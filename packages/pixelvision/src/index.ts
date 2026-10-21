@@ -60,6 +60,22 @@ export { boundingRect, convexHull, huMoments, minAreaRect, moments } from "./sha
 export type { Component, ConnectedComponents } from "./shape/connectedComponents.model";
 export { connectedComponents } from "./shape/connectedComponents";
 
+// Vectorising
+export type {
+  CloseSegment,
+  CurveSegment,
+  LineToSegment,
+  MoveSegment,
+  PathSegment,
+  SnapLinesOptions,
+  SvgOptions,
+  VectorImage,
+  VectorizeOptions,
+  VectorizeThreshold,
+  VectorPath,
+} from "./vector/vectorize.model";
+export { vectorize } from "./vector/vectorize";
+
 // Face
 export type {
   HeadPose,

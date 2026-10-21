@@ -30,6 +30,8 @@ and in React Native (Hermes).
   `@pixelvision/face-neural`.
 - **Shape analysis:** contours, polygon approximation, convex hulls, moments, bounding and rotated
   rectangles, and connected components.
+- **Vectorising:** trace a raster image into SVG paths, with holes, sharp corners and Bézier curves,
+  optional straight-line snapping for drawings, and a stacked colour mode.
 - **Linear algebra:** LU, Cholesky, SVD, eigen-decomposition and least-squares solves.
 
 Every function is typed, documented and tested against reference implementations, with 100% test
