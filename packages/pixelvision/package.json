@@ -63,7 +63,7 @@
     "url": "git+https://github.com/silvandiepen/pixelvision.git",
     "directory": "packages/pixelvision"
   },
-  "homepage": "https://github.com/silvandiepen/pixelvision#readme",
+  "homepage": "https://pixelvision.hakobs.com",
   "bugs": {
     "url": "https://github.com/silvandiepen/pixelvision/issues"
   },

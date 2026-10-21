@@ -9,6 +9,8 @@
 
 <p align="center">Typed, tested computer vision for JavaScript and TypeScript.</p>
 
+<p align="center"><a href="https://pixelvision.hakobs.com">Documentation and live examples</a></p>
+
 ---
 
 pixelvision is computer vision for JavaScript on plain typed arrays. It has no dependencies, no

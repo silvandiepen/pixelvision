@@ -8,6 +8,8 @@ Web Workers, Node and React Native (Hermes).
 Every function is typed, documented and tested against reference implementations, with 100% test
 coverage.
 
+Documentation, the API reference and a live demo of every function: https://pixelvision.hakobs.com
+
 ```sh
 npm install pixelvision
 ```
