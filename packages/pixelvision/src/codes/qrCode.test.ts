@@ -41,8 +41,9 @@ describe("readQrCode", () => {
     }
   });
 
-  it("reads codes in perspective, with noise, version 1 to 10", () => {
-    for (let version = 1; version <= 10; version++) {
+  it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])(
+    "reads a version %i code in perspective, with noise",
+    (version) => {
       const text = version === 1 ? "v1" : `version ${version}`;
       const symbol = encodeQr(text, { version, level: "Q", mask: version % 8 });
       const { image, symbol: drawn } = renderQr(symbol, {
@@ -53,11 +54,11 @@ describe("readQrCode", () => {
       addGaussianNoise(image, 6, version);
 
       const code = readQrCode(image);
-      expect(code?.text, `version ${version}`).toBe(text);
+      expect(code?.text).toBe(text);
       expect(code?.version).toBe(version);
       expectCorners(code!.corners, drawn, 2.5);
-    }
-  });
+    },
+  );
 
   it("reads an unevenly lit code with the local threshold", () => {
     const symbol = encodeQr("in the shade", { version: 2, level: "H" });
