@@ -33,7 +33,7 @@
           <span :class="bemm('kind')">{{ entry.kind }}</span>
         </h3>
         <!-- eslint-disable-next-line vue/no-v-html -- the package's own TSDoc -->
-        <div v-if="entry.summary" :class="bemm('summary')" v-html="markdown(entry.summary)"></div>
+        <div v-if="entry.summary" :class="bemm('summary')" v-html="summaryOf(entry.name)"></div>
         <pre
           :class="bemm('signature')"
         ><code :class="bemm('signature-code')">{{ entry.signatures.join("\n") }}</code></pre>
@@ -88,7 +88,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { nextTick, onMounted, shallowRef } from "vue";
 import { useBemm } from "bemm";
 import reference from "virtual:api-reference";
 import RichText from "../../components/RichText";
@@ -126,19 +126,37 @@ const groups: ApiGroup[] = [
   },
 ].filter((group) => group.entries.length > 0);
 
+const summaries = shallowRef(new Map<string, string>());
+
 /**
- * Renders TSDoc Markdown.
+ * Renders every entry's TSDoc summary from Markdown.
  *
- * @param text - The Markdown.
- * @returns HTML.
+ * @returns Entry name → HTML.
  */
-function markdown(text: string): string {
-  return renderMarkdown(text, pages);
+async function renderSummaries(): Promise<Map<string, string>> {
+  const rendered = await Promise.all(
+    reference.entries
+      .filter((entry) => entry.summary)
+      .map(async (entry) => [entry.name, await renderMarkdown(entry.summary, pages)] as const),
+  );
+  return new Map(rendered);
 }
 
-onMounted(() => {
+/**
+ * Finds an entry's rendered summary.
+ *
+ * @param name - The entry's name.
+ * @returns Its HTML, empty until the summaries have rendered.
+ */
+function summaryOf(name: string): string {
+  return summaries.value.get(name) ?? "";
+}
+
+onMounted(async () => {
   document.title = "API reference · pixelvision";
-  // The page renders after navigation, so scroll to a #name in the URL now it exists.
+  summaries.value = await renderSummaries();
+  await nextTick();
+  // The page renders after navigation, so scroll to a #name in the URL now its text is in.
   if (window.location.hash)
     document.getElementById(window.location.hash.slice(1))?.scrollIntoView();
 });

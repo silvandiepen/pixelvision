@@ -5,7 +5,7 @@
       <p :class="bemm('lead')">{{ guide.description }}</p>
     </header>
     <!-- eslint-disable-next-line vue/no-v-html -- rendered from this repository's own Markdown -->
-    <article :class="bemm('prose')" @click="followLink" v-html="html"></article>
+    <article v-if="html" :class="bemm('prose')" @click="followLink" v-html="html"></article>
     <nav :class="bemm('pager')" aria-label="More guides">
       <RouterLink v-if="previous" :class="bemm('pager-link')" :to="`/guide/${previous.slug}`">
         ← {{ previous.title }}
@@ -22,24 +22,56 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watchEffect } from "vue";
-import { useRouter } from "vue-router";
+import { computed, nextTick, ref, watch, watchEffect } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useBemm } from "bemm";
 import { fillFacts } from "../../content/facts";
 import { GUIDES, findGuide } from "../../content/guides";
 import { functionPages } from "../../navigation";
+import { fenceLanguages, loadHighlighter } from "../../utils/highlight";
 import { renderMarkdown } from "../../utils/markdown";
+import type { Guide } from "../../content/guides.model";
 import type { GuideViewProps } from "./GuideView.model";
 
 const props = defineProps<GuideViewProps>();
 const bemm = useBemm("guide-view", { includeBaseClass: true });
 const router = useRouter();
+const route = useRoute();
 const pages = functionPages();
 
 const guide = computed(() => findGuide(props.slug));
-const html = computed(() =>
-  guide.value ? renderMarkdown(fillFacts(guide.value.markdown), pages) : "",
-);
+const html = ref("");
+
+/**
+ * Renders a guide: first as plain Markdown so it shows at once, then again
+ * with highlighted code once the highlighter has loaded. A result that
+ * arrives after the reader has moved to another guide is dropped.
+ *
+ * @param current - The guide to render.
+ */
+async function render(current: Guide | undefined): Promise<void> {
+  html.value = "";
+  if (!current) return;
+  const markdown = fillFacts(current.markdown);
+  const plain = await renderMarkdown(markdown, pages);
+  if (guide.value !== current) return;
+  html.value = plain;
+  await scrollToHash();
+  const languages = fenceLanguages(markdown);
+  if (languages.length === 0) return;
+  const highlighted = await renderMarkdown(markdown, pages, await loadHighlighter(languages));
+  if (guide.value === current) html.value = highlighted;
+}
+
+/** Scrolls to the heading in the address once the guide's text is on the page. */
+async function scrollToHash(): Promise<void> {
+  if (!route.hash) return;
+  await nextTick();
+  document.getElementById(decodeURIComponent(route.hash.slice(1)))?.scrollIntoView();
+}
+
+watch(guide, (current) => void render(current), { immediate: true });
+
 const index = computed(() => GUIDES.findIndex((candidate) => candidate.slug === props.slug));
 const previous = computed(() => (index.value > 0 ? GUIDES[index.value - 1] : undefined));
 const next = computed(() => GUIDES[index.value + 1]);

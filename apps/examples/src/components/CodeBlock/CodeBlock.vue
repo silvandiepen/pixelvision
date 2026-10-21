@@ -6,18 +6,46 @@
         {{ copied ? "Copied" : "Copy" }}
       </button>
     </div>
-    <pre :class="bemm('pre')"><code :class="bemm('code')">{{ code }}</code></pre>
+    <pre
+      :class="bemm('pre')"
+    ><code :class="bemm('code')" :data-language="highlightAs"><template v-if="lines"><template v-for="(line, row) in lines" :key="row"><span v-for="(token, column) in line" :key="column" :class="bemm('token', { italic: token.italic, bold: token.bold })" :style="{ color: token.color }">{{ token.content }}</span><template v-if="row < lines.length - 1">{{ "\n" }}</template></template></template><template v-else>{{ code }}</template></code></pre>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref, shallowRef, watch } from "vue";
 import { useBemm } from "bemm";
+import { languageOf, loadHighlighter } from "../../utils/highlight";
+import type { CodeLanguage, CodeToken } from "../../utils/highlight.model";
 import type { CodeBlockProps } from "./CodeBlock.model";
 
-const props = withDefaults(defineProps<CodeBlockProps>(), { fileName: "demo.ts" });
+const props = withDefaults(defineProps<CodeBlockProps>(), {
+  fileName: "demo.ts",
+  language: undefined,
+});
 const bemm = useBemm("code-block", { includeBaseClass: true });
 const copied = ref(false);
+const highlightAs = computed(() => languageOf(props.language ?? props.fileName));
+const lines = shallowRef<CodeToken[][] | null>(null);
+
+/**
+ * Shows the code as plain text straight away, then highlighted once the
+ * highlighter has loaded.
+ *
+ * @param source - The code and the language to highlight it in.
+ */
+async function highlight([code, language]: [string, CodeLanguage | undefined]): Promise<void> {
+  lines.value = null;
+  if (!language) return;
+  const highlighter = await loadHighlighter([language]);
+  if (code === props.code && language === highlightAs.value) {
+    lines.value = highlighter.tokens(code, language);
+  }
+}
+
+watch(() => [props.code, highlightAs.value] as [string, CodeLanguage | undefined], highlight, {
+  immediate: true,
+});
 
 /** Copies the code to the clipboard and briefly confirms it. */
 async function copy(): Promise<void> {
@@ -31,7 +59,7 @@ async function copy(): Promise<void> {
 .code-block {
   overflow: hidden;
   border-radius: var(--auno-radius-control);
-  background: var(--auno-surface);
+  background: var(--pv-code-background);
 
   &__bar {
     display: flex;
@@ -64,8 +92,19 @@ async function copy(): Promise<void> {
   }
 
   &__code {
+    color: var(--pv-code-foreground);
     font-size: var(--auno-text-small);
     line-height: 1.5;
+  }
+
+  &__token {
+    &--italic {
+      font-style: italic;
+    }
+
+    &--bold {
+      font-weight: 600;
+    }
   }
 }
 </style>
