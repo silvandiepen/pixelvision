@@ -67,6 +67,8 @@ export type {
 export { createHeadTurnChallenge } from "./face/headTurnChallenge";
 
 // Detection
+export type { BbfCascade, BbfFeature, BbfOptions, BbfStage } from "./detect/bbf.model";
+export { detectBbf } from "./detect/bbf";
 export type { Detection, HaarCascade, HaarOptions, HaarStage, HaarTree } from "./detect/haar.model";
 export { detectHaar } from "./detect/haar";
 export { groupRectangles } from "./detect/groupRectangles";

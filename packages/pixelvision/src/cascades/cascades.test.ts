@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { bbfFace } from "./bbf-face";
 import { eye } from "./eye";
 import { frontalFace } from "./frontal-face";
 import { profileFace } from "./profile-face";
@@ -17,6 +18,14 @@ describe("bundled cascades", () => {
       for (const tree of stage.simpleClassifiers) {
         expect(tree.features.every((f) => f.length === 5)).toBe(true);
       }
+    }
+  });
+
+  it("ships the BBF face cascade", () => {
+    expect(bbfFace).toMatchObject({ width: 24, height: 24 });
+    expect(bbfFace.stage_classifier).toHaveLength(16);
+    for (const stage of bbfFace.stage_classifier) {
+      expect(stage.alpha).toHaveLength(stage.count * 2);
     }
   });
 });

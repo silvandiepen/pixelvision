@@ -128,6 +128,19 @@ declare module "jsfeat" {
         maxIterations?: number,
       ) => boolean;
     };
+    bbf: {
+      prepare_cascade: (cascade: object) => void;
+      build_pyramid: (
+        image: JsfeatMatrix,
+        minWidth: number,
+        minHeight: number,
+        interval?: number,
+      ) => { levels: number; data: JsfeatMatrix[] };
+      detect: (
+        pyramid: { levels: number; data: JsfeatMatrix[] },
+        cascade: object,
+      ) => Array<{ x: number; y: number; width: number; height: number; confidence: number }>;
+    };
     haar: {
       edges_density: number;
       detect_single_scale: (
