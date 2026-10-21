@@ -3,5 +3,7 @@ packages:
   - "apps/*"
   - "examples/*"
 allowBuilds:
-  '@parcel/watcher': false
+  "@parcel/watcher": false
   esbuild: true
+  # Its postinstall only downloads optional CUDA binaries; CPU binaries ship in the package.
+  onnxruntime-node: false

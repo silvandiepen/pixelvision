@@ -1,0 +1,49 @@
+{
+  "name": "@pixelvision/face-neural",
+  "version": "0.0.0",
+  "description": "Optional neural face detection with landmarks for pixelvision (YuNet on onnxruntime): head angle, eyes, nose and mouth.",
+  "license": "MIT",
+  "author": "Sil van Diepen",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./models/yunet.onnx": "./models/face_detection_yunet_2023mar.onnx",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "models",
+    "MODELS.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run --coverage",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "onnxruntime-common": "^1.20.0",
+    "pixelvision": "workspace:^"
+  },
+  "devDependencies": {
+    "onnxruntime-node": "^1.22.0",
+    "onnxruntime-common": "^1.22.0",
+    "pixelvision": "workspace:*",
+    "tsup": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
