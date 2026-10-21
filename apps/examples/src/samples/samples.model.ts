@@ -1,7 +1,8 @@
 import type { RGBAImage } from "pixelvision";
 
 /** Bundled sample images. */
-export type SampleId = "desk" | "shapes" | "low-contrast" | "palette" | "portrait";
+export type SampleId =
+  "desk" | "shapes" | "low-contrast" | "palette" | "portrait" | "page" | "pebbles";
 
 /** A generated sample image. */
 export interface Sample {

@@ -179,6 +179,22 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   erode: icon(
     `<circle cx="12" cy="12" r="9" ${SOFT}/><circle cx="12" cy="12" r="3.5" fill="currentColor" stroke="none"/>${arrow(12, 3, 12, 7)}${arrow(21, 12, 17, 12)}${arrow(12, 21, 12, 17)}${arrow(3, 12, 7, 12)}`,
   ),
+  morphology: icon(
+    `<path d="M4 12A8 8 0 0 1 20 12" ${SOFT}/><rect x="6" y="9" width="12" height="9" rx="2"/>${dot(4, 6, 0.9, SOFT)}${dot(20, 5, 0.9, SOFT)}${dot(10.5, 13.5, 0.9, SOFT)}`,
+  ),
+  "median-blur": icon(
+    `<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10H20M4 14H20M10 4V20M14 4V20" ${SOFT}/>${dot(12, 12, 1.4)}`,
+  ),
+  laplacian: icon(`<path d="M3 12H21" ${SOFT}/><path d="M3 12H8L10 5L14 19L16 12H21"/>`),
+  "adaptive-threshold": icon(
+    `<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M21 6V18A2 2 0 0 1 19 20H8Z" fill="currentColor" stroke="none" opacity="0.3"/><path d="M6.5 9H12M6.5 12H17.5M6.5 15H14"/>`,
+  ),
+  "rgb-to-hsv": icon(
+    `<circle cx="12" cy="12" r="8.5"/><path d="M12 3.5V12L19.4 16.3" ${SOFT}/><path d="M12 12L4.6 16.3" ${SOFT}/>${dot(12, 12, 1.4)}`,
+  ),
+  "in-range": icon(
+    `<circle cx="12" cy="12" r="8.5" ${SOFT}/><path d="M12 12L19.4 7.8A8.5 8.5 0 0 1 19.4 16.2Z" fill="currentColor" stroke="none" opacity="0.4"/><path d="M12 12L19.4 7.8M12 12L19.4 16.2"/>`,
+  ),
   flip: icon(
     `<path d="M12 3V21" stroke-dasharray="2 2"/><path d="M9.5 6L3 18H9.5Z" fill="currentColor" stroke="none" opacity="0.8"/><path d="M14.5 6L21 18H14.5Z"/>`,
   ),
@@ -263,6 +279,25 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
     `<path d="M4 18L6 6L12 11L18 5L20 18Z" ${SOFT}/><path d="M6 6L18 5" stroke-dasharray="2 2"/><path d="M4 18L6 6M18 5L20 18L4 18"/>`,
   ),
 
+  "bounding-rect": icon(
+    `<path d="M6 10L13 5L19 11L12 19Z" ${SOFT}/><rect x="5" y="4" width="15" height="16" rx="0.5"/>`,
+  ),
+  "convex-hull": icon(
+    `<path d="M12 3.5L14 9.5L20.5 9.8L15.3 13.6L17.2 20L12 16.2L6.8 20L8.7 13.6L3.5 9.8L10 9.5Z" ${SOFT}/><path d="M12 3.5L20.5 9.8L17.2 20H6.8L3.5 9.8Z"/>`,
+  ),
+  "min-area-rect": icon(
+    `<path d="M8 9L14 6.5L17 13L11 18Z" ${SOFT}/><path d="M6.5 8.5L15.5 4.5L19.5 14.5L10.5 18.5Z"/>`,
+  ),
+  moments: icon(
+    `<path d="M4 18L11 5L20 18Z"/>${dot(11.7, 13.7, 1.4)}<path d="M11.7 9V18.5M7 13.7H16.5" ${SOFT}/>`,
+  ),
+  "hu-moments": icon(
+    `<rect x="3.5" y="5" width="7" height="7" rx="0.5"/><path d="M17.5 3.5L22 8L17.5 12.5L13 8Z"/><path d="M5 17H19M5 20H15" ${SOFT}/>`,
+  ),
+  "connected-components": icon(
+    `<circle cx="7" cy="8" r="3" fill="currentColor" stroke="none" opacity="0.4"/><path d="M13 5H20V11H16V19H13Z" fill="currentColor" stroke="none" opacity="0.4"/><circle cx="7" cy="17" r="2.5" fill="currentColor" stroke="none" opacity="0.4"/><rect x="3.5" y="4.5" width="7" height="7" rx="0.5"/><rect x="12.5" y="4.5" width="8" height="15" rx="0.5"/><rect x="4" y="14" width="6" height="6" rx="0.5"/>`,
+  ),
+
   // Maths
   "gaussian-kernel": icon(
     `<path d="M3 20H21"/><path d="M3 19C7 19 8.5 5 12 5S17 19 21 19" ${SOFT}/><path d="M6 20V17M9 20V10.5M12 20V5.5M15 20V10.5M18 20V17"/>`,
@@ -331,6 +366,21 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   ),
   "straighten-document": icon(
     `<path d="${TILTED}" ${SOFT}/><rect x="7" y="6" width="10" height="12" rx="1"/><path d="M9 9.5H15M9 12H15M9 14.5H13" ${SOFT}/>`,
+  ),
+  "shape-analysis": icon(
+    `<path d="M5 9L15 5L19 15L9 19Z"/><rect x="4" y="4.5" width="16" height="15" rx="0.5" ${SOFT}/>${dot(12, 12, 1.4)}`,
+  ),
+  "count-objects": icon(
+    `<circle cx="7" cy="7.5" r="3"/><circle cx="16.5" cy="8" r="3.5"/><circle cx="8.5" cy="16.5" r="3.5"/><circle cx="17" cy="17" r="2.5"/>${dot(7, 7.5, 0.9, SOFT)}${dot(16.5, 8, 0.9, SOFT)}${dot(8.5, 16.5, 0.9, SOFT)}${dot(17, 17, 0.9, SOFT)}`,
+  ),
+  "clean-up-scan": icon(
+    `<path d="M5 3H15L19 7V21H5Z"/><path d="M15 3V7H19" ${SOFT}/><path d="M8 11H16M8 14H16M8 17H13"/><path d="M5 3H15L19 7V12L5 21Z" fill="currentColor" stroke="none" opacity="0.15"/>`,
+  ),
+  "color-picker": icon(
+    `<path d="M14.5 4.5L19.5 9.5L10 19H5V14Z"/><path d="M12.5 6.5L17.5 11.5"/><path d="M5 14L10 19" ${SOFT}/>${dot(19.5, 19.5, 1.5)}`,
+  ),
+  sharpness: icon(
+    `<circle cx="12" cy="12" r="8.5" ${SOFT}/><circle cx="12" cy="12" r="4"/><path d="M12 3.5V6M12 18V20.5M3.5 12H6M18 12H20.5"/>`,
   ),
   "find-lines": icon(
     `<rect x="3" y="4" width="18" height="16" rx="2" ${SOFT}/><path d="M1.5 17L22.5 8M6 1.5L16 22.5"/>`,

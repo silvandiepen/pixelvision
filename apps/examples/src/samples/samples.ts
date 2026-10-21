@@ -253,6 +253,113 @@ function portrait(): RGBAImage {
   return image;
 }
 
+/** Size of the page sample's text: line count, line pitch and stroke height, in pixels. */
+const PAGE_TEXT = { lines: 9, top: 34, pitch: 20, stroke: 4, left: 28, right: 292 };
+
+/**
+ * Where the page sample's "words" are: `[left, top, width, height]` bars,
+ * line by line, the same every time.
+ */
+export const PAGE_WORDS: readonly (readonly [number, number, number, number])[] = (() => {
+  const random = seededRandom(11);
+  const words: [number, number, number, number][] = [];
+  for (let line = 0; line < PAGE_TEXT.lines; line++) {
+    const top = PAGE_TEXT.top + line * PAGE_TEXT.pitch;
+    // The last line of a paragraph is shorter.
+    const end = line % 4 === 3 ? 180 : PAGE_TEXT.right;
+    let x = PAGE_TEXT.left;
+    while (true) {
+      const width = 10 + Math.floor(random() * 34);
+      if (x + width > end) break;
+      words.push([x, top, width, PAGE_TEXT.stroke]);
+      x += width + 7;
+    }
+  }
+  return words;
+})();
+
+/**
+ * How much light reaches each point of the page sample: full at the top
+ * left, falling to 20 % at the bottom right.
+ *
+ * @param x - Column.
+ * @param y - Row.
+ * @returns A factor from 0.2 to 1.
+ */
+export function pageLight(x: number, y: number): number {
+  return 1 - 0.8 * ((x / (SAMPLE_WIDTH - 1)) * 0.7 + (y / (SAMPLE_HEIGHT - 1)) * 0.3);
+}
+
+/**
+ * Draws a page of text (bars standing in for words) lit from the top left,
+ * so the paper on the right is darker than the ink on the left.
+ *
+ * @returns The image.
+ */
+function page(): RGBAImage {
+  const image = createImage(SAMPLE_WIDTH, SAMPLE_HEIGHT, [0, 0, 0]);
+  const ink = new Uint8Array(SAMPLE_WIDTH * SAMPLE_HEIGHT);
+  for (const [left, top, width, height] of PAGE_WORDS) {
+    for (let y = top; y < top + height; y++)
+      ink.fill(1, y * SAMPLE_WIDTH + left, y * SAMPLE_WIDTH + left + width);
+  }
+  const { data } = image;
+  for (let y = 0; y < SAMPLE_HEIGHT; y++) {
+    for (let x = 0; x < SAMPLE_WIDTH; x++) {
+      const i = y * SAMPLE_WIDTH + x;
+      const light = pageLight(x, y);
+      const [r, g, b] = ink[i] ? [86, 88, 98] : [240, 236, 226];
+      data[i * 4] = r * light;
+      data[i * 4 + 1] = g * light;
+      data[i * 4 + 2] = b * light;
+    }
+  }
+  addNoise(image, 3, seededRandom(5));
+  return image;
+}
+
+/** The pebbles sample's stones: centre and radii, placed so none touch. */
+export const PEBBLES: readonly { x: number; y: number; rx: number; ry: number }[] = (() => {
+  const random = seededRandom(23);
+  const stones: { x: number; y: number; rx: number; ry: number }[] = [];
+  for (let attempt = 0; attempt < 500 && stones.length < 17; attempt++) {
+    const rx = 8 + Math.round(random() * 10);
+    const ry = Math.round(rx * (0.6 + random() * 0.4));
+    const x = 16 + rx + Math.round(random() * (SAMPLE_WIDTH - 32 - 2 * rx));
+    const y = 16 + ry + Math.round(random() * (SAMPLE_HEIGHT - 32 - 2 * ry));
+    // At least 6 pixels of table between any two stones.
+    if (
+      stones.every(
+        (o) => Math.hypot(o.x - x, o.y - y) > Math.max(o.rx, o.ry) + Math.max(rx, ry) + 6,
+      )
+    ) {
+      stones.push({ x, y, rx, ry });
+    }
+  }
+  return stones;
+})();
+
+/**
+ * Draws dark pebbles of different sizes on a light table, none touching,
+ * for counting objects.
+ *
+ * @returns The image.
+ */
+function pebbles(): RGBAImage {
+  const image = createImage(SAMPLE_WIDTH, SAMPLE_HEIGHT, [222, 218, 208]);
+  addNoise(image, 4, seededRandom(29));
+  const random = seededRandom(31);
+  for (const stone of PEBBLES) {
+    const shade = 50 + Math.round(random() * 40);
+    fillPolygon(image, ellipse(stone.x, stone.y, stone.rx, stone.ry), [
+      shade,
+      shade - 6,
+      shade - 12,
+    ]);
+  }
+  return image;
+}
+
 /** Every bundled sample. */
 export const SAMPLES: readonly Sample[] = [
   {
@@ -284,6 +391,19 @@ export const SAMPLES: readonly Sample[] = [
     label: "Drawn face",
     description: "A plain schematic face, drawn from ellipses, for the face detector.",
     generate: portrait,
+  },
+  {
+    id: "page",
+    label: "Unevenly lit page",
+    description:
+      "Lines of text on a page, lit from the top left: the paper on the right is darker than the ink on the left.",
+    generate: page,
+  },
+  {
+    id: "pebbles",
+    label: "Pebbles",
+    description: "Seventeen dark pebbles of different sizes on a light table, none touching.",
+    generate: pebbles,
   },
 ];
 

@@ -64,3 +64,26 @@ export function rectangleCorners(width: number, height: number): Point[] {
 export function rowsToPoints(rows: readonly (readonly number[])[]): Point[] {
   return rows.map(([x, y]) => ({ x, y }));
 }
+
+/**
+ * The corners of an axis-aligned rectangle, clockwise from the top left,
+ * for drawing it as a polygon. The rectangle covers whole pixels, so the
+ * outline runs along their outer edges.
+ *
+ * @param rect - Left, top, width and height.
+ * @returns Four corners.
+ */
+export function rectPolygon(rect: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): Point[] {
+  const { x, y, width, height } = rect;
+  return [
+    { x, y },
+    { x: x + width, y },
+    { x: x + width, y: y + height },
+    { x, y: y + height },
+  ];
+}

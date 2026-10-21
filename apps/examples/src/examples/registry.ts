@@ -68,6 +68,23 @@ import { transformPointExample } from "./transform-point";
 import { transposeExample } from "./transpose";
 import { warpAffineExample } from "./warp-affine";
 import { warpPerspectiveExample } from "./warp-perspective";
+import { adaptiveThresholdExample } from "./adaptive-threshold";
+import { boundingRectExample } from "./bounding-rect";
+import { cleanUpScanExample } from "./clean-up-scan";
+import { colorPickerExample } from "./color-picker";
+import { connectedComponentsExample } from "./connected-components";
+import { convexHullExample } from "./convex-hull";
+import { countObjectsExample } from "./count-objects";
+import { huMomentsExample } from "./hu-moments";
+import { inRangeExample } from "./in-range";
+import { laplacianExample } from "./laplacian";
+import { medianBlurExample } from "./median-blur";
+import { minAreaRectExample } from "./min-area-rect";
+import { momentsExample } from "./moments";
+import { morphologyExample } from "./morphology";
+import { rgbToHsvExample } from "./rgb-to-hsv";
+import { shapeAnalysisExample } from "./shape-analysis";
+import { sharpnessExample } from "./sharpness";
 
 /**
  * Every example, in gallery order. The router makes a page of each and the
@@ -94,10 +111,16 @@ export const EXAMPLES: readonly Example[] = [
   warpPerspectiveExample,
   warpAffineExample,
   thresholdExample,
+  adaptiveThresholdExample,
   otsuLevelExample,
   dilateExample,
   erodeExample,
+  morphologyExample,
+  medianBlurExample,
+  laplacianExample,
   flipExample,
+  rgbToHsvExample,
+  inRangeExample,
   detectSkinExample,
   detectHaarExample,
   detectBbfExample,
@@ -121,6 +144,12 @@ export const EXAMPLES: readonly Example[] = [
   arcLengthExample,
   approxPolygonExample,
   isConvexExample,
+  boundingRectExample,
+  convexHullExample,
+  minAreaRectExample,
+  momentsExample,
+  huMomentsExample,
+  connectedComponentsExample,
   gaussianKernelExample,
   perspectiveTransformExample,
   affineTransformExample,
@@ -144,6 +173,11 @@ export const EXAMPLES: readonly Example[] = [
   edgeDetectionExample,
   straightenDocumentExample,
   findLinesExample,
+  shapeAnalysisExample,
+  countObjectsExample,
+  cleanUpScanExample,
+  colorPickerExample,
+  sharpnessExample,
 ];
 
 /**
