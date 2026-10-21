@@ -41,6 +41,7 @@ export function detectHeadPose(
     minNeighbors = 2,
     profileMinNeighbors = 1,
     scaleFactor = 1.1,
+    edgeDensity = false,
   } = options;
   const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
   const small =
@@ -56,6 +57,7 @@ export function detectHeadPose(
     detectHaar(frame, cascade, {
       minNeighbors: neighbors,
       scaleFactor,
+      edgeDensity,
       minScale: Math.max(1, minSide / cascade.size[0]),
     })[0];
 

@@ -1,4 +1,4 @@
-import type { HaarCascade, Detection } from "../detect/haar.model";
+import type { Detection, HaarCascade } from "../detect/haar.model";
 
 /**
  * Which way a face points in the image: at the camera, or turned so the
@@ -38,6 +38,12 @@ export interface HeadPoseOptions {
   profileMinNeighbors?: number;
   /** Scale step between window sizes (default 1.1; smaller finds more poses, slower). */
   scaleFactor?: number;
+  /**
+   * Edge pruning passed to {@link detectHaar} (default `false`). Pruning
+   * skips smooth windows, which can include evenly lit faces, and at
+   * camera-frame sizes computing the edge map costs more than it saves.
+   */
+  edgeDensity?: number | false;
 }
 
 /** The pose seen in one frame. */

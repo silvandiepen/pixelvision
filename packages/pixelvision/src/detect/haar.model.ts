@@ -48,8 +48,11 @@ export interface HaarOptions {
   /** Minimum raw detections per result; 0 returns them ungrouped (default 1). */
   minNeighbors?: number;
   /**
-   * Skip windows with too few Canny edges, a large speed-up: the fraction
-   * of edge pixels a window needs (default 0.07), or `false` to disable.
+   * Skip windows with too few Canny edges: the fraction of edge pixels a
+   * window needs (default 0.07, as jsfeat), or `false` to disable. It pays
+   * off on large images with big flat areas; on camera frames of ~320 px
+   * the edge map costs more than it saves, and smooth, evenly lit faces
+   * can be skipped, so prefer `false` there.
    */
   edgeDensity?: number | false;
 }
