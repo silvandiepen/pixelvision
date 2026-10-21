@@ -1,5 +1,8 @@
 import type { Posterized } from "./posterize.model";
 
+// Blends closer than this to half and half are an even split.
+const EVEN = 1 / 32;
+
 /**
  * Reduces RGB pixels to at most `count` colours, a variant of median cut:
  * the colours (at 5 bits per channel) are split box by box, always the box
@@ -96,35 +99,75 @@ export function posterize(rgb: Uint8Array, count: number): Posterized {
 }
 
 /**
- * Gives every pixel the most common label of its 3x3 neighbourhood (its own
- * on a tie). Removes the one-pixel fringes of in-between colours that
- * anti-aliased edges leave, and isolated noisy pixels.
+ * Relabels the anti-aliased pixels along colour edges. Such a pixel is a
+ * blend of the two colours either side of the edge, and the palette colour
+ * nearest to it can be a third one: half navy on white paper is closer to
+ * teal than to either. Each pixel next to a different label is matched
+ * against every blend of two colours found in its 3x3 neighbourhood; when
+ * one blend explains it far better than its nearest colour does (the
+ * residual is under half the distance), it takes whichever of the two
+ * colours covers more of it, and on an even split the more common one.
+ * That splits every edge at half coverage, as a threshold does in black and
+ * white, and keeps corners where they are.
  *
- * @param labels - One label per pixel, row by row.
+ * @param rgb - Pixels as `r, g, b` triples.
+ * @param labels - Each pixel's nearest palette colour.
+ * @param palette - The colours.
  * @param width - Width in pixels.
  * @param height - Height in pixels.
- * @param count - Number of labels in use.
- * @returns The filtered labels.
+ * @returns The labels, fringe pixels relabelled.
  */
-export function majorityFilter(
+export function unmixEdges(
+  rgb: Uint8Array,
   labels: Uint8Array,
+  palette: readonly (readonly [number, number, number])[],
   width: number,
   height: number,
-  count: number,
 ): Uint8Array {
-  const out = new Uint8Array(labels.length);
-  const votes = new Uint16Array(count);
+  const out = labels.slice();
+  const counts = palette.map(() => 0);
+  for (const label of labels) counts[label]++;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
-      votes.fill(0);
+      const p = y * width + x;
+      const near = new Set<number>();
       for (let ny = Math.max(0, y - 1); ny <= Math.min(height - 1, y + 1); ny++) {
         for (let nx = Math.max(0, x - 1); nx <= Math.min(width - 1, x + 1); nx++) {
-          votes[labels[ny * width + nx]]++;
+          near.add(labels[ny * width + nx]);
         }
       }
-      let best = labels[y * width + x];
-      for (let i = 0; i < count; i++) if (votes[i] > votes[best]) best = i;
-      out[y * width + x] = best;
+      if (near.size < 3) continue;
+      const own = palette[labels[p]];
+      const colour = [rgb[p * 3], rgb[p * 3 + 1], rgb[p * 3 + 2]];
+      let best =
+        ((colour[0] - own[0]) ** 2 + (colour[1] - own[1]) ** 2 + (colour[2] - own[2]) ** 2) / 4;
+      const candidates = [...near].filter((label) => label !== labels[p]);
+      for (const [k, i] of candidates.entries()) {
+        for (const j of candidates.slice(k + 1)) {
+          const a = palette[i];
+          const b = palette[j];
+          const ab = [0, 1, 2].map((c) => b[c] - a[c]);
+          const ap = [0, 1, 2].map((c) => colour[c] - a[c]);
+          const t = Math.min(
+            1,
+            Math.max(
+              0,
+              (ab[0] * ap[0] + ab[1] * ap[1] + ab[2] * ap[2]) /
+                (ab[0] ** 2 + ab[1] ** 2 + ab[2] ** 2),
+            ),
+          );
+          const residual =
+            (ap[0] - t * ab[0]) ** 2 + (ap[1] - t * ab[1]) ** 2 + (ap[2] - t * ab[2]) ** 2;
+          // Two equal palette colours give no blend (NaN), which never wins.
+          if (residual < best) {
+            best = residual;
+            // An even split (within the noise of a few levels) goes to the more common
+            // colour, the layer below, so a row of half-covered pixels stays on one side.
+            const even = Math.abs(t - 0.5) < EVEN;
+            out[p] = even ? (counts[i] >= counts[j] ? i : j) : t < 0.5 ? i : j;
+          }
+        }
+      }
     }
   }
   return out;
