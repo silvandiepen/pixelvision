@@ -34,19 +34,22 @@ export const loadOpenCv = (): Promise<{ cv: OpenCv }> => {
 };
 
 /**
- * Copies a single-channel `u8` matrix into an OpenCV `Mat` (caller deletes it).
+ * Copies a `u8` matrix with 1 to 4 channels into an OpenCV `Mat` (caller
+ * deletes it).
  *
  * @param cv - OpenCV namespace.
- * @param matrix - Gray matrix.
- * @returns A `CV_8UC1` Mat.
+ * @param matrix - The matrix.
+ * @returns A `CV_8UC1` to `CV_8UC4` Mat.
  */
-export const toMat = (cv: OpenCv, matrix: Matrix<"u8">): OpenCv =>
-  cv.matFromArray(
+export const toMat = (cv: OpenCv, matrix: Matrix<"u8">): OpenCv => {
+  const mat = new cv.Mat(
     matrix.height,
     matrix.width,
-    cv.CV_8UC1,
-    Array.from(matrix.data.subarray(0, matrix.width * matrix.height)),
+    [cv.CV_8UC1, cv.CV_8UC2, cv.CV_8UC3, cv.CV_8UC4][matrix.channels - 1],
   );
+  mat.data.set(matrix.data.subarray(0, matrix.width * matrix.height * matrix.channels));
+  return mat;
+};
 
 /**
  * Runs `use` with fresh Mats and deletes them afterwards, so the WebAssembly

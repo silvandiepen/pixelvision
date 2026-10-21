@@ -131,7 +131,32 @@ export type { PyrDownOptions } from "./imgproc/pyrDown.model";
 export { pyrDown } from "./imgproc/pyrDown";
 export type { AdaptiveThresholdOptions } from "./imgproc/adaptiveThreshold.model";
 export { adaptiveThreshold } from "./imgproc/adaptiveThreshold";
-export { rgbToHsv } from "./imgproc/color";
+export {
+  hlsToRgb,
+  hsvToRgb,
+  labToRgb,
+  rgbToHls,
+  rgbToHsv,
+  rgbToLab,
+  rgbToYCrCb,
+  yCrCbToRgb,
+} from "./imgproc/color";
+export type { BilateralFilterOptions } from "./imgproc/bilateralFilter.model";
+export { bilateralFilter } from "./imgproc/bilateralFilter";
+export type { CalcHistOptions } from "./imgproc/calcHist.model";
+export { calcHist } from "./imgproc/calcHist";
+export type { ClaheOptions, TileGridSize } from "./imgproc/clahe.model";
+export { clahe } from "./imgproc/clahe";
+export type { DistanceMetric, DistanceTransformOptions } from "./imgproc/distanceTransform.model";
+export { distanceTransform } from "./imgproc/distanceTransform";
+export type { Filter2DFloatOptions, Filter2DOptions, Kernel } from "./imgproc/filter2D.model";
+export { filter2D } from "./imgproc/filter2D";
+export type { ChannelValues, FloodFillOptions, FloodFillResult } from "./imgproc/floodFill.model";
+export { floodFill } from "./imgproc/floodFill";
+export type { MatchTemplateOptions, TemplateMatchMethod } from "./imgproc/matchTemplate.model";
+export { matchTemplate } from "./imgproc/matchTemplate";
+export type { MinMaxLoc } from "./imgproc/minMaxLoc.model";
+export { minMaxLoc } from "./imgproc/minMaxLoc";
 export { flip } from "./imgproc/flip";
 export { inRange } from "./imgproc/inRange";
 export { laplacian } from "./imgproc/laplacian";
