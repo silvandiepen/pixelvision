@@ -1,33 +1,47 @@
 import type { ImageLike } from "pixelvision";
-import { decodeYuNet, INPUT_SIZE, suppress } from "./decode";
-import type { YuNetOutputs } from "./decode";
+import { decodeYuNet, INPUT_SIZE, suppress, validateYuNetOutputs } from "./decode";
+import { FaceNeuralError } from "./errors";
 import type {
   CreateFaceDetectorOptions,
   DetectFacesOptions,
   FaceDetector,
   NeuralFace,
-  OrtTensorLike,
 } from "./faceDetector.model";
 import { letterbox } from "./preprocess";
 
+/** The most faces one `detect` call may return. */
+export const MAX_FACES_LIMIT = 100;
+
 /**
- * Checks that every model output holds numbers.
+ * Fills in and checks detection options: both thresholds must be finite numbers from 0 to 1,
+ * and `maxFaces` a whole number from 1 to {@link MAX_FACES_LIMIT}.
  *
- * @param outputs - Raw session outputs.
- * @returns The outputs typed as numeric.
- * @throws {TypeError} When an output isn't numeric (a different model).
+ * @param options - The caller's options.
+ * @returns The options with defaults applied.
+ * @throws {FaceNeuralError} With code `invalid-option`, naming the option that is out of range.
  */
-const numericOutputs = (outputs: Record<string, OrtTensorLike>): YuNetOutputs => {
-  const result: YuNetOutputs = {};
-  for (const [name, tensor] of Object.entries(outputs)) {
-    if (!(tensor.data instanceof Float32Array)) {
-      throw new TypeError(
-        `createFaceDetector: output ${name} isn't float32; is this the YuNet model?`,
+export const resolveDetectOptions = (
+  options: DetectFacesOptions = {},
+): Required<DetectFacesOptions> => {
+  const { scoreThreshold = 0.7, nmsThreshold = 0.3, maxFaces = 10 } = options;
+  for (const [name, value] of [
+    ["scoreThreshold", scoreThreshold],
+    ["nmsThreshold", nmsThreshold],
+  ] as const) {
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0 || value > 1) {
+      throw new FaceNeuralError(
+        "invalid-option",
+        `detect: ${name} must be a number from 0 to 1, got ${value}`,
       );
     }
-    result[name] = { data: tensor.data };
   }
-  return result;
+  if (!Number.isInteger(maxFaces) || maxFaces < 1 || maxFaces > MAX_FACES_LIMIT) {
+    throw new FaceNeuralError(
+      "invalid-option",
+      `detect: maxFaces must be a whole number from 1 to ${MAX_FACES_LIMIT}, got ${maxFaces}`,
+    );
+  }
+  return { scoreThreshold, nmsThreshold, maxFaces };
 };
 
 /**
@@ -37,6 +51,11 @@ const numericOutputs = (outputs: Record<string, OrtTensorLike>): YuNetOutputs =>
  *
  * Bring your own onnxruntime: `onnxruntime-web` in browsers and workers,
  * `onnxruntime-node` in Node, `onnxruntime-react-native` on phones.
+ *
+ * `detect` validates its input and the model's outputs before decoding and throws a
+ * {@link FaceNeuralError} instead of returning garbage: `invalid-image` for a malformed image,
+ * `invalid-option` for out-of-range thresholds or `maxFaces`, `invalid-output` for outputs that
+ * don't match YuNet.
  *
  * @param options - The onnxruntime module, the model and session options.
  * @returns The detector, once the model has loaded.
@@ -60,13 +79,13 @@ export async function createFaceDetector(
         );
   return {
     async detect(image: ImageLike, detectOptions: DetectFacesOptions = {}): Promise<NeuralFace[]> {
-      const { scoreThreshold = 0.7, nmsThreshold = 0.3, maxFaces = 10 } = detectOptions;
+      const { scoreThreshold, nmsThreshold, maxFaces } = resolveDetectOptions(detectOptions);
       const { data, scale } = letterbox(image);
       const outputs = await session.run({
         input: new ort.Tensor("float32", data, [1, 3, INPUT_SIZE, INPUT_SIZE]),
       });
       const faces = suppress(
-        decodeYuNet(numericOutputs(outputs), scoreThreshold),
+        decodeYuNet(validateYuNetOutputs(outputs), scoreThreshold),
         nmsThreshold,
         maxFaces,
       );

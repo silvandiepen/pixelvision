@@ -1,11 +1,71 @@
-import type { NeuralFace } from "./faceDetector.model";
+import { FaceNeuralError } from "./errors";
+import type { NeuralFace, OrtTensorLike } from "./faceDetector.model";
 
 /** The model's fixed input size. */
 export const INPUT_SIZE = 640;
 const STRIDES = [8, 16, 32] as const;
 
+/** Each output family and the values it holds per grid cell. */
+const OUTPUT_WIDTHS = [
+  ["cls", 1],
+  ["obj", 1],
+  ["bbox", 4],
+  ["kps", 10],
+] as const;
+
 /** Raw model outputs by name (`cls_8`, `obj_8`, `bbox_8`, `kps_8`, …). */
 export type YuNetOutputs = Record<string, { data: ArrayLike<number> }>;
+
+/**
+ * Throws the error for a model output that can't be decoded.
+ *
+ * @param message - What is wrong with which output.
+ * @throws {FaceNeuralError} Always, with code `invalid-output`.
+ */
+function fail(message: string): never {
+  throw new FaceNeuralError(
+    "invalid-output",
+    `createFaceDetector: ${message}; is this the YuNet model?`,
+  );
+}
+
+/**
+ * Checks raw session outputs before they are decoded. Every output the decoder reads must be
+ * present, hold float32 data, have the shape `[1, cells, width]` for its stride (`cells` is
+ * `(640 / stride)²`, `width` is 1 for `cls` and `obj`, 4 for `bbox` and 10 for `kps`), hold
+ * exactly that many values, and contain only finite numbers. Anything else means a different,
+ * damaged or replaced model, and decoding it would produce garbage geometry.
+ *
+ * @param outputs - Raw session outputs by name.
+ * @returns The outputs the decoder reads.
+ * @throws {FaceNeuralError} With code `invalid-output`, naming the first output that fails.
+ */
+export const validateYuNetOutputs = (outputs: Record<string, OrtTensorLike>): YuNetOutputs => {
+  const result: YuNetOutputs = {};
+  for (const stride of STRIDES) {
+    const cells = (INPUT_SIZE / stride) ** 2;
+    for (const [family, width] of OUTPUT_WIDTHS) {
+      const name = `${family}_${stride}`;
+      const tensor = outputs[name];
+      if (!tensor) fail(`output ${name} is missing`);
+      const { data, dims } = tensor;
+      if (!(data instanceof Float32Array)) fail(`output ${name} isn't float32`);
+      const shape = Array.isArray(dims) ? dims.join(", ") : String(dims);
+      if (shape !== `1, ${cells}, ${width}`) {
+        fail(`output ${name} has shape [${shape}], expected [1, ${cells}, ${width}]`);
+      }
+      const values = data as Float32Array;
+      if (values.length !== cells * width) {
+        fail(`output ${name} holds ${values.length} values, expected ${cells * width}`);
+      }
+      for (let i = 0; i < values.length; i++) {
+        if (!Number.isFinite(values[i])) fail(`output ${name} holds a non-finite value at ${i}`);
+      }
+      result[name] = { data: values };
+    }
+  }
+  return result;
+};
 
 /**
  * Turns YuNet's raw outputs into faces in model-input pixels (OpenCV's

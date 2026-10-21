@@ -8,6 +8,8 @@ export type {
   OrtSessionLike,
   OrtTensorLike,
 } from "./faceDetector.model";
-export { createFaceDetector } from "./faceDetector";
+export { createFaceDetector, MAX_FACES_LIMIT } from "./faceDetector";
+export type { FaceNeuralErrorCode } from "./errors.model";
+export { FaceNeuralError } from "./errors";
 export type { HeadPoseFromFaceOptions } from "./headYaw.model";
 export { estimateHeadYaw, headPoseFromFace } from "./headYaw";

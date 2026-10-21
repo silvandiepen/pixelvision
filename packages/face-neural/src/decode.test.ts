@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { decodeYuNet, INPUT_SIZE, iou, suppress } from "./decode";
+import { decodeYuNet, INPUT_SIZE, iou, suppress, validateYuNetOutputs } from "./decode";
+import { FaceNeuralError } from "./errors";
 import type { NeuralFace } from "./faceDetector.model";
 
 /** Empty outputs for all strides, with one cell filled in. */
@@ -91,5 +92,88 @@ describe("iou and suppress", () => {
 
     expect(kept.map((f) => f.score)).toEqual([0.9, 0.7]);
     expect(suppress([face(0, 0, 10, 0.5), face(50, 50, 10, 0.7)], 0.3, 1)).toHaveLength(1);
+  });
+});
+
+/** Well-formed outputs for every stride, as onnxruntime returns them. */
+const sessionOutputs = () => {
+  const result: Record<string, { data: unknown; dims: number[] }> = {};
+  for (const s of [8, 16, 32]) {
+    const cells = (INPUT_SIZE / s) ** 2;
+    for (const [family, width] of [
+      ["cls", 1],
+      ["obj", 1],
+      ["bbox", 4],
+      ["kps", 10],
+    ] as const) {
+      result[`${family}_${s}`] = { data: new Float32Array(cells * width), dims: [1, cells, width] };
+    }
+  }
+  return result;
+};
+
+describe("validateYuNetOutputs", () => {
+  it("passes well-formed outputs through and leaves extra outputs out", () => {
+    const raw: Record<string, { data: unknown; dims: number[] }> = {
+      ...sessionOutputs(),
+      extra: { data: "ignored", dims: [] },
+    };
+
+    const checked = validateYuNetOutputs(raw);
+
+    expect(Object.keys(checked)).toHaveLength(12);
+    expect(checked.kps_32.data).toBe(raw.kps_32.data);
+  });
+
+  it("rejects a missing output", () => {
+    const raw = sessionOutputs();
+    delete raw.obj_16;
+
+    expect(() => validateYuNetOutputs(raw)).toThrow(/output obj_16 is missing/);
+  });
+
+  it("rejects an output that isn't float32", () => {
+    const raw = sessionOutputs();
+    raw.bbox_8.data = new Float64Array(6400 * 4);
+
+    expect(() => validateYuNetOutputs(raw)).toThrow(/output bbox_8 isn't float32/);
+  });
+
+  it("rejects an output with the wrong shape", () => {
+    const flat = sessionOutputs();
+    flat.kps_8.dims = [1, 64000];
+    const odd = sessionOutputs();
+    (odd.cls_8 as { dims: unknown }).dims = undefined;
+
+    expect(() => validateYuNetOutputs(flat)).toThrow(
+      /output kps_8 has shape \[1, 64000\], expected \[1, 6400, 10\]/,
+    );
+    expect(() => validateYuNetOutputs(odd)).toThrow(/output cls_8 has shape \[undefined\]/);
+  });
+
+  it("rejects an output whose element count doesn't match its shape", () => {
+    const raw = sessionOutputs();
+    raw.cls_32.data = new Float32Array(399);
+
+    expect(() => validateYuNetOutputs(raw)).toThrow(/output cls_32 holds 399 values, expected 400/);
+  });
+
+  it.each([NaN, Infinity, -Infinity])("rejects an output holding %s", (value) => {
+    const raw = sessionOutputs();
+    (raw.bbox_16.data as Float32Array)[7] = value;
+
+    expect(() => validateYuNetOutputs(raw)).toThrow(/output bbox_16 holds a non-finite value at 7/);
+  });
+
+  it("throws a typed error", () => {
+    let caught: unknown;
+    try {
+      validateYuNetOutputs({});
+    } catch (error) {
+      caught = error;
+    }
+
+    expect(caught).toBeInstanceOf(FaceNeuralError);
+    expect(caught).toMatchObject({ code: "invalid-output" });
   });
 });

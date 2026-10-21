@@ -22,15 +22,15 @@ export interface NeuralFace {
 
 /** Options for {@link FaceDetector.detect}. */
 export interface DetectFacesOptions {
-  /** Minimum confidence, 0–1 (default 0.7). */
+  /** Minimum confidence, 0–1 (default 0.7). Other values throw `invalid-option`. */
   scoreThreshold?: number;
-  /** Overlap (IoU) above which the weaker of two faces is dropped (default 0.3). */
+  /** Overlap (IoU), 0–1, above which the weaker of two faces is dropped (default 0.3). */
   nmsThreshold?: number;
-  /** Return at most this many faces, best first (default 10). */
+  /** Return at most this many faces, best first: a whole number from 1 to 100 (default 10). */
   maxFaces?: number;
 }
 
-/** A tensor as onnxruntime returns it; `data` is checked to be numeric before use. */
+/** A tensor as onnxruntime returns it; name, shape, type and values are checked before use. */
 export interface OrtTensorLike {
   readonly data: unknown;
   readonly dims: readonly number[];
