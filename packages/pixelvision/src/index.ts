@@ -10,6 +10,28 @@ export { cloneMatrix, createMatrix } from "./core/matrix";
 export { fromImageData, toImageData } from "./core/image";
 export type { GaussianKernelOptions } from "./math/gaussianKernel.model";
 export { gaussianKernel } from "./math/gaussianKernel";
+export type { Eigen, SVD } from "./math/linalg.model";
+export {
+  choleskySolve,
+  eigenSymmetric,
+  luSolve,
+  pseudoInverse,
+  svd,
+  svdSolve,
+} from "./math/linalg";
+export type { MultiplyOptions, NumericMatrix } from "./math/matmath.model";
+export {
+  determinant3x3,
+  identity,
+  invert3x3,
+  matrixFromRows,
+  matrixToRows,
+  multiply,
+  transpose,
+} from "./math/matmath";
+export { median } from "./math/median";
+export type { Point } from "./math/transforms.model";
+export { affineTransform, perspectiveTransform, transformPoint } from "./math/transforms";
 export type { BoxBlurOptions, BoxSumOptions } from "./imgproc/boxBlur.model";
 export { boxBlur, boxSum } from "./imgproc/boxBlur";
 export type { CannyOptions } from "./imgproc/canny.model";
