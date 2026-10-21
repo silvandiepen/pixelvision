@@ -68,7 +68,7 @@ export function createHeadTurnChallenge(options: HeadTurnChallengeOptions = {}):
       case "face-camera-again":
         return pose === "frontal";
       case "turn-one-side":
-        return pose === "profile" || pose === "mirrored-profile";
+        return pose !== "frontal" && pose !== "none";
       default:
         return pose !== "frontal" && pose !== "none" && pose !== firstSide;
     }

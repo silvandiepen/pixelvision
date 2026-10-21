@@ -25,6 +25,14 @@ describe("createHeadTurnChallenge", () => {
     expect(challenge.update("none").step).toBe("done");
   });
 
+  it("accepts landmark-based left and right turns", () => {
+    const challenge = createHeadTurnChallenge({ holdFrames: 1 });
+
+    expect(feed(challenge, ["frontal", "turned-right", "turned-left", "frontal"]).step).toBe(
+      "done",
+    );
+  });
+
   it("needs the other side, not the same one twice", () => {
     const challenge = createHeadTurnChallenge({ holdFrames: 1 });
     feed(challenge, ["frontal", "profile"]);
