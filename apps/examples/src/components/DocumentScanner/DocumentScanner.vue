@@ -138,6 +138,7 @@ const statusText = computed(() => {
   if (state.value === "holding") {
     return `Hold still (${scan.held.value} of ${scan.stableFrames})`;
   }
+  if (scan.cut.value) return "Move back so the whole document is in view.";
   return "Looking for a document. Fit the whole page in view, against a background it stands out from.";
 });
 

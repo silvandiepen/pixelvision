@@ -25,6 +25,8 @@ export interface UseDocumentScan {
   frameSize: Ref<{ width: number; height: number } | null>;
   /** Detections in a row that found the document, up to {@link UseDocumentScan.stableFrames}. */
   held: Ref<number>;
+  /** True while a document is in view but runs off the edge of the frame. */
+  cut: Ref<boolean>;
   /** Detections in a row needed before it captures. */
   stableFrames: number;
   /** Starts the back camera and the loop. Resolves `false` when the camera isn't available. */

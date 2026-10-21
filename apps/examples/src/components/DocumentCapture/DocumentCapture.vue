@@ -86,9 +86,11 @@ const message = ref<string | null>(null);
 
 const active = computed(() => camera.active.value);
 const holding = computed(() => scan.state.value === "holding");
-const statusText = computed(() =>
-  holding.value ? "Hold still…" : "Looking for a document. Fit the whole page in view.",
-);
+const statusText = computed(() => {
+  if (holding.value) return "Hold still…";
+  if (scan.cut.value) return "Move back so the whole document is in view.";
+  return "Looking for a document. Fit the whole page in view.";
+});
 
 /** Starts the back camera. */
 async function startCamera(): Promise<void> {

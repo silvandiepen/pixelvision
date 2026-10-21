@@ -185,6 +185,28 @@ test.describe("document scanner", () => {
     expect(ratio).toBeCloseTo(85.6 / 53.98, 1);
   });
 
+  test("asks to move back when the document runs off the frame", async ({ page }) => {
+    // The right-hand corners lie beyond the 640 px wide frame.
+    await fakeCameraWithScene(page, [
+      { x: 300, y: 110 },
+      { x: 720, y: 130 },
+      { x: 720, y: 380 },
+      { x: 280, y: 360 },
+    ]);
+    await page.goto("/scan-document");
+    await page.locator("[data-scanner-camera]").click();
+
+    await expect(page.locator("[data-scanner-status]")).toHaveText(
+      "Move back so the whole document is in view.",
+      { timeout: 10_000 },
+    );
+    await page.waitForTimeout(2_000);
+    await expect(page.locator('[data-slug="scan-document"]')).not.toHaveAttribute(
+      "data-scanner-state",
+      "captured",
+    );
+  });
+
   test("captures from the camera once the document is still", async ({ page }) => {
     await fakeCameraWithScene(page);
     await page.goto("/scan-document");

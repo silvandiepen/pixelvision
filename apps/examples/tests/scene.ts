@@ -65,8 +65,12 @@ export async function scenePng(page: Page): Promise<Buffer> {
  * Replaces the camera with a stream of the generated scene.
  *
  * @param page - The page, before it navigates.
+ * @param corners - Where the document is drawn (default {@link SCENE_CORNERS}).
  */
-export async function fakeCameraWithScene(page: Page): Promise<void> {
+export async function fakeCameraWithScene(
+  page: Page,
+  corners: readonly { x: number; y: number }[] = SCENE_CORNERS,
+): Promise<void> {
   await page.addInitScript(
     ([source, corners]) => {
       const draw = new Function("canvas", "corners", `(${source})(canvas, corners)`);
@@ -85,7 +89,7 @@ export async function fakeCameraWithScene(page: Page): Promise<void> {
         configurable: true,
       });
     },
-    [drawScene.toString(), SCENE_CORNERS] as const,
+    [drawScene.toString(), corners] as const,
   );
 }
 

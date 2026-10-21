@@ -27,6 +27,7 @@ export function useDocumentScan({ onCapture }: UseDocumentScanOptions): UseDocum
   const liveCorners = shallowRef<readonly Point[] | null>(null);
   const frameSize = ref<{ width: number; height: number } | null>(null);
   const held = ref(0);
+  const cut = ref(false);
   const tracker = createDocumentTracker({ holdFrames: STABLE_FRAMES });
   let timer = 0;
 
@@ -34,7 +35,11 @@ export function useDocumentScan({ onCapture }: UseDocumentScanOptions): UseDocum
     const frame = camera.frame(FRAME_BOX);
     if (frame) {
       frameSize.value = { width: frame.width, height: frame.height };
-      const { status, corners, progress } = tracker.update(findDocument(frame)?.corners ?? null);
+      const found = findDocument(frame, { reportCut: true });
+      cut.value = found?.cut === true;
+      const { status, corners, progress } = tracker.update(
+        found && !found.cut ? found.corners : null,
+      );
       liveCorners.value = corners;
       held.value = Math.round(progress * STABLE_FRAMES);
       state.value = corners ? "holding" : "looking";
@@ -55,6 +60,7 @@ export function useDocumentScan({ onCapture }: UseDocumentScanOptions): UseDocum
     window.clearTimeout(timer);
     tracker.reset();
     held.value = 0;
+    cut.value = false;
     liveCorners.value = null;
     if (!(await camera.start("environment"))) {
       state.value = "idle";
@@ -73,5 +79,15 @@ export function useDocumentScan({ onCapture }: UseDocumentScanOptions): UseDocum
   }
 
   onBeforeUnmount(() => window.clearTimeout(timer));
-  return { camera, state, liveCorners, frameSize, held, stableFrames: STABLE_FRAMES, start, stop };
+  return {
+    camera,
+    state,
+    liveCorners,
+    frameSize,
+    held,
+    cut,
+    stableFrames: STABLE_FRAMES,
+    start,
+    stop,
+  };
 }
