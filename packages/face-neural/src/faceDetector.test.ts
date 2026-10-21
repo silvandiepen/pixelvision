@@ -37,9 +37,13 @@ const pixel = { width: 1, height: 1, data: [0, 0, 0, 255] };
 
 const model = readFileSync(new URL("../models/face_detection_yunet_2023mar.onnx", import.meta.url));
 
+// One thread for the real model, so it doesn't take every core from the test
+// suites running beside it.
+const sessionOptions = { intraOpNumThreads: 1, interOpNumThreads: 1 };
+
 describe("createFaceDetector", () => {
   it("runs the real model and finds no face in a blank frame", async () => {
-    const detector = await createFaceDetector({ ort, model });
+    const detector = await createFaceDetector({ ort, model, sessionOptions });
     const blank = { width: 320, height: 240, data: new Uint8ClampedArray(320 * 240 * 4).fill(128) };
 
     expect(await detector.detect(blank)).toEqual([]);
@@ -47,7 +51,7 @@ describe("createFaceDetector", () => {
 
   it("loads a model from a path and rejects non-numeric outputs", async () => {
     const path = new URL("../models/face_detection_yunet_2023mar.onnx", import.meta.url).pathname;
-    await expect(createFaceDetector({ ort, model: path })).resolves.toBeDefined();
+    await expect(createFaceDetector({ ort, model: path, sessionOptions })).resolves.toBeDefined();
 
     const outputs = emptyOutputs();
     (outputs.cls_8 as { data: unknown }).data = ["x"];

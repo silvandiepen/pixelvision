@@ -28,7 +28,9 @@ jobs:
       - run: pnpm check:packages
       - run: pnpm check:models
       - run: pnpm typecheck
-      - run: pnpm test
+      # Two suites at a time: run together, the OpenCV and model tests starve
+      # each other on a 4-core runner and hit the per-test timeout.
+      - run: pnpm test --concurrency=2
 
   e2e:
     runs-on: ubuntu-latest
@@ -41,7 +43,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter @pixelvision/examples exec playwright install --with-deps chromium firefox webkit
-      - run: pnpm test:e2e
+      # One browser suite at a time, for the same reason.
+      - run: pnpm test:e2e --concurrency=1
       - if: failure()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
