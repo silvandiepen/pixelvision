@@ -1,6 +1,6 @@
 {
   "name": "@pixelvision/face-neural",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Optional neural face detection with landmarks for pixelvision (YuNet on onnxruntime): head angle, eyes, nose and mouth.",
   "license": "MIT",
   "author": "Sil van Diepen",
