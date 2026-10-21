@@ -42,6 +42,23 @@ export async function readImageFile(file: File): Promise<ImageData> {
 }
 
 /**
+ * Waits until a playing video has a picture to read. Some browsers report the
+ * video's size before the first frame is drawn, and reading then gives a blank
+ * image.
+ *
+ * @param video - A video element that has started playing.
+ */
+async function waitForFrame(video: HTMLVideoElement): Promise<void> {
+  const once = (event: string) =>
+    new Promise((resolve) => video.addEventListener(event, resolve, { once: true }));
+  if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA) await once("loadeddata");
+  if (video.videoWidth === 0) await once("resize");
+  if (typeof video.requestVideoFrameCallback === "function") {
+    await new Promise((resolve) => video.requestVideoFrameCallback(resolve));
+  }
+}
+
+/**
  * Takes one frame from the camera, then turns the camera off again.
  *
  * @returns The frame's RGBA pixels.
@@ -58,9 +75,7 @@ export async function readCameraFrame(): Promise<ImageData> {
     video.playsInline = true;
     video.srcObject = stream;
     await video.play();
-    if (video.videoWidth === 0) {
-      await new Promise((resolve) => video.addEventListener("resize", resolve, { once: true }));
-    }
+    await waitForFrame(video);
     return pixelsOf(video, video.videoWidth, video.videoHeight);
   } finally {
     stream.getTracks().forEach((track) => track.stop());
