@@ -66,12 +66,12 @@
     </div>
 
     <div :class="bemm('intro')">
-      <p :class="bemm('eyebrow')">Liveness</p>
-      <h2 id="liveness-heading" :class="bemm('title')">Check there's a person there.</h2>
-      <p :class="bemm('lead')">
-        Look at the camera, turn your head one way, then the other. A printed photo or a still
-        screen can't do that.
-      </p>
+      <SectionHeading
+        eyebrow="Liveness"
+        title="Check there's a person there."
+        heading-id="liveness-heading"
+        lede="Look at the camera, turn your head one way, then the other. A printed photo or a still screen can't do that."
+      />
       <SegmentedChoice
         :model-value="backend"
         label="Face detector"
@@ -97,6 +97,7 @@ import AppButton from "../AppButton";
 import FaceCapture from "../FaceCapture";
 import type { FaceCaptureResult } from "../FaceCapture/FaceCapture.model";
 import PixelCanvas from "../PixelCanvas";
+import SectionHeading from "../SectionHeading";
 import SegmentedChoice from "../SegmentedChoice";
 import SuccessMark from "../SuccessMark";
 import type { FaceBackend } from "../../composables/useHeadTurn/useHeadTurn.model";
@@ -183,24 +184,6 @@ watchEffect(() => {
     display: flex;
     flex-direction: column;
     gap: var(--auno-space-l);
-  }
-
-  &__eyebrow {
-    color: var(--pv-accent);
-    font-size: var(--auno-text-small);
-    font-weight: 600;
-  }
-
-  &__title {
-    font-size: clamp(36px, 5vw, 56px);
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-  }
-
-  &__lead {
-    color: var(--auno-secondary);
-    font-size: var(--auno-text-lead);
-    line-height: 1.45;
   }
 
   &__note {

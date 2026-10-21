@@ -6,12 +6,12 @@
     :data-scan-state="capture ? 'success' : 'scanning'"
   >
     <div :class="bemm('intro')">
-      <p :class="bemm('eyebrow')">Document scanning</p>
-      <h2 id="scan-heading" :class="bemm('title')">Scan a document.</h2>
-      <p :class="bemm('lead')">
-        Point your camera at a page or card. It finds the edges, waits for you to hold still, and
-        straightens it into a file you can keep.
-      </p>
+      <SectionHeading
+        eyebrow="Document scanning"
+        title="Scan a document."
+        heading-id="scan-heading"
+        lede="Point your camera at a page or card. It finds the edges, waits for you to hold still, and straightens it into a file you can keep."
+      />
       <SegmentedChoice v-model="aspect" label="Proportions" name="aspect" :options="ASPECTS" />
     </div>
 
@@ -92,6 +92,7 @@ import type { Point } from "pixelvision";
 import AppButton from "../AppButton";
 import DocumentCapture from "../DocumentCapture";
 import PixelCanvas from "../PixelCanvas";
+import SectionHeading from "../SectionHeading";
 import SegmentedChoice from "../SegmentedChoice";
 import SuccessMark from "../SuccessMark";
 import type { DocumentCapture as Capture } from "../../composables/useDocumentScan/useDocumentScan.model";
@@ -194,24 +195,6 @@ watchEffect(() => {
     display: flex;
     flex-direction: column;
     gap: var(--auno-space-l);
-  }
-
-  &__eyebrow {
-    color: var(--pv-accent);
-    font-size: var(--auno-text-small);
-    font-weight: 600;
-  }
-
-  &__title {
-    font-size: clamp(36px, 5vw, 56px);
-    letter-spacing: -0.03em;
-    line-height: 1.05;
-  }
-
-  &__lead {
-    color: var(--auno-secondary);
-    font-size: var(--auno-text-lead);
-    line-height: 1.45;
   }
 
   &__demo {

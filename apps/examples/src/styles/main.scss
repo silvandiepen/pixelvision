@@ -29,6 +29,19 @@
   --pv-accent: oklch(0.47 0.2 290);
   --pv-overlay: oklch(0.62 0.26 290);
 
+  // Code highlighting: tones of the anchors above, so they follow the theme.
+  // Weight and italics carry most of the difference; no hue.
+  --pv-code-background: var(--auno-surface);
+  --pv-code-foreground: var(--auno-ink);
+  --pv-code-keyword: var(--auno-ink);
+  --pv-code-function: var(--auno-ink);
+  --pv-code-constant: var(--auno-ink);
+  --pv-code-type: color-mix(in srgb, var(--auno-ink) 85%, var(--auno-page));
+  --pv-code-property: color-mix(in srgb, var(--auno-ink) 85%, var(--auno-page));
+  --pv-code-string: var(--auno-secondary);
+  --pv-code-punctuation: var(--auno-secondary);
+  --pv-code-comment: var(--auno-faint);
+
   // Type
   --auno-font:
     -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
