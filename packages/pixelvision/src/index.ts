@@ -1,3 +1,4 @@
+// Core
 export type {
   CreateMatrixOptions,
   ImageLike,
@@ -8,6 +9,8 @@ export type {
 } from "./core/matrix.model";
 export { cloneMatrix, createMatrix } from "./core/matrix";
 export { fromImageData, toImageData } from "./core/image";
+
+// Math
 export type { GaussianKernelOptions } from "./math/gaussianKernel.model";
 export { gaussianKernel } from "./math/gaussianKernel";
 export type { Eigen, SVD } from "./math/linalg.model";
@@ -32,6 +35,8 @@ export {
 export { median } from "./math/median";
 export type { Point } from "./math/transforms.model";
 export { affineTransform, perspectiveTransform, transformPoint } from "./math/transforms";
+
+// Document scanning
 export type {
   ExtractDocumentOptions,
   FindDocumentOptions,
@@ -39,12 +44,34 @@ export type {
   Quad,
 } from "./document/document.model";
 export { extractDocument, findDocument } from "./document/document";
+
+// Shapes
 export type { Contour, FindContoursOptions } from "./shape/contours.model";
 export { findContours } from "./shape/contours";
 export { approxPolygon, arcLength, contourArea, isConvex } from "./shape/polygon";
+
+// Face
+export type {
+  HeadPose,
+  HeadPoseCascades,
+  HeadPoseOptions,
+  HeadPoseResult,
+} from "./face/headPose.model";
+export { detectHeadPose } from "./face/headPose";
+export type {
+  HeadTurnChallenge,
+  HeadTurnChallengeOptions,
+  HeadTurnState,
+  HeadTurnStep,
+} from "./face/headTurnChallenge.model";
+export { createHeadTurnChallenge } from "./face/headTurnChallenge";
+
+// Detection
 export type { Detection, HaarCascade, HaarOptions, HaarStage, HaarTree } from "./detect/haar.model";
 export { detectHaar } from "./detect/haar";
 export { groupRectangles } from "./detect/groupRectangles";
+
+// Features
 export type { FastOptions } from "./features/fast.model";
 export { detectFast } from "./features/fast";
 export type { Keypoint } from "./features/keypoint.model";
@@ -59,11 +86,17 @@ export type { YapeOptions } from "./features/yape.model";
 export { detectYape } from "./features/yape";
 export type { Yape06Options } from "./features/yape06.model";
 export { detectYape06 } from "./features/yape06";
+
+// Motion estimation
 export type { Estimate, EstimateOptions, EstimationMethod } from "./motion/estimate.model";
 export { estimateAffine, estimateHomography } from "./motion/estimate";
+
+// Tracking
 export type { FlowFrame, TrackedPoint, TrackPointsOptions } from "./tracking/opticalFlow.model";
 export { trackPoints } from "./tracking/opticalFlow";
 export { buildPyramid } from "./tracking/pyramid";
+
+// Image processing
 export type { BoxBlurOptions, BoxSumOptions } from "./imgproc/boxBlur.model";
 export { boxBlur, boxSum } from "./imgproc/boxBlur";
 export type { CannyOptions } from "./imgproc/canny.model";
@@ -84,6 +117,7 @@ export type { IntegralImage, IntegralImageOptions } from "./imgproc/integralImag
 export { integralImage } from "./imgproc/integralImage";
 export type { PyrDownOptions } from "./imgproc/pyrDown.model";
 export { pyrDown } from "./imgproc/pyrDown";
+export { flip } from "./imgproc/flip";
 export type { MorphologyOptions } from "./imgproc/morphology.model";
 export { dilate, erode } from "./imgproc/morphology";
 export type { ThresholdOptions } from "./imgproc/threshold.model";
