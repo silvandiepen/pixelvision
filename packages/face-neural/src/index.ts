@@ -5,6 +5,7 @@ export type {
   FaceLandmarks,
   NeuralFace,
   OrtLike,
+  OrtSessionLike,
   OrtTensorLike,
 } from "./faceDetector.model";
 export { createFaceDetector } from "./faceDetector";

@@ -65,7 +65,7 @@ Pass the onnxruntime module your app uses (for example `onnxruntime-react-native
 
 ## TypeScript
 
-In this version the `ort` option's type is stricter than onnxruntime's own declarations, so passing the module directly can fail to type-check even though it works at runtime. The [head-turn example's loader](https://github.com/silvandiepen/pixelvision/blob/main/apps/examples/src/examples/head-turn/neural.ts) shows a small typed adapter until that's fixed.
+Pass the onnxruntime module itself as `ort`; no adapter is needed. The [head-turn example's loader](https://github.com/silvandiepen/pixelvision/blob/main/apps/examples/src/examples/head-turn/neural.ts) shows the full set-up, including where the `.wasm` file comes from.
 
 ## The model and its licence
 

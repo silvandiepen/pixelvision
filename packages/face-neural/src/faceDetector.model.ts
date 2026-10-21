@@ -30,26 +30,27 @@ export interface DetectFacesOptions {
   maxFaces?: number;
 }
 
-/** A tensor as onnxruntime returns it. */
+/** A tensor as onnxruntime returns it; `data` is checked to be numeric before use. */
 export interface OrtTensorLike {
-  data: ArrayLike<number> | Float32Array;
-  dims: readonly number[];
+  readonly data: unknown;
+  readonly dims: readonly number[];
+}
+
+/** An inference session as onnxruntime returns it. */
+export interface OrtSessionLike {
+  run(feeds: Record<string, unknown>): Promise<Record<string, OrtTensorLike>>;
 }
 
 /**
  * The parts of an onnxruntime module the detector uses, so you can pass
- * `onnxruntime-web`, `onnxruntime-node` or `onnxruntime-react-native`.
+ * `onnxruntime-web`, `onnxruntime-node` or `onnxruntime-react-native` as is.
  */
 export interface OrtLike {
   InferenceSession: {
-    create: (
-      model: string | Uint8Array | ArrayBuffer,
-      options?: object,
-    ) => Promise<{
-      run: (feeds: Record<string, unknown>) => Promise<Record<string, OrtTensorLike>>;
-    }>;
+    create(uri: string, options?: object): Promise<OrtSessionLike>;
+    create(buffer: Uint8Array, options?: object): Promise<OrtSessionLike>;
   };
-  Tensor: new (type: "float32", data: Float32Array, dims: number[]) => unknown;
+  Tensor: new (type: "float32", data: Float32Array, dims: readonly number[]) => unknown;
 }
 
 /** Options for {@link createFaceDetector}. */

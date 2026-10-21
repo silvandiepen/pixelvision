@@ -8,10 +8,26 @@ const model = readFileSync(new URL("../models/face_detection_yunet_2023mar.onnx"
 
 describe("createFaceDetector", () => {
   it("runs the real model and finds no face in a blank frame", async () => {
-    const detector = await createFaceDetector({ ort: ort as unknown as OrtLike, model });
+    const detector = await createFaceDetector({ ort, model });
     const blank = { width: 320, height: 240, data: new Uint8ClampedArray(320 * 240 * 4).fill(128) };
 
     expect(await detector.detect(blank)).toEqual([]);
+  });
+
+  it("loads a model from a path and rejects non-numeric outputs", async () => {
+    const path = new URL("../models/face_detection_yunet_2023mar.onnx", import.meta.url).pathname;
+    await expect(createFaceDetector({ ort, model: path })).resolves.toBeDefined();
+
+    const odd: OrtLike = {
+      InferenceSession: {
+        create: async () => ({ run: async () => ({ cls_8: { data: ["x"], dims: [1] } }) }),
+      },
+      Tensor: class {} as unknown as OrtLike["Tensor"],
+    };
+    const detector = await createFaceDetector({ ort: odd, model: "model.onnx" });
+    await expect(detector.detect({ width: 1, height: 1, data: [0, 0, 0, 255] })).rejects.toThrow(
+      TypeError,
+    );
   });
 
   it("maps decoded faces back to image pixels", async () => {
@@ -31,7 +47,7 @@ describe("createFaceDetector", () => {
       InferenceSession: { create: async () => ({ run: async () => outputs }) },
       Tensor: class {} as unknown as OrtLike["Tensor"],
     };
-    const detector = await createFaceDetector({ ort: fake, model: new Uint8Array() });
+    const detector = await createFaceDetector({ ort: fake, model: new ArrayBuffer(0) });
 
     // Image 1280x960: scale 0.5, so model pixels double.
     const [face] = await detector.detect({

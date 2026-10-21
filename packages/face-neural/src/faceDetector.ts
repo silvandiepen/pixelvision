@@ -1,12 +1,34 @@
 import type { ImageLike } from "pixelvision";
 import { decodeYuNet, INPUT_SIZE, suppress } from "./decode";
+import type { YuNetOutputs } from "./decode";
 import type {
   CreateFaceDetectorOptions,
   DetectFacesOptions,
   FaceDetector,
   NeuralFace,
+  OrtTensorLike,
 } from "./faceDetector.model";
 import { letterbox } from "./preprocess";
+
+/**
+ * Checks that every model output holds numbers.
+ *
+ * @param outputs - Raw session outputs.
+ * @returns The outputs typed as numeric.
+ * @throws {TypeError} When an output isn't numeric (a different model).
+ */
+const numericOutputs = (outputs: Record<string, OrtTensorLike>): YuNetOutputs => {
+  const result: YuNetOutputs = {};
+  for (const [name, tensor] of Object.entries(outputs)) {
+    if (!(tensor.data instanceof Float32Array)) {
+      throw new TypeError(
+        `createFaceDetector: output ${name} isn't float32; is this the YuNet model?`,
+      );
+    }
+    result[name] = { data: tensor.data };
+  }
+  return result;
+};
 
 /**
  * Loads YuNet (OpenCV Zoo, MIT) and returns a detector that finds faces
@@ -29,7 +51,13 @@ export async function createFaceDetector(
   options: CreateFaceDetectorOptions,
 ): Promise<FaceDetector> {
   const { ort, model, sessionOptions } = options;
-  const session = await ort.InferenceSession.create(model, sessionOptions);
+  const session =
+    typeof model === "string"
+      ? await ort.InferenceSession.create(model, sessionOptions)
+      : await ort.InferenceSession.create(
+          model instanceof Uint8Array ? model : new Uint8Array(model),
+          sessionOptions,
+        );
   return {
     async detect(image: ImageLike, detectOptions: DetectFacesOptions = {}): Promise<NeuralFace[]> {
       const { scoreThreshold = 0.7, nmsThreshold = 0.3, maxFaces = 10 } = detectOptions;
@@ -37,7 +65,11 @@ export async function createFaceDetector(
       const outputs = await session.run({
         input: new ort.Tensor("float32", data, [1, 3, INPUT_SIZE, INPUT_SIZE]),
       });
-      const faces = suppress(decodeYuNet(outputs, scoreThreshold), nmsThreshold, maxFaces);
+      const faces = suppress(
+        decodeYuNet(numericOutputs(outputs), scoreThreshold),
+        nmsThreshold,
+        maxFaces,
+      );
       const back = (p: { x: number; y: number }) => ({ x: p.x / scale, y: p.y / scale });
       return faces.map((face) => ({
         x: face.x / scale,
