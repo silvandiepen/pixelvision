@@ -1,7 +1,13 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: {
+    index: "src/index.ts",
+    "cascades/frontal-face": "src/cascades/frontal-face.ts",
+    "cascades/profile-face": "src/cascades/profile-face.ts",
+    "cascades/eye": "src/cascades/eye.ts",
+    "cascades/upper-body": "src/cascades/upper-body.ts",
+  },
   format: ["esm", "cjs"],
   dts: true,
   sourcemap: true,

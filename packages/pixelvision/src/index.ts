@@ -32,6 +32,9 @@ export {
 export { median } from "./math/median";
 export type { Point } from "./math/transforms.model";
 export { affineTransform, perspectiveTransform, transformPoint } from "./math/transforms";
+export type { Detection, HaarCascade, HaarOptions, HaarStage, HaarTree } from "./detect/haar.model";
+export { detectHaar } from "./detect/haar";
+export { groupRectangles } from "./detect/groupRectangles";
 export type { FastOptions } from "./features/fast.model";
 export { detectFast } from "./features/fast";
 export type { Keypoint } from "./features/keypoint.model";
