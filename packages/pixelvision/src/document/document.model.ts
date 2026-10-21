@@ -8,7 +8,7 @@ export type Quad = [Point, Point, Point, Point];
 export interface FindDocumentOptions {
   /** Work on a copy scaled so its longer side is at most this (default 400). Smaller is faster. */
   maxSize?: number;
-  /** Smallest document as a fraction of the image area (default 0.1). */
+  /** Smallest document as a fraction of the image area (default 0.02: an ID card held up to a webcam). */
   minArea?: number;
   /** Largest document as a fraction of the image area (default 0.98). */
   maxArea?: number;

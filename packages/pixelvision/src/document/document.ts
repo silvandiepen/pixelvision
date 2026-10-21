@@ -107,7 +107,7 @@ export function findDocument(
   image: ImageLike | Matrix,
   options: FindDocumentOptions = {},
 ): FoundDocument | null {
-  const { maxSize = 400, minArea = 0.1, maxArea = 0.98 } = options;
+  const { maxSize = 400, minArea = 0.02, maxArea = 0.98 } = options;
   const gray = toGray(image, options.order);
   const { width, height } = gray;
   if (width < 8 || height < 8) return null;
