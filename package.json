@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm check:models && pnpm test && pnpm build",
+    "check:models": "node scripts/check-models.mjs",
     "check:packages": "node scripts/check-packages.mjs"
   },
   "devDependencies": {

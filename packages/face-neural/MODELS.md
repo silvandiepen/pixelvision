@@ -4,6 +4,8 @@
 
 - Source: https://huggingface.co/opencv/face_detection_yunet (OpenCV Zoo), file
   `face_detection_yunet_2023mar.onnx`, unmodified.
+- SHA-256: `8f2383e4dd3cfbb4553ea8718107fc0423210dc964f9f4280604804ed2552fa4` (232,589 bytes),
+  checked in CI by `pnpm check:models`.
 - Licence: MIT, Copyright (c) 2020 Shiqi Yu <shiqi.yu@gmail.com>.
 - Paper: Wu, W., Peng, H. & Yu, S. "YuNet: A Tiny Millisecond-level Face Detector",
   Machine Intelligence Research, 2023.
