@@ -23,8 +23,18 @@ export interface HeadPoseOptions {
   maxSize?: number;
   /** Smallest face as a fraction of the shorter image side (default 0.2). */
   minFaceSize?: number;
-  /** Minimum merged detections per face (default 2). */
+  /** Minimum merged detections for a frontal face (default 2). */
   minNeighbors?: number;
+  /**
+   * Minimum merged detections for a profile (default 1). The profile
+   * cascade was trained on near-full side views and rarely fires more than
+   * once on a moderate turn, so it's accepted on a single detection; hold
+   * the pose for a few frames (as the head-turn challenge does) to filter
+   * stray hits.
+   */
+  profileMinNeighbors?: number;
+  /** Scale step between window sizes (default 1.1; smaller finds more poses, slower). */
+  scaleFactor?: number;
 }
 
 /** The pose seen in one frame. */

@@ -13,6 +13,9 @@ import type { HeadPoseCascades, HeadPoseOptions, HeadPoseResult } from "./headPo
  * cascade on the mirrored frame (it's trained for one side only). The
  * detection with the most support wins.
  *
+ * The profile cascade only fires on clear turns (it was trained on
+ * near-full side views); moderate turns read as `"none"` in between.
+ *
  * @param image - Single-channel `u8` matrix (gray camera frame).
  * @param cascades - Frontal and profile cascades.
  * @param options - Working size, minimum face size, grouping strength.
@@ -32,7 +35,13 @@ export function detectHeadPose(
 ): HeadPoseResult {
   assertType("detectHeadPose", image, "u8");
   assertChannels("detectHeadPose", image, 1);
-  const { maxSize = 320, minFaceSize = 0.2, minNeighbors = 2 } = options;
+  const {
+    maxSize = 320,
+    minFaceSize = 0.2,
+    minNeighbors = 2,
+    profileMinNeighbors = 1,
+    scaleFactor = 1.1,
+  } = options;
   const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
   const small =
     scale < 1
@@ -43,17 +52,18 @@ export function detectHeadPose(
       : image;
   const prepared = equalizeHistogram(small);
   const minSide = Math.min(prepared.width, prepared.height) * minFaceSize;
-  const detect = (frame: Matrix<"u8">, cascade: HeadPoseCascades["frontal"]) =>
+  const detect = (frame: Matrix<"u8">, cascade: HeadPoseCascades["frontal"], neighbors: number) =>
     detectHaar(frame, cascade, {
-      minNeighbors,
+      minNeighbors: neighbors,
+      scaleFactor,
       minScale: Math.max(1, minSide / cascade.size[0]),
     })[0];
 
   const candidates: Array<[HeadPoseResult["pose"], Detection | undefined]> = [
-    ["frontal", detect(prepared, cascades.frontal)],
-    ["profile", detect(prepared, cascades.profile)],
+    ["frontal", detect(prepared, cascades.frontal, minNeighbors)],
+    ["profile", detect(prepared, cascades.profile, profileMinNeighbors)],
   ];
-  const mirrored = detect(flip(prepared), cascades.profile);
+  const mirrored = detect(flip(prepared), cascades.profile, profileMinNeighbors);
   candidates.push([
     "mirrored-profile",
     mirrored && { ...mirrored, x: prepared.width - mirrored.x - mirrored.width },
