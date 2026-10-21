@@ -2,7 +2,7 @@
 // publint (package.json and files) and Are the types wrong? (types for every
 // entry point in every module mode).
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { copyFileSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -28,7 +28,12 @@ const packages = [
   { dir: "packages/capture-ui", exclude: ["haar-worker"] },
 ];
 
+// Temporary folders, removed when the script ends, whether it passes or fails.
+const scratch = [];
+process.on("exit", () => scratch.forEach((dir) => rmSync(dir, { recursive: true, force: true })));
+
 const out = mkdtempSync(join(tmpdir(), "pixelvision-packs-"));
+scratch.push(out);
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
 
 const tarballs = [];
@@ -47,6 +52,7 @@ for (const { dir, entrypoints, exclude } of packages) {
 // Install the tarballs into an empty project with npm, as a user would, and
 // load every entry point through ESM and CommonJS.
 const app = mkdtempSync(join(tmpdir(), "pixelvision-consumer-"));
+scratch.push(app);
 writeFileSync(join(app, "package.json"), JSON.stringify({ name: "consumer", private: true }));
 run(
   "npm",
