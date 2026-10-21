@@ -26,7 +26,9 @@
   "files": [
     "dist",
     "models",
-    "MODELS.md"
+    "MODELS.md",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -34,16 +36,32 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "onnxruntime-common": "^1.20.0",
     "pixelvision": "workspace:^"
   },
   "devDependencies": {
     "onnxruntime-node": "^1.22.0",
-    "onnxruntime-common": "^1.22.0",
     "pixelvision": "workspace:*",
     "tsup": "^9.0.0"
   },
   "engines": {
     "node": ">=22"
+  },
+  "keywords": [
+    "face-detection",
+    "face-landmarks",
+    "yunet",
+    "onnxruntime",
+    "head-pose",
+    "liveness",
+    "pixelvision"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/silvandiepen/pixelvision.git",
+    "directory": "packages/face-neural"
+  },
+  "homepage": "https://github.com/silvandiepen/pixelvision/tree/main/packages/face-neural#readme",
+  "bugs": {
+    "url": "https://github.com/silvandiepen/pixelvision/issues"
   }
 }

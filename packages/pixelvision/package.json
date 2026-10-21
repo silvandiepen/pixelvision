@@ -34,7 +34,10 @@
   },
   "files": [
     "dist",
-    "THIRD_PARTY_NOTICES.md"
+    "!dist/cascades/*.map",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup",
@@ -66,5 +69,12 @@
   },
   "engines": {
     "node": ">=22"
+  },
+  "typesVersions": {
+    "*": {
+      "cascades/*": [
+        "./dist/cascades/*.d.ts"
+      ]
+    }
   }
 }

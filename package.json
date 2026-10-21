@@ -17,7 +17,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check:packages": "node scripts/check-packages.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -29,6 +30,8 @@
     "turbo": "2.11.7",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.72.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "publint": "0.3.12",
+    "@arethetypeswrong/cli": "0.18.5"
   }
 }

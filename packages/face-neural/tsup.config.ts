@@ -8,5 +8,5 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   target: "es2022",
-  external: ["pixelvision", "onnxruntime-common", "onnxruntime-web", "onnxruntime-node"],
+  external: ["pixelvision"],
 });
