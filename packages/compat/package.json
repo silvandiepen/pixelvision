@@ -1,0 +1,19 @@
+{
+  "name": "@pixelvision/compat",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Proves pixelvision runs unchanged outside Node: the same smoke pipeline in Node and in Hermes (React Native's engine), compared by checksum.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test": "node scripts/run.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixelvision": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2",
+    "hermes-engine-cli": "0.12.0"
+  }
+}

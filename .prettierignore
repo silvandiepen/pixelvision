@@ -3,3 +3,7 @@ coverage
 pnpm-lock.yaml
 .turbo
 packages/pixelvision/src/cascades
+test-results
+playwright-report
+blob-report
+.out
