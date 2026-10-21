@@ -1,5 +1,10 @@
 import {
   arcLength,
+  boundingRect,
+  convexHull,
+  huMoments,
+  minAreaRect,
+  moments,
   contourArea,
   dilate,
   erode,
@@ -287,4 +292,115 @@ describe("blur and warp agree with OpenCV within rounding", () => {
       });
     });
   }
+});
+
+describe("shape analysis matches OpenCV", () => {
+  /** Contours of the fixtures' bright regions, as OpenCV Mats and as points. */
+  const shapeContours = () =>
+    fixtures.flatMap((fixture) =>
+      findContours(threshold(gaussianBlur(gray(fixture), { kernelSize: 5 })), {
+        minPixels: 20,
+      }).map((contour, i) => ({ name: `${fixture.name} #${i}`, contour })),
+    );
+  const asMat = (points: Point[]) =>
+    cv.matFromArray(
+      points.length,
+      1,
+      cv.CV_32SC2,
+      points.flatMap((p) => [p.x, p.y]),
+    );
+
+  it("boundingRect matches cv.boundingRect", () => {
+    for (const { name, contour } of shapeContours()) {
+      const mat = asMat(contour);
+      withMats([mat], () => {
+        const r = cv.boundingRect(mat);
+        expect(boundingRect(contour), name).toEqual({
+          x: r.x,
+          y: r.y,
+          width: r.width,
+          height: r.height,
+        });
+      });
+    }
+  });
+
+  it("convexHull matches cv.convexHull as a point set", () => {
+    for (const { name, contour } of shapeContours()) {
+      const mat = asMat(contour);
+      const hull = new cv.Mat();
+      withMats([mat, hull], () => {
+        cv.convexHull(mat, hull, false, true);
+        const reference = Array.from(
+          { length: hull.rows },
+          (_, k) => `${hull.data32S[k * 2]},${hull.data32S[k * 2 + 1]}`,
+        );
+        const ours = convexHull(contour).map((p) => `${p.x},${p.y}`);
+        expect(ours.sort(), name).toEqual(reference.sort());
+      });
+    }
+  });
+
+  it("minAreaRect matches cv.minAreaRect (area and centre)", () => {
+    for (const { name, contour } of shapeContours()) {
+      const mat = asMat(contour);
+      withMats([mat], () => {
+        const r = cv.minAreaRect(mat);
+        const ours = minAreaRect(contour);
+        expect(ours.width * ours.height, name).toBeCloseTo(r.size.width * r.size.height, 2);
+        expect(ours.center.x, name).toBeCloseTo(r.center.x, 2);
+        expect(ours.center.y, name).toBeCloseTo(r.center.y, 2);
+      });
+    }
+  });
+
+  it("moments and huMoments match cv.moments / cv.HuMoments on contours", () => {
+    for (const { name, contour } of shapeContours()) {
+      const mat = asMat(contour);
+      const hu = new cv.Mat();
+      withMats([mat, hu], () => {
+        const reference = cv.moments(mat, false);
+        const ours = moments(contour);
+        for (const key of [
+          "m00",
+          "m10",
+          "m01",
+          "m20",
+          "m11",
+          "m02",
+          "m30",
+          "m21",
+          "m12",
+          "m03",
+          "mu20",
+          "mu11",
+          "mu02",
+          "mu30",
+          "mu21",
+          "mu12",
+          "mu03",
+          "nu20",
+          "nu11",
+          "nu02",
+          "nu30",
+          "nu21",
+          "nu12",
+          "nu03",
+        ] as const) {
+          // Central moments subtract large spatial moments, so measure their
+          // error against the spatial moment of the same order.
+          const base = key.startsWith("mu") ? reference[`m${key.slice(2)}`] : reference[key];
+          const scale = Math.max(1, Math.abs(base));
+          expect(Math.abs(ours[key] - reference[key]) / scale, `${name} ${key}`).toBeLessThan(1e-6);
+        }
+        cv.HuMoments(reference, hu);
+        const referenceHu = Array.from(hu.data64F as Float64Array);
+        huMoments(ours).forEach((h, k) =>
+          expect(Math.abs(h - referenceHu[k]), `${name} hu${k + 1}`).toBeLessThan(
+            1e-9 + 1e-6 * Math.abs(referenceHu[k]),
+          ),
+        );
+      });
+    }
+  });
 });

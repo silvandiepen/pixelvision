@@ -49,6 +49,8 @@ export { extractDocument, findDocument } from "./document/document";
 export type { Contour, FindContoursOptions } from "./shape/contours.model";
 export { findContours } from "./shape/contours";
 export { approxPolygon, arcLength, contourArea, isConvex } from "./shape/polygon";
+export type { Moments, Rect, RotatedRect } from "./shape/shapes.model";
+export { boundingRect, convexHull, huMoments, minAreaRect, moments } from "./shape/shapes";
 
 // Face
 export type {
