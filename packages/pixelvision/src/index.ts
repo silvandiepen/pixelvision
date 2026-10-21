@@ -32,6 +32,16 @@ export {
 export { median } from "./math/median";
 export type { Point } from "./math/transforms.model";
 export { affineTransform, perspectiveTransform, transformPoint } from "./math/transforms";
+export type {
+  ExtractDocumentOptions,
+  FindDocumentOptions,
+  FoundDocument,
+  Quad,
+} from "./document/document.model";
+export { extractDocument, findDocument } from "./document/document";
+export type { Contour, FindContoursOptions } from "./shape/contours.model";
+export { findContours } from "./shape/contours";
+export { approxPolygon, arcLength, contourArea, isConvex } from "./shape/polygon";
 export type { Detection, HaarCascade, HaarOptions, HaarStage, HaarTree } from "./detect/haar.model";
 export { detectHaar } from "./detect/haar";
 export { groupRectangles } from "./detect/groupRectangles";
@@ -74,6 +84,10 @@ export type { IntegralImage, IntegralImageOptions } from "./imgproc/integralImag
 export { integralImage } from "./imgproc/integralImage";
 export type { PyrDownOptions } from "./imgproc/pyrDown.model";
 export { pyrDown } from "./imgproc/pyrDown";
+export type { MorphologyOptions } from "./imgproc/morphology.model";
+export { dilate, erode } from "./imgproc/morphology";
+export type { ThresholdOptions } from "./imgproc/threshold.model";
+export { otsuLevel, threshold } from "./imgproc/threshold";
 export type { ResampleOptions } from "./imgproc/resample.model";
 export { resample } from "./imgproc/resample";
 export type { Transform, WarpOptions } from "./imgproc/warp.model";
