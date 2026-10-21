@@ -163,7 +163,11 @@ test.describe("landing page: liveness check", () => {
     expect(errors).toEqual([]);
   });
 
-  test("asks for a face only once none has been seen for a moment", async ({ page }) => {
+  test("asks for a face only once none has been seen for a moment", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(canvasCameraUnsupported(browserName), CANVAS_CAMERA_SKIP);
     await blankCamera(page);
     await page.goto("/");
     const section = page.locator("[data-home-liveness]");
