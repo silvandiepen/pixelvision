@@ -105,6 +105,18 @@ function ring(count: number, radius: number, r: number): string {
   }).join("");
 }
 
+/**
+ * Three overlapping discs standing for R, G and B, the target of the
+ * "back to RGB" icons.
+ *
+ * @param x - Centre x of the group.
+ * @param y - Centre y of the group.
+ * @returns Three circle elements.
+ */
+function rgbTrio(x: number, y: number): string {
+  return `<circle cx="${x - 1.6}" cy="${y - 1.2}" r="2.4"/><circle cx="${x + 1.6}" cy="${y - 1.2}" r="2.4"/><circle cx="${x}" cy="${y + 1.5}" r="2.4"/>`;
+}
+
 /** A tilted quadrilateral, the "document in a photo" shape. */
 const TILTED = "M5 6.5L17.5 4.5L19 16.5L6.5 19.5Z";
 
@@ -199,6 +211,43 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
     `<path d="M12 3V21" stroke-dasharray="2 2"/><path d="M9.5 6L3 18H9.5Z" fill="currentColor" stroke="none" opacity="0.8"/><path d="M14.5 6L21 18H14.5Z"/>`,
   ),
 
+  "rgb-to-hls": icon(
+    `<path d="M12 3L19.5 12L12 21L4.5 12Z"/><path d="M4.5 12A7.5 2.2 0 0 0 19.5 12" ${SOFT}/><path d="M12 3V21" ${SOFT}/>`,
+  ),
+  "hls-to-rgb": icon(
+    `<path d="M6 6.5L9.5 12L6 17.5L2.5 12Z"/>${arrow(10.5, 12, 13.2, 12)}${rgbTrio(18, 12)}`,
+  ),
+  "hsv-to-rgb": icon(
+    `<circle cx="6" cy="12" r="3.8"/><path d="M6 8.2V12L9.3 13.9" ${SOFT}/>${arrow(10.5, 12, 13.2, 12)}${rgbTrio(18, 12)}`,
+  ),
+  "rgb-to-lab": icon(
+    `<path d="M12 3V21"/><path d="M4 15.5L20 8.5" ${SOFT}/><path d="M4.5 8L19.5 16" ${SOFT}/>${dot(12, 12, 1.6)}`,
+  ),
+  "lab-to-rgb": icon(
+    `<path d="M6 6.5V17.5"/><path d="M2.5 14L9.5 10" ${SOFT}/>${arrow(10.5, 12, 13.2, 12)}${rgbTrio(18, 12)}`,
+  ),
+  "rgb-to-ycrcb": icon(
+    `<rect x="3" y="4" width="5" height="16" rx="1.5"/><path d="M3 14H8" ${SOFT}/><rect x="11" y="4" width="10" height="16" rx="1.5" ${SOFT}/><path d="M16 4V20M11 12H21" ${SOFT}/>${dot(18.5, 8.5, 1.4)}`,
+  ),
+  "ycrcb-to-rgb": icon(
+    `<rect x="2.5" y="7" width="3" height="10" rx="1"/><rect x="6.5" y="9" width="3.5" height="6" rx="1" ${SOFT}/>${arrow(11, 12, 13.4, 12)}${rgbTrio(18, 12)}`,
+  ),
+  "filter-2d": icon(
+    `<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M9.33 4V20M14.67 4V20M4 9.33H20M4 14.67H20" ${SOFT}/><path d="M10.9 12H13.1M12 10.9V13.1"/><path d="M5.9 12H7.5M16.5 12H18.1M11.2 6.67H12.8M11.2 17.33H12.8" ${SOFT}/>`,
+  ),
+  "bilateral-filter": icon(
+    `<path d="M3 17H11V7H21"/><path d="M3 14L5 15.5L7 13L9 15L11 13.5" ${SOFT}/><path d="M13 10L15 8.5L17 10.5L19 9L21 10.5" ${SOFT}/>`,
+  ),
+  clahe: icon(
+    `<path d="M3 20H21"/><path d="M5.5 20V12M9 20V9M12.5 20V10.5M16 20V9M19.5 20V13"/><path d="M9 9V5M16 9V4" ${SOFT}/><path d="M3 9H21" stroke-dasharray="2 2" ${SOFT}/>`,
+  ),
+  "calc-hist": icon(
+    `<path d="M3 20H21"/><path d="M5 20V11M11 20V5.5M17 20V13"/><path d="M7.5 20V8M13.5 20V14.5M19.5 20V9" ${SOFT}/>`,
+  ),
+  "flood-fill": icon(
+    `<path d="M4 11.5L10.5 5L17.5 12L11 18.5Z"/><path d="M4 11.5H17.5" ${SOFT}/><path d="M10.5 5L8.5 3" ${SOFT}/><path d="M19.5 14C19.5 14 21.5 16.6 21.5 18A2 2 0 0 1 17.5 18C17.5 16.6 19.5 14 19.5 14Z" fill="currentColor" stroke="none"/>`,
+  ),
+
   // Detection
   "detect-skin": icon(
     `<path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11M11 11V5a1.5 1.5 0 0 1 3 0v6M14 11V6.5a1.5 1.5 0 0 1 3 0V13M17 12.5a1.5 1.5 0 0 1 3 0V15a6.5 6.5 0 0 1-6.5 6.5H13a6 6 0 0 1-5.1-2.8L5.2 14.4a1.5 1.5 0 0 1 2.4-1.8L8 13"/>`,
@@ -207,6 +256,9 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
     `<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="2.5 2" ${SOFT}/><circle cx="12" cy="12" r="6.5"/><rect x="7.5" y="8.5" width="9" height="2.75" fill="currentColor" stroke="none" opacity="0.8"/><rect x="7.5" y="11.25" width="9" height="2.75"/>`,
   ),
   // BBF: a face found by comparing single pixels, shown as pairs of dots joined by a line.
+  "match-template": icon(
+    `<rect x="3" y="3" width="18" height="18" rx="2" ${SOFT}/><rect x="5.5" y="5.5" width="5" height="5" rx="1" stroke-dasharray="1.5 1.5"/>${arrow(10.5, 10.5, 13, 13)}<rect x="13.5" y="13.5" width="5" height="5" rx="1"/>`,
+  ),
   "detect-bbf": icon(
     `<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="2.5 2" ${SOFT}/><circle cx="12" cy="12" r="6.5"/>${dot(9.5, 10.5, 1.1)}${dot(14.5, 10.5, 1.1)}<path d="M9.5 10.5L14.5 10.5" ${SOFT}/>${dot(12, 15, 1.1)}<path d="M12 10.5L12 15" ${SOFT}/>`,
   ),
@@ -297,6 +349,9 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "hu-moments": icon(
     `<rect x="3.5" y="5" width="7" height="7" rx="0.5"/><path d="M17.5 3.5L22 8L17.5 12.5L13 8Z"/><path d="M5 17H19M5 20H15" ${SOFT}/>`,
   ),
+  "distance-transform": icon(
+    `<rect x="3" y="5" width="18" height="14" rx="1.5"/><rect x="6.5" y="8.5" width="11" height="7" rx="1" ${SOFT}/><path d="M10 12H14"/>`,
+  ),
   "connected-components": icon(
     `<circle cx="7" cy="8" r="3" fill="currentColor" stroke="none" opacity="0.4"/><path d="M13 5H20V11H16V19H13Z" fill="currentColor" stroke="none" opacity="0.4"/><circle cx="7" cy="17" r="2.5" fill="currentColor" stroke="none" opacity="0.4"/><rect x="3.5" y="4.5" width="7" height="7" rx="0.5"/><rect x="12.5" y="4.5" width="8" height="15" rx="0.5"/><rect x="4" y="14" width="6" height="6" rx="0.5"/>`,
   ),
@@ -352,6 +407,9 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   ),
   "eigen-symmetric": icon(
     `<ellipse cx="12" cy="12" rx="9" ry="5" transform="rotate(-30 12 12)" ${SOFT}/>${arrow(12, 12, 19.4, 7.75)}${arrow(12, 12, 14.6, 16.5)}`,
+  ),
+  "min-max-loc": icon(
+    `<path d="M3 14C5.5 14 6.5 5 9 5S12.5 19 15 19S18.5 11 21 11" ${SOFT}/>${dot(9, 5, 1.6)}<circle cx="15" cy="19" r="1.6"/>`,
   ),
   median: icon(
     `<path d="M3 20H21"/><path d="M5 20V16M8.5 20V13.5M15.5 20V8.5M19 20V5" ${SOFT}/><path d="M12 20V11" stroke-width="2.5"/>`,

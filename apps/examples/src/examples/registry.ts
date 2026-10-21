@@ -84,6 +84,21 @@ import { minAreaRectExample } from "./min-area-rect";
 import { momentsExample } from "./moments";
 import { morphologyExample } from "./morphology";
 import { rgbToHsvExample } from "./rgb-to-hsv";
+import { bilateralFilterExample } from "./bilateral-filter";
+import { calcHistExample } from "./calc-hist";
+import { claheExample } from "./clahe";
+import { distanceTransformExample } from "./distance-transform";
+import { filter2DExample } from "./filter-2d";
+import { floodFillExample } from "./flood-fill";
+import { hlsToRgbExample } from "./hls-to-rgb";
+import { hsvToRgbExample } from "./hsv-to-rgb";
+import { labToRgbExample } from "./lab-to-rgb";
+import { matchTemplateExample } from "./match-template";
+import { minMaxLocExample } from "./min-max-loc";
+import { rgbToHlsExample } from "./rgb-to-hls";
+import { rgbToLabExample } from "./rgb-to-lab";
+import { rgbToYCrCbExample } from "./rgb-to-ycrcb";
+import { yCrCbToRgbExample } from "./ycrcb-to-rgb";
 import { shapeAnalysisExample } from "./shape-analysis";
 import { sharpnessExample } from "./sharpness";
 
@@ -107,6 +122,8 @@ export const EXAMPLES: readonly Example[] = [
   scharrDerivativesExample,
   integralImageExample,
   equalizeHistogramExample,
+  claheExample,
+  calcHistExample,
   cannyExample,
   houghLinesExample,
   warpPerspectiveExample,
@@ -118,13 +135,24 @@ export const EXAMPLES: readonly Example[] = [
   erodeExample,
   morphologyExample,
   medianBlurExample,
+  bilateralFilterExample,
+  filter2DExample,
   laplacianExample,
   flipExample,
   rgbToHsvExample,
+  hsvToRgbExample,
+  rgbToHlsExample,
+  hlsToRgbExample,
+  rgbToLabExample,
+  labToRgbExample,
+  rgbToYCrCbExample,
+  yCrCbToRgbExample,
   inRangeExample,
+  floodFillExample,
   detectSkinExample,
   detectHaarExample,
   detectBbfExample,
+  matchTemplateExample,
   groupRectanglesExample,
   detectHeadPoseExample,
   findDocumentExample,
@@ -152,6 +180,7 @@ export const EXAMPLES: readonly Example[] = [
   momentsExample,
   huMomentsExample,
   connectedComponentsExample,
+  distanceTransformExample,
   gaussianKernelExample,
   perspectiveTransformExample,
   affineTransformExample,
@@ -170,6 +199,7 @@ export const EXAMPLES: readonly Example[] = [
   pseudoInverseExample,
   eigenSymmetricExample,
   medianExample,
+  minMaxLocExample,
   scanDocumentExample,
   headTurnExample,
   edgeDetectionExample,
