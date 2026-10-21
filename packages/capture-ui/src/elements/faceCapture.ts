@@ -6,6 +6,7 @@ import { parseBoolean, parseNumber, parseRatio, parseShape } from "../logic/attr
 import { fitToPixels } from "../logic/captureSize";
 import { zeroCanvas } from "../logic/disposal";
 import { createFaceFlow, turnProgress } from "../logic/faceFlow";
+import { SEVERAL_FACES_RATIO, followFace } from "../logic/faces";
 import type { FaceFlow, FaceFlowState, TurnHint } from "../logic/faceFlow.model";
 import {
   assessFace,
@@ -215,6 +216,11 @@ export class FaceCaptureElement extends CaptureElement {
 
   private get showLandmarks(): boolean {
     return parseBoolean(this.getAttribute("show-landmarks"), false);
+  }
+
+  /** Fraction of the largest face's width from which another face counts as a second person. */
+  private get severalFacesRatio(): number {
+    return parseNumber(this.getAttribute("several-faces-ratio"), SEVERAL_FACES_RATIO, 0, 1);
   }
 
   protected stageMarkup(): string {
@@ -504,17 +510,31 @@ export class FaceCaptureElement extends CaptureElement {
     if (!token.current || !this.flow || !this.guide) return;
     this.detections++;
     const { scale } = frame;
-    const box = observation.box && scaleBox(observation.box, scale);
-    const landmarks = observation.landmarks?.map((p) => ({ x: p.x * scale, y: p.y * scale }));
     const t = this.viewTransform();
+    // Every face in view: the flow follows the largest face nearest the guide's centre, and
+    // counts the faces of a meaningful size to tell when someone else is in the frame.
+    const followed = followFace(observation, {
+      guide: this.guide,
+      toView: (face) => boxToView(scaleBox(face, scale), t),
+      ratio: this.severalFacesRatio,
+    });
+    const main = followed.box;
+    // The pose, landmarks, score and yaw describe the source's own face; they only count when
+    // that is the face being followed.
+    const own = followed.own;
+    const box = main && scaleBox(main, scale);
+    const landmarks = own
+      ? observation.landmarks?.map((p) => ({ x: p.x * scale, y: p.y * scale }))
+      : undefined;
     // Guidance and the tracker follow the smoothed box, for every detector: a one-off wrong
     // detection is ignored (its pose too), and brief gaps keep the last box.
-    const smoothed = this.boxSmoother.update(box && boxToView(box, t));
+    const smoothed = this.boxSmoother.update(followed.viewBox);
     const viewBox = smoothed.box;
-    const pose = smoothed.outlier ? "none" : observation.pose;
+    const facePose = own ? observation.pose : "none";
+    const pose = smoothed.outlier ? "none" : facePose;
     const guidance = assessFace(viewBox, this.guide);
     // The quality gate: only a sharp, well-lit face region counts as a frame worth keeping.
-    const quality = observation.box && assessRegion(grayscale(frame.image), observation.box);
+    const quality = main && assessRegion(grayscale(frame.image), main);
     if (quality) this.lastQuality = quality;
     const issue = quality ? checkQuality(quality, this.qualityThresholds).issue : null;
     const previous = this.flowState;
@@ -522,12 +542,13 @@ export class FaceCaptureElement extends CaptureElement {
       pose,
       guidance,
       quality: issue,
+      faceCount: followed.count,
       kept: this.best !== undefined,
     });
     this.flowState = state;
 
     if (landmarks && !smoothed.outlier) this.lastLandmarks = landmarks.map((p) => toView(p, t));
-    if (!viewBox) this.lastLandmarks = [];
+    if (!viewBox || !own) this.lastLandmarks = [];
     if (viewBox) {
       this.tracker.setTarget([
         { x: viewBox.x, y: viewBox.y },
@@ -538,19 +559,20 @@ export class FaceCaptureElement extends CaptureElement {
       this.tracker.setTarget(undefined);
     }
 
-    if (state.frontal && observation.box && quality) {
-      this.considerFrame(frame, observation.box, observation.pose, quality);
+    if (state.frontal && main && quality) {
+      this.considerFrame(frame, main, facePose, quality);
     }
 
-    this.lastYaw = observation.yaw;
+    this.lastYaw = own ? observation.yaw : undefined;
     this.lastPose = {
-      pose: observation.pose,
+      pose: facePose,
       guidance,
       phase: state.phase,
+      faceCount: followed.count,
       box,
       landmarks,
-      score: observation.score,
-      yaw: observation.yaw,
+      score: own ? observation.score : undefined,
+      yaw: this.lastYaw,
     };
     this.emit<PoseDetail>("pv-pose", this.lastPose);
 
@@ -852,6 +874,7 @@ export class FaceCaptureElement extends CaptureElement {
         `step      ${s?.step ?? "-"} (${s?.stepsDone ?? 0}/${s?.totalSteps ?? 0})`,
         `pose      ${this.lastPose?.pose ?? "-"}`,
         `guidance  ${this.lastPose?.guidance ?? "-"}`,
+        `faces     ${this.lastPose?.faceCount ?? "-"}`,
         `hint      ${s?.hint ?? "-"}${s?.stalled ? " (stalled)" : ""}`,
         `yaw       ${this.lastYaw === undefined ? "-" : `${Math.round(this.lastYaw)}°`}`,
         `quality   ${describeQuality(this.lastQuality, this.qualityThresholds)}`,

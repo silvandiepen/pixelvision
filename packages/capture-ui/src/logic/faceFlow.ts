@@ -8,10 +8,8 @@ import type {
   GuideTone,
   TurnHint,
 } from "./faceFlow.model";
-import type { FaceGuidance } from "./geometry.model";
 import type { LabelKey } from "./labels.model";
 import { qualityHint } from "./quality";
-import type { QualityIssue } from "./quality.model";
 import { createSettledValue } from "./settle";
 
 const TOTAL_STEPS = 4;
@@ -71,6 +69,13 @@ export function turnProgress(
  * flow waits in the `finishing` phase for one instead of finishing, and
  * the timeout still applies.
  *
+ * A detection can also report several faces of a meaningful size
+ * (`faceCount` above 1, from `selectMainFace`): such a frame counts
+ * towards no step and is never `frontal`, the flow doesn't finish on it,
+ * and "Make sure only you are in the frame" shows as a settled hint, so a
+ * second face seen for a moment neither flashes the hint nor stops a
+ * capture that is otherwise ready.
+ *
  * @param options - Hold and window frames, timeout, steps, direction, hint timing, clock.
  * @returns The flow.
  *
@@ -115,8 +120,8 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   });
 
   let startedAt = now();
-  // Alignment: guidance of recent detections with a face.
-  let recent: FaceGuidance[] = [];
+  // Alignment: whether each recent detection with a face was aligned (and alone).
+  let recent: boolean[] = [];
   let seenFace = false;
   // Stall detection: when the current step last made progress.
   let stage = "";
@@ -147,13 +152,17 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     return step === "turn-one-side" ? "turnOneSide" : "turnOtherSide";
   };
 
-  /** The positional or quality hint this detection asks for, before settling. */
+  /** Whether more than one face of a meaningful size is in view. */
+  const several = (input: FaceFlowInput): boolean => (input.faceCount ?? 1) > 1;
+
+  /** The several-faces, positional or quality hint this detection asks for, before settling. */
   const rawHint = (
-    guidance: FaceGuidance,
+    input: FaceFlowInput,
     step: HeadTurnStep | undefined,
     holding: boolean,
-    quality: QualityIssue | null | undefined,
   ): LabelKey | undefined => {
+    const { guidance, quality } = input;
+    if (several(input)) return "severalFaces";
     switch (guidance) {
       case "no-face":
         // Before the challenge the main instruction already says where to put the face.
@@ -227,19 +236,19 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     stalled: boolean,
     t: number,
   ): LabelKey | undefined =>
-    hint.update(rawHint(input.guidance, step, holding, input.quality), t) ??
-    (stalled ? helperFor(step) : undefined);
+    hint.update(rawHint(input, step, holding), t) ?? (stalled ? helperFor(step) : undefined);
 
-  /** A frame worth keeping as the capture: facing the camera, aligned, and good enough. */
+  /** A frame worth keeping as the capture: one face, facing the camera, aligned, and good enough. */
   const isGood = (input: FaceFlowInput): boolean =>
-    input.pose === "frontal" && input.guidance === "aligned" && !input.quality;
+    input.pose === "frontal" && input.guidance === "aligned" && !input.quality && !several(input);
 
   /**
-   * The steps are done: finish when a good frame was kept, otherwise wait
-   * for one with a calm hint, still bound by the timeout.
+   * The steps are done: finish when a good frame was kept and only one
+   * face is in view, otherwise wait with a calm hint, still bound by the
+   * timeout.
    */
   const complete = (input: FaceFlowInput, t: number): FaceFlowState => {
-    if (input.kept !== false) return finish(t);
+    if (input.kept !== false && !several(input)) return finish(t);
     const good = isGood(input);
     return {
       phase: "finishing",
@@ -251,7 +260,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
       hint: secondary(input, undefined, good, false, t),
       accepted: false,
       stalled: false,
-      tone: tone.update(input.guidance === "no-face" ? "found" : "hold", t),
+      tone: tone.update(input.guidance === "no-face" || several(input) ? "found" : "hold", t),
       frontal: good,
     };
   };
@@ -265,7 +274,8 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
 
   const runChallenge = (input: FaceFlowInput, t: number): FaceFlowState => {
     const before = challenge.state.progress;
-    const after = challenge.update(filterPose(input.pose));
+    // With several people in view, nobody's turn counts.
+    const after = challenge.update(several(input) ? "none" : filterPose(input.pose));
     if (after.step === "done") return complete(input, t);
     const step = after.step as HeadTurnStep;
     if (after.progress > before && acceptPauseMs > 0 && current.phase === "challenge") {
@@ -290,7 +300,8 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     const turn = turnHint(step, after.firstSide);
     const stalled = trackStall(step, hold, t);
     const facing = step === "face-camera" || step === "face-camera-again";
-    const raw: GuideTone = input.guidance === "no-face" ? "found" : hold > 0 ? "hold" : "aligned";
+    const raw: GuideTone =
+      input.guidance === "no-face" || several(input) ? "found" : hold > 0 ? "hold" : "aligned";
     return {
       phase: "challenge",
       step,
@@ -310,13 +321,13 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
 
   const align = (input: FaceFlowInput, t: number): FaceFlowState => {
     const hasFace = input.guidance !== "no-face";
+    const aligned = input.guidance === "aligned" && !several(input);
     if (hasFace) {
       seenFace = true;
       // Frames without a face are neutral: they neither count nor break the hold.
-      recent = [...recent, input.guidance].slice(-windowSize);
+      recent = [...recent, aligned].slice(-windowSize);
     }
-    const ok = (g: FaceGuidance) => g === "aligned";
-    const count = recent.filter(ok).length;
+    const count = recent.filter(Boolean).length;
     if (count >= frames) {
       recent = [];
       if (!steps) return complete(input, t);
@@ -324,7 +335,6 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     }
     const hold = Math.min(1, count / frames);
     const stalled = trackStall("align", hold, t);
-    const aligned = ok(input.guidance);
     const raw: GuideTone = !hasFace ? (seenFace ? "found" : "idle") : aligned ? "hold" : "found";
     return {
       ...initial(),

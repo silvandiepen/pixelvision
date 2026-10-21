@@ -68,6 +68,13 @@ export interface FaceFlowInput {
    */
   quality?: QualityIssue | null;
   /**
+   * Faces of a meaningful size in the frame, the main face included (from
+   * `selectMainFace`; default 1). With more than one, the frame doesn't
+   * count towards any step, isn't `frontal`, the flow doesn't finish, and
+   * "Make sure only you are in the frame" shows as a settled hint.
+   */
+  faceCount?: number;
+  /**
    * Whether a good frame has been kept for the capture so far (default
    * `true`). When the steps finish without one, the flow waits in the
    * `finishing` phase until this is true.
@@ -107,7 +114,10 @@ export interface FaceFlowState {
   tone: GuideTone;
   /** Which way to show the turn arrow, during a turn step. */
   turn?: TurnHint;
-  /** This frame is a good frontal frame to keep as the capture: facing, aligned and without a quality issue. */
+  /**
+   * This frame is a good frontal frame to keep as the capture: one face,
+   * facing the camera, aligned and without a quality issue.
+   */
   frontal: boolean;
 }
 

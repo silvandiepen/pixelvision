@@ -42,9 +42,17 @@ export interface StepDetail {
 
 /** `pv-pose`: one detection. Coordinates are in camera-frame pixels. */
 export interface PoseDetail {
+  /** The pose of the face being followed (`"none"` when the detector described another face). */
   pose: HeadPose;
   guidance: FaceGuidance;
   phase: FacePhase;
+  /**
+   * Faces of a meaningful size in view (at least `several-faces-ratio` of the largest face's
+   * width), the followed face included; 0 without a face. Above 1, the flow waits and asks
+   * for only one person in the frame.
+   */
+  faceCount: number;
+  /** The face being followed: the largest face nearest the guide's centre. */
   box?: Box;
   landmarks?: Point[];
   score?: number;

@@ -12,9 +12,16 @@ import type { RunToken } from "../logic/runToken.model";
 
 /** What a pose source found in one frame, in that frame's pixels. */
 export interface FaceObservation {
+  /** The pose of the face in `box`. */
   pose: HeadPose;
-  /** The face box. */
+  /** The face box: the face `pose`, `landmarks`, `score` and `yaw` describe. */
   box?: Box;
+  /**
+   * Every face found, `box` included, so `<pv-face-capture>` can tell when
+   * more than one person is in view. Optional: without it, `box` is the
+   * only face.
+   */
+  faces?: Box[];
   /** Landmarks to draw, e.g. eyes, nose tip and mouth corners. */
   landmarks?: Point[];
   /** Detector confidence, 0–1. */

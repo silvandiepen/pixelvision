@@ -79,6 +79,13 @@ export type {
 } from "./logic/faceFlow.model";
 export { createFaceFlow, turnProgress } from "./logic/faceFlow";
 export type {
+  FaceSelection,
+  FaceSelectionOptions,
+  FollowFaceOptions,
+  FollowedFace,
+} from "./logic/faces.model";
+export { SEVERAL_FACES_RATIO, followFace, observedFaces, selectMainFace } from "./logic/faces";
+export type {
   AspectPreset,
   DocumentFlow,
   DocumentFlowOptions,

@@ -2,9 +2,13 @@ import type {
   FaceNeuralModuleLike,
   FaceObservation,
   LoadNeuralPoseSourceOptions,
+  NeuralFaceLike,
   NeuralPoseSourceOptions,
   PoseSource,
 } from "./source.model";
+
+/** Most faces asked of the detector per frame. */
+const MAX_FACES = 10;
 
 /**
  * Wraps a `@pixelvision/face-neural` detector as a pose source: more
@@ -13,7 +17,10 @@ import type {
  * live gauge. This package doesn't import face-neural or onnxruntime
  * here; pass them in, or use {@link loadNeuralPoseSource}.
  *
- * Frames are passed unmirrored, so the sides are the person's own.
+ * Frames are passed unmirrored, so the sides are the person's own. The
+ * largest face found is the person's (its pose, box and landmarks are
+ * reported); every face is listed in `faces`, so the element can tell
+ * when more than one person is in view.
  *
  * @param options - The detector, `headPoseFromFace`, optional `estimateHeadYaw`, and the turn threshold.
  * @returns The pose source.
@@ -37,13 +44,21 @@ export function neuralPoseSource(options: NeuralPoseSourceOptions): PoseSource {
     directional: true,
     turnThreshold: threshold,
     async detect(frame): Promise<FaceObservation> {
-      const [face] = await detector.detect(frame, { maxFaces: 1 });
+      const found = await detector.detect(frame, { maxFaces: MAX_FACES });
+      // The largest face is the person's own; the others only tell that more people are in view.
+      const face = found.reduce<NeuralFaceLike | undefined>(
+        (largest, f) => (!largest || f.width > largest.width ? f : largest),
+        undefined,
+      );
       const pose = headPoseFromFace(face, { threshold, mirrored: false });
       if (!face) return { pose };
       const { rightEye, leftEye, noseTip, mouthRight, mouthLeft } = face.landmarks;
+      const toBox = ({ x, y, width, height }: NeuralFaceLike) => ({ x, y, width, height });
+      const box = toBox(face);
       const observation: FaceObservation = {
         pose,
-        box: { x: face.x, y: face.y, width: face.width, height: face.height },
+        box,
+        faces: [box, ...found.filter((f) => f !== face).map(toBox)],
         landmarks: [rightEye, leftEye, noseTip, mouthRight, mouthLeft],
         score: face.score,
       };

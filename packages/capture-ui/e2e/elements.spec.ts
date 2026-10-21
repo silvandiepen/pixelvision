@@ -26,6 +26,8 @@ interface PageWindow {
   loadCascades: () => Promise<unknown>;
   grayStream: () => MediaStream;
   darkStream: () => MediaStream;
+  twoFacesStream: () => MediaStream;
+  faceCounts: number[];
   streams: MediaStream[];
   record: PageRecord;
   el: TestElement;
@@ -283,6 +285,42 @@ test.describe("<pv-face-capture>", () => {
     expect(events).not.toContain("pv-capture");
     expect(await page.evaluate(() => (window as unknown as PageWindow).el.state)).toMatchObject({
       phase: "finishing",
+    });
+  });
+
+  test("asks for only one person with two faces in view, and doesn't capture", async ({ page }) => {
+    await open(page);
+    // A 4:3 view, the camera's shape, so frame and view line up. The default detector (HAAR in
+    // the built-in worker) finds both drawn faces.
+    await mount(
+      page,
+      '<pv-face-capture steps="off" hold-frames="2" hint-delay="0" style="display:block;width:640px;height:480px"></pv-face-capture>',
+    );
+    await page.evaluate(async () => {
+      const w = window as unknown as PageWindow;
+      w.faceCounts = [];
+      w.el.addEventListener("pv-pose", (event) =>
+        w.faceCounts.push((event as CustomEvent<{ faceCount: number }>).detail.faceCount),
+      );
+      w.el.stream = w.twoFacesStream();
+      await w.el.start();
+    });
+    const hint = () =>
+      page.evaluate(
+        () =>
+          (window as unknown as PageWindow).el.shadowRoot!.querySelector(".instruction-hint")!
+            .textContent,
+      );
+
+    await expect.poll(hint, { timeout: 15_000 }).toBe("Make sure only you are in the frame");
+    // Many more detections pass: still no capture.
+    await page.waitForTimeout(1500);
+
+    expect(await hint()).toBe("Make sure only you are in the frame");
+    expect(await page.evaluate(() => (window as unknown as PageWindow).faceCounts)).toContain(2);
+    expect(await elementEvents(page)).not.toContain("pv-capture");
+    expect(await page.evaluate(() => (window as unknown as PageWindow).el.state)).toMatchObject({
+      phase: "aligning",
     });
   });
 

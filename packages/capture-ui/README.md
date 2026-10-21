@@ -219,44 +219,48 @@ created yourself. onnxruntime-web and the model together are about 14 MB.
 ### Your own
 
 `source` takes any function, or a `{ detect, directional?, turnThreshold?, name?, dispose? }`
-object. It receives the RGBA frame and returns `{ pose, box?, landmarks?, score?, yaw? }` in that
-frame's pixels, or a promise of it. `yaw` is in degrees, positive towards the person's left. `pose` is a pixelvision `HeadPose`. `<pv-document-scanner>` takes a `finder` with
+object. It receives the RGBA frame and returns `{ pose, box?, faces?, landmarks?, score?, yaw? }`
+in that frame's pixels, or a promise of it. `box` is the face that `pose`, `landmarks`, `score` and
+`yaw` describe; `faces` lists every face found, `box` included, so the element can tell when more
+than one person is in view (see [One person at a time](#one-person-at-a-time)). Without `faces`,
+`box` is the only face. `yaw` is in degrees, positive towards the person's left. `pose` is a pixelvision `HeadPose`. `<pv-document-scanner>` takes a `finder` with
 `find(frame)` in the same way.
 
 ## `<pv-face-capture>`
 
 ### Attributes
 
-| Attribute            | Default | What it does                                                                                                                 |
-| -------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `autostart`          | off     | Start the camera when connected. Without it, an intro panel with a start button shows first                                  |
-| `guide-shape`        | `oval`  | `oval`, `circle` or `rect`                                                                                                   |
-| `guide-aspect`       | `0.78`  | Width / height of the guide, as `0.75`, `3/4` or `3:4` (ignored for `circle`)                                                |
-| `mirrored`           | on      | Mirror the preview like a mirror. The capture is never mirrored                                                              |
-| `steps`              | on      | Run the head-turn check. `steps="off"` captures once the face is aligned and still                                           |
-| `auto-capture`       | on      | Capture when the flow finishes. When off, a "Take photo" button appears instead                                              |
-| `hold-frames`        | `3`     | Matching detections a step (or the alignment) needs                                                                          |
-| `window-frames`      | `6`     | Recent detections with a face considered for `hold-frames`. A stray or missed detection slows a step instead of resetting it |
-| `smooth-frames`      | `8`     | Detections the face box is median-smoothed over before guidance is derived                                                   |
-| `accept-pause`       | `900`   | Milliseconds the acceptance moment (full ring, check mark) lasts after each step                                             |
-| `hint-delay`         | `700`   | Milliseconds a positional hint must persist before it shows. "Keep your face in the oval" waits at least 1200                |
-| `hint-hold`          | `1500`  | Minimum milliseconds a hint, or a guide colour, stays on screen                                                              |
-| `message-hold`       | `1500`  | Minimum milliseconds each main instruction stays on screen                                                                   |
-| `timeout`            | `45000` | Milliseconds before giving up (`pv-error` with `timeout`). `0` disables it                                                   |
-| `first-turn`         | `left`  | The side asked for first, with a directional source                                                                          |
-| `show-landmarks`     | off     | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                |
-| `show-debug`         | off     | Show detector, phase, step, pose, guidance, quality, sharpness and detection rate                                            |
-| `min-sharpness`      | `70`    | Lowest sharpness of the face region for a frame to be kept. See [Quality gates](#quality-gates)                              |
-| `min-brightness`     | `80`    | Lowest mean brightness of the face region, 0–255                                                                             |
-| `max-brightness`     | `212`   | Highest mean brightness of the face region, 0–255                                                                            |
-| `min-contrast`       | `22`    | Lowest contrast (standard deviation of the levels) of the face region                                                        |
-| `detect-size`        | `480`   | Longest side of the frame handed to the detector                                                                             |
-| `detect-interval`    | `120`   | Minimum milliseconds between detections. One frame is analysed at a time, so a slow detector lowers the rate instead         |
-| `worker`             | on      | Run the built-in detector in a worker                                                                                        |
-| `max-pixels`         | 2764800 | Most pixels a capture may have (1920 × 1440). A larger camera frame is scaled down. Kept between 320 × 240 and 4096 × 4096   |
-| `include-image-data` | off     | Also put the raw `ImageData` in `pv-capture`. Off, the capture is only the JPEG                                              |
-| `start-timeout`      | `10000` | Milliseconds the camera gets to deliver its first frame size before `pv-error` with `start-timeout`                          |
-| `lang`               | page    | Language of the built-in texts (`en`, `nl`). If not set, the closest `lang` attribute is used                                |
+| Attribute             | Default | What it does                                                                                                                                                    |
+| --------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `autostart`           | off     | Start the camera when connected. Without it, an intro panel with a start button shows first                                                                     |
+| `guide-shape`         | `oval`  | `oval`, `circle` or `rect`                                                                                                                                      |
+| `guide-aspect`        | `0.78`  | Width / height of the guide, as `0.75`, `3/4` or `3:4` (ignored for `circle`)                                                                                   |
+| `mirrored`            | on      | Mirror the preview like a mirror. The capture is never mirrored                                                                                                 |
+| `steps`               | on      | Run the head-turn check. `steps="off"` captures once the face is aligned and still                                                                              |
+| `auto-capture`        | on      | Capture when the flow finishes. When off, a "Take photo" button appears instead                                                                                 |
+| `hold-frames`         | `3`     | Matching detections a step (or the alignment) needs                                                                                                             |
+| `window-frames`       | `6`     | Recent detections with a face considered for `hold-frames`. A stray or missed detection slows a step instead of resetting it                                    |
+| `smooth-frames`       | `8`     | Detections the face box is median-smoothed over before guidance is derived                                                                                      |
+| `several-faces-ratio` | `0.4`   | Smallest width, as a fraction of the largest face's, from which another face counts as a second person (0–1). See [One person at a time](#one-person-at-a-time) |
+| `accept-pause`        | `900`   | Milliseconds the acceptance moment (full ring, check mark) lasts after each step                                                                                |
+| `hint-delay`          | `700`   | Milliseconds a positional hint must persist before it shows. "Keep your face in the oval" waits at least 1200                                                   |
+| `hint-hold`           | `1500`  | Minimum milliseconds a hint, or a guide colour, stays on screen                                                                                                 |
+| `message-hold`        | `1500`  | Minimum milliseconds each main instruction stays on screen                                                                                                      |
+| `timeout`             | `45000` | Milliseconds before giving up (`pv-error` with `timeout`). `0` disables it                                                                                      |
+| `first-turn`          | `left`  | The side asked for first, with a directional source                                                                                                             |
+| `show-landmarks`      | off     | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                                                   |
+| `show-debug`          | off     | Show detector, phase, step, pose, guidance, face count, quality, sharpness and detection rate                                                                   |
+| `min-sharpness`       | `70`    | Lowest sharpness of the face region for a frame to be kept. See [Quality gates](#quality-gates)                                                                 |
+| `min-brightness`      | `80`    | Lowest mean brightness of the face region, 0–255                                                                                                                |
+| `max-brightness`      | `212`   | Highest mean brightness of the face region, 0–255                                                                                                               |
+| `min-contrast`        | `22`    | Lowest contrast (standard deviation of the levels) of the face region                                                                                           |
+| `detect-size`         | `480`   | Longest side of the frame handed to the detector                                                                                                                |
+| `detect-interval`     | `120`   | Minimum milliseconds between detections. One frame is analysed at a time, so a slow detector lowers the rate instead                                            |
+| `worker`              | on      | Run the built-in detector in a worker                                                                                                                           |
+| `max-pixels`          | 2764800 | Most pixels a capture may have (1920 × 1440). A larger camera frame is scaled down. Kept between 320 × 240 and 4096 × 4096                                      |
+| `include-image-data`  | off     | Also put the raw `ImageData` in `pv-capture`. Off, the capture is only the JPEG                                                                                 |
+| `start-timeout`       | `10000` | Milliseconds the camera gets to deliver its first frame size before `pv-error` with `start-timeout`                                                             |
+| `lang`                | page    | Language of the built-in texts (`en`, `nl`). If not set, the closest `lang` attribute is used                                                                   |
 
 On/off attributes accept `on`/`off`, `true`/`false` and `1`/`0`. An attribute without a value is
 on.
@@ -291,7 +295,7 @@ does neither: listen on the element.
 | Event         | `detail`                                                                                                                                                                                                                                                     |
 | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `pv-ready`    | `{ width, height, facingMode }`: the camera runs                                                                                                                                                                                                             |
-| `pv-pose`     | `{ pose, guidance, phase, box?, landmarks?, score?, yaw? }`: each detection, in camera pixels                                                                                                                                                                |
+| `pv-pose`     | `{ pose, guidance, phase, faceCount, box?, landmarks?, score?, yaw? }`: each detection, in camera pixels. `box` is the face being followed; `faceCount` the faces of a meaningful size in view, that one included (0 without a face)                         |
 | `pv-detector` | `{ name }`: the detector was switched through "Use precise detection"                                                                                                                                                                                        |
 | `pv-step`     | `{ step, stepsDone, totalSteps, progress }`: a head-turn step started, or `step: "done"` once the steps are complete                                                                                                                                         |
 | `pv-capture`  | `{ blob, image?, metadata }`: a JPEG, its `ImageData` with `include-image-data`, and `{ width, height, sharpness, quality, box, pose, challengePassed, durationMs, capturedAt, mirrored: false }`. On the element only                                       |
@@ -337,6 +341,32 @@ The flow is built to stay calm with a detector that is wrong now and then:
 
 The face tracker eases towards the smoothed box at the display rate, and holds still through
 brief gaps instead of blinking.
+
+### One person at a time
+
+A selfie is of one person. Both built-in detectors report every face in the frame, and the
+element decides which one to follow and whether someone else is in view:
+
+- **The main face is the largest face nearest the oval's centre.** Faces narrower than
+  `several-faces-ratio` times the largest face's width (default 0.4) don't count, such as a small
+  face on a poster far behind the person. Of the faces that do count, the one whose centre is
+  nearest the oval's centre is followed: guidance, the tracker and the quality gate use it. With
+  one person in view, that is the largest face.
+- **Several faces of a meaningful size: no progress, no capture.** While more than one face counts,
+  no detection counts towards the alignment or a step, no frame is kept, and the flow doesn't
+  finish. "Make sure only you are in the frame" shows as a secondary hint, settled like the
+  positional ones, so a second face seen for a moment neither flashes the hint nor holds up a
+  capture that is otherwise ready. It comes before positional and quality hints.
+- **`faceCount` on `pv-pose`** gives the number of counted faces for each detection.
+
+Set `several-faces-ratio="0"` to count every face found, however small. With `1`, only faces as
+wide as the largest one count. HAAR only looks for faces from a fifth of the frame's shorter side
+(`detectHeadPose`'s `minFaceSize`), so smaller faces aren't found at all. It lists the face it
+follows, frontal or in profile, and every other frontal face, so a second person in profile isn't
+counted. The neural detector follows the largest face and lists every face.
+
+The pose, landmarks and turn angle describe the detector's own face. When the face being followed
+is another one (another person nearer the oval's centre), that detection's pose is `"none"`.
 
 With `prefers-reduced-motion`, the pulse, the turn animation and the arrow nudge are switched
 off. The check mark and the colour change remain.
@@ -574,6 +604,8 @@ The logic behind the elements is exported, and it has no DOM:
 - `createBoxSmoother`, `createSettledValue` and `createEasedNumber`: the calming pieces.
 - `turnProgress`: the turn gauge.
 - `assessFace` and `guideFor`: the guidance maths.
+- `followFace`, `selectMainFace` and `observedFaces`: which face to follow, and how many people
+  are in view.
 - `createPointsTracker`: smoothing.
 - `createStabilityTracker`: hold-still detection.
 - `sharpness`: the sharpness score.
@@ -615,7 +647,11 @@ attributes, and for their lifecycle with a stand-in stream and canvas: start val
 timeouts, stopping and disconnecting during startup and while the detector loads, cleanup of
 canvases and Blob URLs, event boundaries and capture size. `src/elements/qualityGate.test.ts`
 feeds both elements drawn frames: sharp ones are captured, blurred and dark ones never are and
-show the matching hint, and dark-then-good captures a good frame.
+show the matching hint, and dark-then-good captures a good frame. `src/elements/guidance.test.ts`
+and `src/logic/guidance.test.ts` run the guidance states on drawn faces that pixelvision's HAAR
+cascades find (`guidanceScenes` in `src/logic/testScenes.ts`): frontal and centred, offset, small,
+too large, two people, a tiny face behind the person, and none, through the element and through
+the flow.
 
 ```sh
 pnpm --filter @pixelvision/capture-ui test:e2e
@@ -623,8 +659,9 @@ pnpm --filter @pixelvision/capture-ui test:e2e
 
 runs the built package in Chromium, Firefox and WebKit with a fake camera (`e2e/`): start, stop
 and disconnect, the real built-in worker and its termination, cleanup, event boundaries, and the
-`haar-worker` entry under a strict CSP without `blob:`, and a dark fake camera that shows "Find a
-bit more light" and never captures.
+`haar-worker` entry under a strict CSP without `blob:`, a dark fake camera that shows "Find a
+bit more light" and never captures, and a fake camera with two drawn faces that shows "Make sure
+only you are in the frame" and never captures.
 
 ## Limitations
 

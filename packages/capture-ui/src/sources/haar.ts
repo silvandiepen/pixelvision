@@ -8,18 +8,19 @@ import type {
 
 /**
  * Detects the head pose in one RGBA frame with pixelvision's HAAR
- * cascades. Shared by the main-thread source and the worker.
+ * cascades, and every face in view. Shared by the main-thread source and
+ * the worker.
  *
  * @param frame - RGBA pixels.
  * @param options - Cascades and `detectHeadPose` options.
- * @returns The observation.
+ * @returns The observation: the chosen face's pose and box, and every face found.
  */
 export function detectWithHaar(frame: FrameImage, options: HaarPoseSourceOptions): FaceObservation {
   const { cascades, ...poseOptions } = options;
-  const { pose, face } = detectHeadPose(grayscale(frame), cascades, poseOptions);
+  const { pose, face, faces } = detectHeadPose(grayscale(frame), cascades, poseOptions);
   if (!face) return { pose };
-  const { x, y, width, height } = face;
-  return { pose, box: { x, y, width, height } };
+  const boxes = faces.map(({ x, y, width, height }) => ({ x, y, width, height }));
+  return { pose, box: boxes[0], faces: boxes };
 }
 
 /**

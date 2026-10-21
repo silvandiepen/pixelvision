@@ -28,6 +28,8 @@ export interface CaptureLabels {
   stepOf: string;
   /** Secondary hint when the face is lost during the head turns. */
   faceLost: string;
+  /** Secondary hint while more than one face of a meaningful size is in view. */
+  severalFaces: string;
   /** Helper hints when a step makes no progress for a while. */
   alignHelp: string;
   turnFurther: string;

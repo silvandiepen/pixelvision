@@ -392,3 +392,81 @@ describe("createFaceFlow with quality", () => {
     expect(feed({ ...good, kept: true }, 2).phase).toBe("done");
   });
 });
+
+describe("createFaceFlow with several faces", () => {
+  /** A flow on a fake clock fed full inputs, 200 ms apart, with the default hint timing. */
+  const makeCrowded = (options: FaceFlowOptions = {}) => {
+    let t = 0;
+    const flow = createFaceFlow({ holdFrames: 2, acceptPauseMs: 0, now: () => t, ...options });
+    const feed = (input: FaceFlowInput, times = 1): FaceFlowState => {
+      let state = flow.state;
+      for (let i = 0; i < times; i++) {
+        t += 200;
+        state = flow.update(input);
+      }
+      return state;
+    };
+    return { flow, feed };
+  };
+  const alone: FaceFlowInput = { pose: "frontal", guidance: "aligned", faceCount: 1 };
+  const two: FaceFlowInput = { ...alone, faceCount: 2 };
+
+  it("doesn't align with two people in view, and asks for one once it persists", () => {
+    const { feed } = makeCrowded();
+    let s = feed(two, 3);
+    expect(s).toMatchObject({ phase: "aligning", hold: 0, frontal: false });
+    expect(s.hint).toBeUndefined();
+    s = feed(two, 20);
+    expect(s).toMatchObject({
+      phase: "aligning",
+      hold: 0,
+      hint: "severalFaces",
+      tone: "found",
+      frontal: false,
+    });
+    // Once alone, the flow goes on.
+    expect(feed(alone, 2)).toMatchObject({ phase: "challenge", step: "face-camera" });
+  });
+
+  it("puts the several-faces hint before positional and quality hints", () => {
+    const { feed } = makeCrowded();
+    expect(feed({ ...two, guidance: "too-far", quality: "dark" }, 6).hint).toBe("severalFaces");
+  });
+
+  it("neither flashes the hint nor stops for a second face seen briefly", () => {
+    const { feed } = makeCrowded({ holdFrames: 3, windowFrames: 6 });
+    feed(alone);
+    let s = feed(two, 2);
+    expect(s.hint).toBeUndefined();
+    s = feed(alone, 2);
+    expect(s.hint).toBeUndefined();
+    expect(s).toMatchObject({ phase: "challenge", step: "face-camera" });
+  });
+
+  it("holds the head turns while two people are in view", () => {
+    const { feed } = makeCrowded();
+    let s = feed(alone, 3);
+    expect(s.step).toBe("turn-one-side");
+    s = feed({ ...two, pose: "profile" }, 20);
+    expect(s).toMatchObject({ step: "turn-one-side", stepsDone: 1, hold: 0, hint: "severalFaces" });
+    expect(s.tone).toBe("found");
+    s = feed({ ...alone, pose: "profile" }, 2);
+    expect(s).toMatchObject({ step: "turn-other-side", stepsDone: 2 });
+  });
+
+  it("never finishes, even with a frame kept, until the other person has gone", () => {
+    const { feed } = makeCrowded({ steps: false });
+    // Aligned alone, but nothing good enough kept yet: the flow waits for a frame.
+    expect(feed({ ...alone, kept: false }, 2).phase).toBe("finishing");
+    let s = feed({ ...two, kept: true }, 10);
+    expect(s).toMatchObject({ phase: "finishing", frontal: false, hint: "severalFaces" });
+    expect(s.tone).toBe("found");
+    s = feed({ ...alone, kept: true });
+    expect(s.phase).toBe("done");
+  });
+
+  it("treats a missing count as one face", () => {
+    const { feed } = makeCrowded({ steps: false });
+    expect(feed({ pose: "frontal", guidance: "aligned" }, 2).phase).toBe("done");
+  });
+});

@@ -29,7 +29,7 @@ describe("neuralPoseSource", () => {
     },
   );
 
-  it("maps the first face to an observation", async () => {
+  it("maps the face to an observation", async () => {
     const detector = { detect: vi.fn(async () => [face]) };
     const headPoseFromFace = vi.fn(() => "turned-left" as const);
     const source = neuralPoseSource({ detector, headPoseFromFace, threshold: 12 });
@@ -37,6 +37,7 @@ describe("neuralPoseSource", () => {
     await expect(source.detect(frame)).resolves.toEqual({
       pose: "turned-left",
       box: { x: 10, y: 20, width: 30, height: 40 },
+      faces: [{ x: 10, y: 20, width: 30, height: 40 }],
       landmarks: [
         { x: 1, y: 1 },
         { x: 2, y: 1 },
@@ -46,8 +47,27 @@ describe("neuralPoseSource", () => {
       ],
       score: 0.9,
     });
-    expect(detector.detect).toHaveBeenCalledWith(frame, { maxFaces: 1 });
+    expect(detector.detect).toHaveBeenCalledWith(frame, { maxFaces: 10 });
     expect(headPoseFromFace).toHaveBeenCalledWith(face, { threshold: 12, mirrored: false });
+  });
+
+  it("follows the largest face and lists every face", async () => {
+    const small = { ...face, x: 100, width: 12, height: 14, score: 0.99 };
+    const large = { ...face, x: 200, width: 60, height: 70, score: 0.8 };
+    const headPoseFromFace = vi.fn(() => "frontal" as const);
+    const source = neuralPoseSource({
+      detector: { detect: async () => [face, small, large] },
+      headPoseFromFace,
+    });
+    const observation = (await source.detect(frame))!;
+
+    expect(headPoseFromFace).toHaveBeenCalledWith(large, { threshold: 18, mirrored: false });
+    expect(observation.box).toEqual({ x: 200, y: 20, width: 60, height: 70 });
+    expect(observation.faces).toEqual([
+      { x: 200, y: 20, width: 60, height: 70 },
+      { x: 10, y: 20, width: 30, height: 40 },
+      { x: 100, y: 20, width: 12, height: 14 },
+    ]);
   });
 
   it("reports no face", async () => {

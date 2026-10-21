@@ -105,6 +105,54 @@ const darkStream = () => {
   return stream;
 };
 
+/**
+ * Draws a schematic face (hair, skin, eyes, brows, nose, mouth), as the unit tests' fixtures do.
+ *
+ * @param context - The 2D context.
+ * @param cx - Centre x.
+ * @param cy - Centre y.
+ * @param s - Size; 1 is a face about 112 pixels wide.
+ */
+const drawFace = (context, cx, cy, s) => {
+  const ellipse = (x, y, rx, ry, level) => {
+    context.fillStyle = `rgb(${level}, ${level}, ${level})`;
+    context.beginPath();
+    context.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
+    context.fill();
+  };
+  ellipse(cx, cy - 20 * s, 66 * s, 70 * s, 30);
+  ellipse(cx, cy + 5 * s, 56 * s, 72 * s, 190);
+  for (const side of [-1, 1]) {
+    ellipse(cx + side * 22 * s, cy - 12 * s, 11 * s, 5 * s, 42);
+    ellipse(cx + side * 22 * s, cy - 26 * s, 14 * s, 3 * s, 55);
+  }
+  ellipse(cx, cy + 14 * s, 7 * s, 4 * s, 140);
+  ellipse(cx, cy + 36 * s, 20 * s, 5 * s, 90);
+};
+
+/**
+ * A camera stand-in with two people side by side: two drawn faces of similar size.
+ *
+ * @returns The stream.
+ */
+const twoFacesStream = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 480;
+  const context = canvas.getContext("2d");
+  const draw = () => {
+    context.fillStyle = "#878787";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    drawFace(context, 190, 215, 1.2);
+    drawFace(context, 460, 215, 1.15);
+  };
+  draw();
+  const stream = canvas.captureStream(15);
+  const timer = setInterval(draw, 60);
+  stream.getVideoTracks()[0].addEventListener("ended", () => clearInterval(timer));
+  return stream;
+};
+
 /** Every stream handed out, so tests can check that tracks were stopped. */
 const streams = [];
 Object.defineProperty(navigator, "mediaDevices", {
@@ -123,6 +171,7 @@ Object.assign(window, {
   loadCascades,
   grayStream,
   darkStream,
+  twoFacesStream,
   record,
   streams,
   pageReady: true,

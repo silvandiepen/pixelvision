@@ -1,7 +1,7 @@
-// Drawn test scenes for the quality gates: a schematic face (as in packages/parity's drawing
-// helpers) and a light document on a dark textured surface (as in the examples' end-to-end
-// scene), with the ways a camera frame goes wrong. Imported by tests only; not part of the
-// package.
+// Drawn test scenes for the quality gates and the guidance states: schematic faces (as in
+// packages/parity's drawing helpers) and a light document on a dark textured surface (as in the
+// examples' end-to-end scene), with the ways a camera frame goes wrong. Imported by tests only;
+// not part of the package.
 import { createMatrix, gaussianBlur } from "pixelvision";
 import type { Matrix, Point } from "pixelvision";
 import type { Box } from "./geometry.model";
@@ -103,29 +103,27 @@ export interface TestScene {
   image: Matrix<"u8">;
   /** The face box, or the document's bounding box. */
   box: Box;
+  /** Every face box, the main face's first (face scenes only). */
+  faces?: Box[];
   /** The document's corners (document scenes only). */
   corners?: [Point, Point, Point, Point];
 }
 
+/** Another face drawn into a face scene: its centre and size (1 is about 112 pixels wide). */
+export interface ExtraFace extends Point {
+  scale: number;
+}
+
 /**
- * Draws a schematic face (hair, skin, eyes, brows, nose, mouth) on a
- * textured wall, and the box a face detector reports for it.
+ * Draws a schematic face (hair, skin, eyes, brows, nose, mouth).
  *
- * @param width - Frame width.
- * @param height - Frame height.
- * @param scale - Face size; 1 is a face about 112 pixels wide.
- * @param centre - Centre of the face (default the frame's centre).
- * @returns The scene.
+ * @param image - Gray image.
+ * @param centre - Centre of the face.
+ * @param s - Face size; 1 is a face about 112 pixels wide.
+ * @returns The box a face detector reports for it.
  */
-export function faceScene(
-  width = 480,
-  height = 360,
-  scale = 1.4,
-  centre: Point = { x: width / 2, y: height / 2 },
-): TestScene {
-  const image = texturedBackground(width, height, 120, 30, 5);
+const drawFace = (image: Matrix<"u8">, centre: Point, s: number): Box => {
   const { x: cx, y: cy } = centre;
-  const s = scale;
   ellipse(image, cx, cy - 20 * s, 66 * s, 70 * s, 30);
   ellipse(image, cx, cy + 5 * s, 56 * s, 72 * s, 190);
   for (const side of [-1, 1]) {
@@ -134,7 +132,65 @@ export function faceScene(
   }
   ellipse(image, cx, cy + 14 * s, 7 * s, 4 * s, 140);
   ellipse(image, cx, cy + 36 * s, 20 * s, 5 * s, 90);
-  return { image, box: { x: cx - 56 * s, y: cy - 62 * s, width: 112 * s, height: 134 * s } };
+  return { x: cx - 56 * s, y: cy - 62 * s, width: 112 * s, height: 134 * s };
+};
+
+/**
+ * Draws a schematic face (hair, skin, eyes, brows, nose, mouth) on a
+ * textured wall, and the box a face detector reports for it; optionally
+ * more faces, such as a second person or a small face far behind.
+ *
+ * @param width - Frame width.
+ * @param height - Frame height.
+ * @param scale - Face size; 1 is a face about 112 pixels wide.
+ * @param centre - Centre of the face (default the frame's centre).
+ * @param others - More faces to draw.
+ * @returns The scene, with every face box in `faces`.
+ */
+export function faceScene(
+  width = 480,
+  height = 360,
+  scale = 1.4,
+  centre: Point = { x: width / 2, y: height / 2 },
+  others: readonly ExtraFace[] = [],
+): TestScene {
+  const image = texturedBackground(width, height, 120, 30, 5);
+  const box = drawFace(image, centre, scale);
+  const faces = [box, ...others.map((face) => drawFace(image, face, face.scale))];
+  return { image, box, faces };
+}
+
+/** The face guidance fixtures, one per guidance state. */
+export type GuidanceCase = "frontal" | "offset" | "small" | "large" | "two" | "tiny" | "none";
+
+/**
+ * Drawn 480 x 360 frames for the face guidance states, placed for a view
+ * of the same size with the default oval guide (centre 240, 158; 174
+ * wide). pixelvision's HAAR cascades find each face with `minFaceSize:
+ * 0.1` (the tiny face is too small for the default 0.2):
+ *
+ * - `frontal`: one face, centred and the size the oval asks for.
+ * - `offset`: the same face far to the side.
+ * - `small`: a face too far away.
+ * - `large`: a face too close.
+ * - `two`: two people of similar size side by side.
+ * - `tiny`: the centred face, and a small face far behind (under 40% of its width).
+ * - `none`: the wall alone.
+ *
+ * @returns The frames by case.
+ */
+export function guidanceScenes(): Record<GuidanceCase, Matrix<"u8">> {
+  const scene = (scale: number, centre: Point, others: ExtraFace[] = []) =>
+    faceScene(480, 360, scale, centre, others).image;
+  return {
+    frontal: scene(1.2, { x: 240, y: 152 }),
+    offset: scene(1, { x: 110, y: 160 }),
+    small: scene(0.45, { x: 240, y: 155 }),
+    large: scene(1.45, { x: 240, y: 165 }),
+    two: scene(0.9, { x: 140, y: 160 }, [{ x: 345, y: 160, scale: 0.85 }]),
+    tiny: scene(1.2, { x: 240, y: 152 }, [{ x: 420, y: 70, scale: 0.38 }]),
+    none: texturedBackground(480, 360, 120, 30, 5),
+  };
 }
 
 /**
