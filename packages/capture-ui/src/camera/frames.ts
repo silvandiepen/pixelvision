@@ -66,17 +66,33 @@ export class FrameGrabber {
     this.context.drawImage(video, 0, 0, width, height);
     return { image: this.context.getImageData(0, 0, width, height), scale: videoWidth / width };
   }
+
+  /** Frees the reused canvas, so the last detection frame can't be read back from it. */
+  release(): void {
+    if (this.canvas) {
+      this.canvas.width = 0;
+      this.canvas.height = 0;
+    }
+    this.canvas = undefined;
+    this.context = undefined;
+  }
 }
 
 /**
- * Draws the video's current frame at full resolution.
+ * Draws the video's current frame at the given size.
  *
  * @param video - A playing video.
+ * @param width - Width of the result; the frame is scaled to it.
+ * @param height - Height of the result.
  * @returns A canvas holding the frame.
  */
-export function snapshot(video: HTMLVideoElement): HTMLCanvasElement {
-  const canvas = createCanvas(video.videoWidth, video.videoHeight);
-  context2d(canvas).drawImage(video, 0, 0);
+export function snapshot(
+  video: HTMLVideoElement,
+  width: number,
+  height: number,
+): HTMLCanvasElement {
+  const canvas = createCanvas(width, height);
+  context2d(canvas).drawImage(video, 0, 0, width, height);
   return canvas;
 }
 

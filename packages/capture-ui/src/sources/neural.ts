@@ -17,6 +17,7 @@ import type {
  *
  * @param options - The detector, `headPoseFromFace`, optional `estimateHeadYaw`, and the turn threshold.
  * @returns The pose source.
+ * @throws {RangeError} When `threshold` isn't a number of degrees between 0 and 90.
  *
  * @example
  * import * as ort from "onnxruntime-web";
@@ -26,6 +27,11 @@ import type {
  */
 export function neuralPoseSource(options: NeuralPoseSourceOptions): PoseSource {
   const { detector, headPoseFromFace, estimateHeadYaw, threshold = 18 } = options;
+  if (typeof threshold !== "number" || !(threshold > 0 && threshold < 90)) {
+    throw new RangeError(
+      `neuralPoseSource: threshold must be between 0 and 90 degrees, got ${threshold}`,
+    );
+  }
   return {
     name: "yunet",
     directional: true,

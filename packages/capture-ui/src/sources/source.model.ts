@@ -8,6 +8,7 @@ import type {
   Point,
 } from "pixelvision";
 import type { Box } from "../logic/geometry.model";
+import type { RunToken } from "../logic/runToken.model";
 
 /** What a pose source found in one frame, in that frame's pixels. */
 export interface FaceObservation {
@@ -156,4 +157,22 @@ export interface WorkerLike {
   postMessage(message: unknown): void;
   addEventListener(type: "message" | "error", listener: (event: MessageEvent) => void): void;
   terminate(): void;
+}
+
+/** Options for {@link createDefaultPoseSource}. */
+export interface DefaultPoseSourceOptions {
+  /** The run the source is built for; nothing is created once it is no longer current. */
+  token: RunToken;
+  /** Cascades to use; when absent they are loaded with `loadCascades`. */
+  cascades?: HeadPoseCascades;
+  /** Loads the frontal and profile cascades. */
+  loadCascades: () => Promise<HeadPoseCascades>;
+  /** Starts a detection worker, or returns undefined to detect on the main thread. */
+  createWorker?: () => WorkerLike | undefined;
+}
+
+/** A default pose source and how it runs, for the debug readout. */
+export interface BuiltPoseSource {
+  source: PoseSource;
+  kind: "haar (worker)" | "haar (main thread)";
 }

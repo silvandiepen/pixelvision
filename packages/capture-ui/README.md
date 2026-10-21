@@ -4,7 +4,7 @@ Camera capture components for [pixelvision](../pixelvision), as framework-agnost
 Components. They work in plain HTML, Vue, React, Svelte and Angular.
 
 - **`<pv-face-capture>`**: a selfie flow with an oval face guide, a progress ring, a smoothed face
-  tracker and a head-turn liveness check. It captures the sharpest frontal frame.
+  tracker and a head-turn challenge. It captures the sharpest frontal frame.
 - **`<pv-document-scanner>`**: finds a document with the back camera, outlines it, captures it
   once it is held still, and straightens it. The person can then pick a shape, drag the corners,
   retake or confirm.
@@ -14,10 +14,13 @@ replaced through the `labels` property, and English and Dutch are built in. The 
 `prefers-reduced-motion`, announce instructions to screen readers, and can be used with a
 keyboard.
 
-> **Liveness:** the head-turn check shows that a person moved their head as asked. That is a
-> useful signal against printed photos and still screens. It is not a certified
-> presentation-attack check, because a video replay can follow the steps. For KYC, send the capture
-> to a certified liveness service.
+> **Not a liveness or identity check.** The head-turn challenge runs in the browser and shows
+> only that the camera feed turned as asked. It is not presentation-attack detection (PAD): a
+> replayed video, a virtual camera, an injected stream or a modified page can complete it, and
+> anything the browser sends can be forged. `metadata.challengePassed` is a client-side challenge
+> result for capture quality and guidance, never an authorization input. Likewise, the document
+> scanner crops a photo; it does not verify the document. A KYC or identity decision belongs on a
+> server, with independently evaluated PAD, document validation and checks on the uploaded media.
 
 ## Install
 
@@ -49,6 +52,9 @@ Importing the package registers both elements. The package has no framework runt
   selfie.addEventListener("pv-error", (e) => console.warn(e.detail.code));
 </script>
 ```
+
+`pv-capture` stays on the element: it doesn't bubble or cross shadow roots, so listen on the
+element itself, not on `document` or a parent.
 
 ```html
 <pv-document-scanner aspect="id-card" autostart></pv-document-scanner>
@@ -166,6 +172,23 @@ scanner.finder = workerDocumentFinder(worker);
 
 Set `worker="off"` to always detect on the main thread.
 
+**Strict Content Security Policy.** The built-in worker needs `blob:` in `worker-src`. Don't add
+it; serve the `haar-worker` entry from your own origin instead, and give the elements a worker
+source as above. The entry is a browser-only ES module (`import` only, no types), and it bundles
+everything it needs, so this policy is enough for the worker:
+
+```http
+Content-Security-Policy: default-src 'none'; script-src 'self'; worker-src 'self'; img-src 'self' blob: data:; media-src 'self' blob:; style-src 'self' 'unsafe-inline'; connect-src 'self'
+```
+
+`img-src blob:` is for the captured still, whose Blob URL is revoked as soon as it has decoded,
+and `data:` for the generated SVG mask around the face guide and the document outline;
+`media-src blob:` covers browsers that treat the camera preview as a Blob source. The elements'
+styles live in their shadow roots as `<style>` elements, hence `style-src 'unsafe-inline'`. Model
+or WASM loading for `@pixelvision/face-neural` and your upload endpoint need their own directives.
+Without a worker source and without `blob:`, the built-in worker fails on its first frame and the
+elements detect on the main thread.
+
 ### Neural: `@pixelvision/face-neural`
 
 YuNet is more robust than HAAR. It gives five landmarks to draw and knows the turn direction, so
@@ -203,63 +226,70 @@ frame's pixels, or a promise of it. `yaw` is in degrees, positive towards the pe
 
 ### Attributes
 
-| Attribute         | Default | What it does                                                                                                                 |
-| ----------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `autostart`       | off     | Start the camera when connected. Without it, an intro panel with a start button shows first                                  |
-| `guide-shape`     | `oval`  | `oval`, `circle` or `rect`                                                                                                   |
-| `guide-aspect`    | `0.78`  | Width / height of the guide, as `0.75`, `3/4` or `3:4` (ignored for `circle`)                                                |
-| `mirrored`        | on      | Mirror the preview like a mirror. The capture is never mirrored                                                              |
-| `steps`           | on      | Run the head-turn check. `steps="off"` captures once the face is aligned and still                                           |
-| `auto-capture`    | on      | Capture when the flow finishes. When off, a "Take photo" button appears instead                                              |
-| `hold-frames`     | `3`     | Matching detections a step (or the alignment) needs                                                                          |
-| `window-frames`   | `6`     | Recent detections with a face considered for `hold-frames`. A stray or missed detection slows a step instead of resetting it |
-| `smooth-frames`   | `8`     | Detections the face box is median-smoothed over before guidance is derived                                                   |
-| `accept-pause`    | `900`   | Milliseconds the acceptance moment (full ring, check mark) lasts after each step                                             |
-| `hint-delay`      | `700`   | Milliseconds a positional hint must persist before it shows. "Keep your face in the oval" waits at least 1200                |
-| `hint-hold`       | `1500`  | Minimum milliseconds a hint, or a guide colour, stays on screen                                                              |
-| `message-hold`    | `1500`  | Minimum milliseconds each main instruction stays on screen                                                                   |
-| `timeout`         | `45000` | Milliseconds before giving up (`pv-error` with `timeout`). `0` disables it                                                   |
-| `first-turn`      | `left`  | The side asked for first, with a directional source                                                                          |
-| `show-landmarks`  | off     | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                |
-| `show-debug`      | off     | Show detector, phase, step, pose, guidance, sharpness and detection rate                                                     |
-| `detect-size`     | `480`   | Longest side of the frame handed to the detector                                                                             |
-| `detect-interval` | `120`   | Minimum milliseconds between detections. One frame is analysed at a time, so a slow detector lowers the rate instead         |
-| `worker`          | on      | Run the built-in detector in a worker                                                                                        |
-| `lang`            | page    | Language of the built-in texts (`en`, `nl`). If not set, the closest `lang` attribute is used                                |
+| Attribute            | Default | What it does                                                                                                                 |
+| -------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `autostart`          | off     | Start the camera when connected. Without it, an intro panel with a start button shows first                                  |
+| `guide-shape`        | `oval`  | `oval`, `circle` or `rect`                                                                                                   |
+| `guide-aspect`       | `0.78`  | Width / height of the guide, as `0.75`, `3/4` or `3:4` (ignored for `circle`)                                                |
+| `mirrored`           | on      | Mirror the preview like a mirror. The capture is never mirrored                                                              |
+| `steps`              | on      | Run the head-turn check. `steps="off"` captures once the face is aligned and still                                           |
+| `auto-capture`       | on      | Capture when the flow finishes. When off, a "Take photo" button appears instead                                              |
+| `hold-frames`        | `3`     | Matching detections a step (or the alignment) needs                                                                          |
+| `window-frames`      | `6`     | Recent detections with a face considered for `hold-frames`. A stray or missed detection slows a step instead of resetting it |
+| `smooth-frames`      | `8`     | Detections the face box is median-smoothed over before guidance is derived                                                   |
+| `accept-pause`       | `900`   | Milliseconds the acceptance moment (full ring, check mark) lasts after each step                                             |
+| `hint-delay`         | `700`   | Milliseconds a positional hint must persist before it shows. "Keep your face in the oval" waits at least 1200                |
+| `hint-hold`          | `1500`  | Minimum milliseconds a hint, or a guide colour, stays on screen                                                              |
+| `message-hold`       | `1500`  | Minimum milliseconds each main instruction stays on screen                                                                   |
+| `timeout`            | `45000` | Milliseconds before giving up (`pv-error` with `timeout`). `0` disables it                                                   |
+| `first-turn`         | `left`  | The side asked for first, with a directional source                                                                          |
+| `show-landmarks`     | off     | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                |
+| `show-debug`         | off     | Show detector, phase, step, pose, guidance, sharpness and detection rate                                                     |
+| `detect-size`        | `480`   | Longest side of the frame handed to the detector                                                                             |
+| `detect-interval`    | `120`   | Minimum milliseconds between detections. One frame is analysed at a time, so a slow detector lowers the rate instead         |
+| `worker`             | on      | Run the built-in detector in a worker                                                                                        |
+| `max-pixels`         | 2764800 | Most pixels a capture may have (1920 × 1440). A larger camera frame is scaled down. Kept between 320 × 240 and 4096 × 4096   |
+| `include-image-data` | off     | Also put the raw `ImageData` in `pv-capture`. Off, the capture is only the JPEG                                              |
+| `start-timeout`      | `10000` | Milliseconds the camera gets to deliver its first frame size before `pv-error` with `start-timeout`                          |
+| `lang`               | page    | Language of the built-in texts (`en`, `nl`). If not set, the closest `lang` attribute is used                                |
 
 On/off attributes accept `on`/`off`, `true`/`false` and `1`/`0`. An attribute without a value is
 on.
 
 ### Properties and methods
 
-| Member               | What it is                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------ |
-| `labels`             | `Partial<CaptureLabels>`: texts to replace                                                 |
-| `source`             | The face detector (see [Detectors](#detectors))                                            |
-| `preciseSource`      | `() => Promise<PoseSource>`: offered as "Use precise detection" when a step stalls on HAAR |
-| `usePreciseSource()` | Switches to `preciseSource` now                                                            |
-| `cascades`           | `{ frontal, profile }` for the default detector                                            |
-| `stream`             | A `MediaStream` to use instead of opening the camera (your own device picker)              |
-| `state`              | The flow's current state (read-only)                                                       |
-| `result`             | The last `pv-capture` detail (read-only)                                                   |
-| `start()`            | Opens the camera and starts the flow                                                       |
-| `stop()`             | Stops the camera and detection                                                             |
-| `reset()`            | Starts the flow over. The camera keeps running if it was, otherwise the intro shows        |
-| `capture()`          | Captures now and finishes                                                                  |
+| Member                 | What it is                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------ |
+| `labels`               | `Partial<CaptureLabels>`: texts to replace                                                 |
+| `source`               | The face detector (see [Detectors](#detectors))                                            |
+| `preciseSource`        | `() => Promise<PoseSource>`: offered as "Use precise detection" when a step stalls on HAAR |
+| `usePreciseSource()`   | Switches to `preciseSource` now                                                            |
+| `cascades`             | `{ frontal, profile }` for the default detector                                            |
+| `stream`               | A `MediaStream` to use instead of opening the camera (your own device picker)              |
+| `state`                | The flow's current state (read-only)                                                       |
+| `maxPixels`            | The `max-pixels` attribute as a number                                                     |
+| `includeImageData`     | The `include-image-data` attribute as a boolean                                            |
+| `start()`              | Opens the camera and starts the flow                                                       |
+| `stop()`               | Stops the camera and detection                                                             |
+| `reset()`              | Clears the capture and starts over. The camera keeps running if it was                     |
+| `capture()`            | Captures now and finishes. Resolves with the `pv-capture` detail                           |
+| `clearSensitiveData()` | Revokes Blob URLs, zeroes canvases and drops every capture the element holds               |
+| `dispose()`            | `stop()` and `clearSensitiveData()`. Runs on its own when the element is removed           |
 
 ### Events
 
-All events bubble and cross the shadow root.
+Status events bubble and cross the shadow root. `pv-capture`, the only event with image data,
+does neither: listen on the element.
 
-| Event         | `detail`                                                                                                                                               |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pv-ready`    | `{ width, height, facingMode }`: the camera runs                                                                                                       |
-| `pv-pose`     | `{ pose, guidance, phase, box?, landmarks?, score?, yaw? }`: each detection, in camera pixels                                                          |
-| `pv-detector` | `{ name }`: the detector was switched through "Use precise detection"                                                                                  |
-| `pv-step`     | `{ step, stepsDone, totalSteps, progress }`: a head-turn step started, or `step: "done"`                                                               |
-| `pv-capture`  | `{ blob, image, metadata }`: a JPEG, its `ImageData`, and `{ width, height, sharpness, box, pose, liveness, durationMs, capturedAt, mirrored: false }` |
-| `pv-complete` | `{ durationMs, stepsDone }`: the flow is finished                                                                                                      |
-| `pv-error`    | `{ code, message, cause? }`. `code` is one of `denied`, `blocked-frame`, `unavailable`, `in-use`, `insecure`, `unknown`, `timeout` or `detector`       |
+| Event         | `detail`                                                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pv-ready`    | `{ width, height, facingMode }`: the camera runs                                                                                                                                                                                                             |
+| `pv-pose`     | `{ pose, guidance, phase, box?, landmarks?, score?, yaw? }`: each detection, in camera pixels                                                                                                                                                                |
+| `pv-detector` | `{ name }`: the detector was switched through "Use precise detection"                                                                                                                                                                                        |
+| `pv-step`     | `{ step, stepsDone, totalSteps, progress }`: a head-turn step started, or `step: "done"`                                                                                                                                                                     |
+| `pv-capture`  | `{ blob, image?, metadata }`: a JPEG, its `ImageData` with `include-image-data`, and `{ width, height, sharpness, box, pose, challengePassed, durationMs, capturedAt, mirrored: false }`. On the element only                                                |
+| `pv-complete` | `{ durationMs, stepsDone }`: the flow is finished                                                                                                                                                                                                            |
+| `pv-error`    | `{ code, message, cause? }`. `code` is one of `denied`, `blocked-frame`, `unavailable`, `in-use`, `insecure`, `unknown`, `timeout`, `detector`, `no-video` (the stream has no live video track), `ended` (the track ended), `media-error` or `start-timeout` |
 
 ### How it behaves
 
@@ -311,42 +341,67 @@ Run it with `CALM_REPORT=1` to print the numbers.
 
 ### Attributes
 
-| Attribute         | Default | What it does                                                                                 |
-| ----------------- | ------- | -------------------------------------------------------------------------------------------- |
-| `autostart`       | off     | Start the camera when connected                                                              |
-| `aspect`          | `auto`  | `auto` (as seen), `id-card` (85.6 × 53.98 mm) or `a4`. It follows the document's orientation |
-| `auto-capture`    | on      | Capture once the document holds still. The shutter button is always there                    |
-| `hold-frames`     | `8`     | Steady detections needed before capturing                                                    |
-| `review`          | on      | Show the review (shape, adjust, retake, confirm). When off, `pv-capture` fires right away    |
-| `mirrored`        | off     | Mirror the preview                                                                           |
-| `show-debug`      | off     | Show finder, phase, area and hold progress                                                   |
-| `detect-size`     | `480`   | Longest side of the frame handed to `findDocument`                                           |
-| `detect-interval` | `120`   | Minimum milliseconds between detections                                                      |
-| `worker`          | on      | Run `findDocument` in a worker                                                               |
-| `lang`            | page    | Language of the built-in texts                                                               |
+| Attribute            | Default | What it does                                                                                 |
+| -------------------- | ------- | -------------------------------------------------------------------------------------------- |
+| `autostart`          | off     | Start the camera when connected                                                              |
+| `aspect`             | `auto`  | `auto` (as seen), `id-card` (85.6 × 53.98 mm) or `a4`. It follows the document's orientation |
+| `auto-capture`       | on      | Capture once the document holds still. The shutter button is always there                    |
+| `hold-frames`        | `8`     | Steady detections needed before capturing                                                    |
+| `review`             | on      | Show the review (shape, adjust, retake, confirm). When off, `pv-capture` fires right away    |
+| `mirrored`           | off     | Mirror the preview                                                                           |
+| `show-debug`         | off     | Show finder, phase, area and hold progress                                                   |
+| `detect-size`        | `480`   | Longest side of the frame handed to `findDocument`                                           |
+| `detect-interval`    | `120`   | Minimum milliseconds between detections                                                      |
+| `worker`             | on      | Run `findDocument` in a worker                                                               |
+| `max-pixels`         | 2764800 | Most pixels of the photo the document is straightened from (1920 × 1440)                     |
+| `include-image-data` | off     | Also put the straightened `ImageData` in `pv-capture`                                        |
+| `start-timeout`      | `10000` | Milliseconds the camera gets to deliver its first frame size                                 |
+| `lang`               | page    | Language of the built-in texts                                                               |
 
 ### Properties and methods
 
-`labels`, `stream`, `finder` (a `DocumentFinder`), `aspect`, `corners` (the latest detection,
-read-only), `start()`, `stop()`, `reset()` and `capture()`.
+`labels`, `stream`, `finder` (a `DocumentFinder`), `aspect`, `corners` (the smoothed outline,
+read-only), `maxPixels`, `includeImageData`, `start()`, `stop()`, `reset()`, `capture()`,
+`clearSensitiveData()` and `dispose()`, as for `<pv-face-capture>`.
 
 ### Events
 
-| Event        | `detail`                                                                                                                                        |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pv-ready`   | `{ width, height, facingMode }`                                                                                                                 |
-| `pv-detect`  | `{ corners, area?, progress, stable }`: each detection. `corners` is null when no document was found                                            |
-| `pv-capture` | `{ blob, image, corners, aspect, aspectRatio?, source: { width, height } }`: the straightened JPEG and its pixels, and the corners in the photo |
-| `pv-error`   | As above                                                                                                                                        |
+| Event        | `detail`                                                                                                                                                                                     |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pv-ready`   | `{ width, height, facingMode }`                                                                                                                                                              |
+| `pv-detect`  | `{ corners, area?, progress, stable }`: each detection. `corners` is null when no document was found                                                                                         |
+| `pv-capture` | `{ blob, image?, corners, aspect, aspectRatio?, source: { width, height } }`: the straightened JPEG, its pixels with `include-image-data`, and the corners in the photo. On the element only |
+| `pv-error`   | As above                                                                                                                                                                                     |
 
 ### How it behaves
 
-The detected outline is drawn with rounded corners and handles. It eases between detections, and
-the surround outside it dims. A ring at the top fills while the corners hold still. Then the frame
-is captured at full resolution and straightened with `extractDocument`. In the review, the person
+Detections go through pixelvision's `createDocumentTracker`: the outline is the median of the
+last few detections, a detection that jumps away is ignored until it repeats, and a few missed
+frames keep the outline. The outline is drawn with rounded corners and handles. It eases between
+detections, and the surround outside it dims. A ring at the top fills while the outline stays
+within 5% of the document's diagonal, and drains when it moves, so a hand-held document gets
+there. Then the frame is captured at full resolution (up to `max-pixels`), the corners are scaled
+from the detection frame to it, and it is straightened with `extractDocument`. In the review, the person
 can switch between Auto, ID card and A4. They can also drag the four corners on the still frame:
 each corner is a button that moves with the arrow keys (Shift moves faster). "Use this scan" fires
 `pv-capture`.
+
+## Captured data
+
+The captures are biometric and identity-document images. The elements keep them short-lived:
+
+- `pv-capture` is dispatched on the element only, so page-wide listeners (analytics, tag
+  managers, other scripts listening on `document`) don't receive it.
+- Captures are bounded to `max-pixels`, and carry the raw `ImageData` only with
+  `include-image-data`.
+- Once a capture is handed off, the element keeps no reference to it: working canvases are set to
+  zero size, and the preview's Blob URL is revoked as soon as the image has decoded. The decoded
+  preview stays on screen until retake, `reset()`, `clearSensitiveData()` or removal.
+- Removing the element, `reset()`, errors and `dispose()` clear everything, including the
+  preview. Call `clearSensitiveData()` yourself after uploading if the preview should go too.
+
+JavaScript can't guarantee that memory is erased, and your own references (the event detail, the
+`capture()` result) are yours to drop. Don't put captures in logs, analytics, storage or caches.
 
 ## Theming
 
@@ -470,8 +525,18 @@ aspect presets, camera error classification, the worker protocol and labels.
 
 The browser glue (`src/elements`, `src/camera/frames.ts`, the worker entry) is not counted towards
 the threshold. It needs a real camera, video frames, a 2D canvas, pointer capture and a worker
-scope. The elements have happy-dom tests for registration, intro and error panels, languages and
-labels, attributes and the aspect radio group. The full flows were run in Chrome through the demo.
+scope. The elements have happy-dom tests for registration, panels, languages, labels and
+attributes, and for their lifecycle with a stand-in stream and canvas: start validation and
+timeouts, stopping and disconnecting during startup and while the detector loads, cleanup of
+canvases and Blob URLs, event boundaries and capture size.
+
+```sh
+pnpm --filter @pixelvision/capture-ui test:e2e
+```
+
+runs the built package in Chromium, Firefox and WebKit with a fake camera (`e2e/`): start, stop
+and disconnect, the real built-in worker and its termination, cleanup, event boundaries, and the
+`haar-worker` entry under a strict CSP without `blob:`.
 
 ## Limitations
 
@@ -483,4 +548,5 @@ labels, attributes and the aspect radio group. The full flows were run in Chrome
   detection rate is around 3–6 per second. The worker keeps the preview and overlay smooth in the
   meantime.
 - iOS Safari has no Vibration API, so there are no haptics there.
-- The capture is a JPEG at 92% quality. Use `detail.image` (`ImageData`) for another format.
+- The capture is a JPEG at 92% quality. Set `include-image-data` and use `detail.image`
+  (`ImageData`) for another format.

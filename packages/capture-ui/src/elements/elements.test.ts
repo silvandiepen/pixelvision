@@ -112,7 +112,7 @@ describe("<pv-face-capture>", () => {
     el.cascades = cascades;
     expect(el.cascades).toBe(cascades);
     expect(el.state).toBeUndefined();
-    expect(el.result).toBeUndefined();
+    expect("result" in el).toBe(false);
   });
 
   it("returns to the intro on reset and stops cleanly", async () => {

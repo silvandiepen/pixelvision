@@ -19,6 +19,16 @@ const face: NeuralFaceLike = {
 const frame = { width: 2, height: 2, data: new Uint8ClampedArray(16) };
 
 describe("neuralPoseSource", () => {
+  it.each([0, -5, 90, NaN, Infinity, "18" as unknown as number])(
+    "rejects a turn threshold of %s",
+    (threshold) => {
+      const detector = { detect: vi.fn(async () => []) };
+      expect(() =>
+        neuralPoseSource({ detector, headPoseFromFace: () => "frontal", threshold }),
+      ).toThrow(RangeError);
+    },
+  );
+
   it("maps the first face to an observation", async () => {
     const detector = { detect: vi.fn(async () => [face]) };
     const headPoseFromFace = vi.fn(() => "turned-left" as const);

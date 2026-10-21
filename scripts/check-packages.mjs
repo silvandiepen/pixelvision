@@ -21,6 +21,11 @@ const packages = [
   },
   // The model is a data file, so it has no types to check.
   { dir: "packages/face-neural", exclude: ["models/yunet.onnx"] },
+  // `haar-worker` is a browser-only ES module worker script, loaded by URL with
+  // `new Worker(new URL("@pixelvision/capture-ui/haar-worker", import.meta.url), { type: "module" })`.
+  // It exports nothing and is exported for `import` only, so it has no types and no
+  // CommonJS entry by design; publint still checks it.
+  { dir: "packages/capture-ui", exclude: ["haar-worker"] },
 ];
 
 const out = mkdtempSync(join(tmpdir(), "pixelvision-packs-"));

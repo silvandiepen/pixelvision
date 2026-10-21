@@ -1,11 +1,17 @@
 import type { HeadPose, HeadTurnStep, Point, Quad } from "pixelvision";
 import type { CameraErrorCode } from "../camera/camera.model";
+import type { StreamFailure } from "../camera/startup.model";
 import type { AspectPreset } from "../logic/documentFlow.model";
 import type { FacePhase } from "../logic/faceFlow.model";
 import type { Box, FaceGuidance } from "../logic/geometry.model";
 
-/** Why a component stopped: a camera failure, the selfie timeout, or a detector failure. */
-export type CaptureErrorCode = CameraErrorCode | "timeout" | "detector";
+/**
+ * Why a component stopped: a camera failure, the selfie timeout, a detector failure, or a
+ * stream that has no live video track (`no-video`), whose track ended (`ended`), that reported
+ * a media error (`media-error`), or that delivered no frame size in time (`start-timeout`).
+ */
+export type CaptureErrorCode =
+  CameraErrorCode | "timeout" | "detector" | Exclude<StreamFailure, "aborted">;
 
 /** `pv-ready`: the camera is running. */
 export interface ReadyDetail {
@@ -54,21 +60,33 @@ export interface FaceCaptureMetadata {
   /** Face box in capture pixels, when known. */
   box?: Box;
   pose: HeadPose;
-  /** Whether the head-turn challenge was completed. */
-  liveness: boolean;
+  /**
+   * Whether the head-turn challenge was completed in this browser.
+   *
+   * This is a client-side challenge result, not presentation-attack detection (PAD) and not
+   * evidence that a live person was present: a replayed video, a virtual camera, an injected
+   * stream or a modified page can complete the challenge or set this field. Use it for capture
+   * quality and user guidance only. A KYC or identity decision belongs on a server, with
+   * independently evaluated PAD and checks on the uploaded media.
+   */
+  challengePassed: boolean;
   /** Milliseconds from start to capture. */
   durationMs: number;
+  /** The browser's clock at capture time; client-controlled, so not evidence of when. */
   capturedAt: string;
   /** The capture is never mirrored, whatever the preview shows. */
   mirrored: false;
 }
 
-/** `pv-capture` from `<pv-face-capture>`. */
+/**
+ * `pv-capture` from `<pv-face-capture>`. The event doesn't bubble or cross the shadow root:
+ * listen on the element itself.
+ */
 export interface FaceCaptureDetail {
-  /** JPEG of the capture. */
+  /** JPEG of the capture, at most `max-pixels` pixels. */
   blob: Blob;
-  /** Pixels of the capture. */
-  image: ImageData;
+  /** Pixels of the capture; only with `include-image-data`. */
+  image?: ImageData;
   metadata: FaceCaptureMetadata;
 }
 
@@ -88,18 +106,21 @@ export interface DetectDetail {
   stable: boolean;
 }
 
-/** `pv-capture` from `<pv-document-scanner>`. */
+/**
+ * `pv-capture` from `<pv-document-scanner>`. The event doesn't bubble or cross the shadow
+ * root: listen on the element itself. This is a cropped photo, not a verified document.
+ */
 export interface DocumentCaptureDetail {
   /** JPEG of the straightened document. */
   blob: Blob;
-  /** Pixels of the straightened document. */
-  image: ImageData;
+  /** Pixels of the straightened document; only with `include-image-data`. */
+  image?: ImageData;
   /** Corners in the source photo's pixels: top-left, top-right, bottom-right, bottom-left. */
   corners: Quad;
   aspect: AspectPreset;
   /** Width / height used, undefined for `"auto"`. */
   aspectRatio?: number;
-  /** Size of the source photo. */
+  /** Size of the source photo, at most `max-pixels` pixels. */
   source: { width: number; height: number };
 }
 

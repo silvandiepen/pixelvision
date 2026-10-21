@@ -3,6 +3,8 @@ import type { HeadPose, HeadPoseCascades } from "pixelvision";
 import { canvasPixels, canvasToBlob, context2d, createCanvas } from "../camera/frames";
 import type { GrabbedFrame } from "../camera/frames";
 import { parseBoolean, parseNumber, parseRatio, parseShape } from "../logic/attributes";
+import { fitToPixels } from "../logic/captureSize";
+import { zeroCanvas } from "../logic/disposal";
 import { createFaceFlow, turnProgress } from "../logic/faceFlow";
 import type { FaceFlow, FaceFlowState, TurnHint } from "../logic/faceFlow.model";
 import {
@@ -22,11 +24,11 @@ import { HAPTICS, vibrate } from "../logic/haptics";
 import { formatLabel } from "../logic/labels";
 import { sharpness } from "../logic/sharpness";
 import { createBoxSmoother } from "../logic/boxSmoother";
+import type { RunToken } from "../logic/runToken.model";
 import { createEasedNumber, createPointsTracker } from "../logic/smoothing";
-import { haarPoseSource } from "../sources/haar";
+import { createDefaultPoseSource, loadCascades } from "../sources/faceSource";
 import { createInlineWorker } from "../sources/inlineWorker";
 import type { DetectFace, PoseSource } from "../sources/source.model";
-import { workerPoseSource } from "../sources/worker";
 import { CaptureElement, SCRIM_BLEED } from "./captureElement";
 import type {
   CompleteDetail,
@@ -40,18 +42,22 @@ import { faceStyles } from "./styles";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-/** The best frontal frame seen so far. */
+/** The best frontal frame seen so far, at most `max-pixels` pixels. */
 interface BestFrame {
   canvas: HTMLCanvasElement;
   score: number;
+  /** Face box in the canvas's pixels. */
   box: Box;
   pose: HeadPose;
 }
 
 /**
  * `<pv-face-capture>`: a selfie flow with an oval face guide, a progress
- * ring, a smoothed face tracker and pixelvision's head-turn liveness
- * challenge. Captures the sharpest frontal frame when done.
+ * ring, a smoothed face tracker and pixelvision's head-turn challenge.
+ * Captures the sharpest frontal frame when done.
+ *
+ * The head-turn challenge is a client-side capture aid, not liveness or
+ * presentation-attack detection; see {@link FaceCaptureMetadata.challengePassed}.
  *
  * Detection runs on pixelvision's HAAR cascades by default (in a worker
  * where possible), or on any `source` you set, such as
@@ -102,8 +108,6 @@ export class FaceCaptureElement extends CaptureElement {
   private hintTimer: ReturnType<typeof setTimeout> | undefined;
   private lastYaw: number | undefined;
   private best: BestFrame | undefined;
-  private resultValue: FaceCaptureDetail | undefined;
-  private stillUrl: string | undefined;
   private lastPose: PoseDetail | undefined;
   private detections = 0;
   private sourceKind = "";
@@ -193,11 +197,6 @@ export class FaceCaptureElement extends CaptureElement {
   /** The flow's current state, or undefined before the camera starts. */
   get state(): FaceFlowState | undefined {
     return this.flowState;
-  }
-
-  /** The last capture, once there is one. */
-  get result(): FaceCaptureDetail | undefined {
-    return this.resultValue;
   }
 
   private get steps(): boolean {
@@ -398,13 +397,29 @@ export class FaceCaptureElement extends CaptureElement {
     this.tracker.reset();
     this.trackerEl.removeAttribute("d");
     this.landmarksEl.replaceChildren();
+    this.dropFrames();
   }
 
-  /** Restarts the flow. A running camera keeps running; otherwise the intro shows again. */
+  protected clearCaptures(): void {
+    this.dropFrames();
+    this.hideStill();
+  }
+
+  /** Frees the kept frame and forgets the last detection. */
+  private dropFrames(): void {
+    zeroCanvas(this.best?.canvas);
+    this.best = undefined;
+    this.lastPose = undefined;
+    this.lastLandmarks = [];
+  }
+
+  /**
+   * Restarts the flow and clears the previous capture (see `clearSensitiveData`). A running
+   * camera keeps running; otherwise the intro shows again.
+   */
   reset(): void {
     if (!this.ready) return;
-    this.resultValue = undefined;
-    this.hideStill();
+    this.clearSensitiveData();
     this.shutter.hidden = true;
     this.retake.parentElement!.hidden = true;
     if (this.running) {
@@ -423,23 +438,36 @@ export class FaceCaptureElement extends CaptureElement {
     }
   }
 
-  /** Builds the detector on first use. */
-  private async ensureSource(): Promise<PoseSource> {
+  /**
+   * Builds the detector on first use, for the given run. A source built for a run that ended
+   * meanwhile is disposed (its worker terminated) instead of kept.
+   *
+   * @param token - The run asking.
+   * @param worker - Whether the default detector may use a worker.
+   * @returns The detector, or undefined when the run ended while it was built.
+   */
+  private async ensureSource(token: RunToken, worker = true): Promise<PoseSource | undefined> {
     if (this.activeSource) return this.activeSource;
     if (this.sourceValue) {
       this.sourceKind = this.sourceValue.name ?? "custom";
       this.activeSource = this.sourceValue;
-    } else {
-      const cascades = this.cascadesValue ?? (await loadCascades());
-      const worker = parseBoolean(this.getAttribute("worker"), true)
-        ? createInlineWorker()
-        : undefined;
-      this.sourceKind = worker ? "haar (worker)" : "haar (main thread)";
-      this.activeSource = worker
-        ? workerPoseSource(worker, { cascades })
-        : haarPoseSource({ cascades });
+      return this.activeSource;
     }
-    return this.activeSource;
+    const built = await createDefaultPoseSource({
+      token,
+      cascades: this.cascadesValue,
+      loadCascades,
+      createWorker:
+        worker && parseBoolean(this.getAttribute("worker"), true) ? createInlineWorker : undefined,
+    });
+    if (!built) return undefined;
+    if (!token.current || this.activeSource) {
+      built.source.dispose?.();
+      return token.current ? this.activeSource : undefined;
+    }
+    this.sourceKind = built.kind;
+    this.activeSource = built.source;
+    return built.source;
   }
 
   /** Drops the active detector so the next frame builds the new one. */
@@ -448,24 +476,24 @@ export class FaceCaptureElement extends CaptureElement {
     this.activeSource = undefined;
   }
 
-  protected async processFrame(frame: GrabbedFrame, generation: number): Promise<void> {
-    const source = await this.ensureSource();
+  protected async processFrame(frame: GrabbedFrame, token: RunToken): Promise<void> {
+    const source = await this.ensureSource(token);
+    if (!source || !token.current) return;
     let observation;
     try {
       observation = (await source.detect(frame.image)) ?? { pose: "none" as const };
     } catch (error) {
-      if (this.sourceKind === "haar (worker)") {
+      if (!token.current) return;
+      if (source === this.activeSource && this.sourceKind === "haar (worker)") {
         // The worker failed to start (a strict Content Security Policy): detect on the main thread.
         source.dispose?.();
-        this.activeSource = haarPoseSource({
-          cascades: this.cascadesValue ?? (await loadCascades()),
-        });
-        this.sourceKind = "haar (main thread)";
+        this.activeSource = undefined;
+        await this.ensureSource(token, false);
         return;
       }
       throw error;
     }
-    if (generation !== this.generation || !this.flow || !this.guide) return;
+    if (!token.current || !this.flow || !this.guide) return;
     this.detections++;
     const { scale } = frame;
     const box = observation.box && scaleBox(observation.box, scale);
@@ -493,8 +521,9 @@ export class FaceCaptureElement extends CaptureElement {
       this.tracker.setTarget(undefined);
     }
 
-    if (state.frontal && observation.box)
+    if (state.frontal && observation.box) {
       this.considerFrame(frame, observation.box, observation.pose);
+    }
 
     this.lastYaw = observation.yaw;
     this.lastPose = {
@@ -545,52 +574,68 @@ export class FaceCaptureElement extends CaptureElement {
   private considerFrame(frame: GrabbedFrame, faceBox: Box, pose: HeadPose): void {
     const score = sharpness(grayscale(frame.image), faceBox);
     if (this.best && score <= this.best.score) return;
-    const { videoWidth: width, videoHeight: height } = this.video;
-    const canvas = this.best?.canvas ?? createCanvas(width, height);
-    canvas.width = width;
-    canvas.height = height;
-    context2d(canvas).drawImage(this.video, 0, 0, width, height);
-    this.best = { canvas, score, box: scaleBox(faceBox, frame.scale), pose };
+    const fit = fitToPixels(this.video.videoWidth, this.video.videoHeight, this.maxPixels);
+    const canvas = this.best?.canvas ?? createCanvas(fit.width, fit.height);
+    canvas.width = fit.width;
+    canvas.height = fit.height;
+    context2d(canvas).drawImage(this.video, 0, 0, fit.width, fit.height);
+    this.best = { canvas, score, box: scaleBox(faceBox, frame.scale * fit.scale), pose };
   }
 
   /**
    * Captures now: the sharpest frontal frame when one was kept and the
-   * flow is done, otherwise the current frame. Fires `pv-capture` and
+   * flow is done, otherwise the current frame, scaled to at most
+   * `max-pixels`. Fires `pv-capture` (on the element only) and
    * `pv-complete`, stops the camera and shows the still.
    *
-   * @returns The capture.
+   * The element keeps no reference to the capture once it is handed
+   * off: kept frames are freed, and the still's Blob URL is revoked as
+   * soon as it has decoded. Call `clearSensitiveData()` to remove the
+   * still from view as well.
+   *
+   * @returns The capture, or undefined when the camera isn't running.
    */
   async capture(): Promise<FaceCaptureDetail | undefined> {
-    if (!this.running && !this.best) return undefined;
-    const generation = this.generation;
+    const token = this.token;
+    if (!this.running || !token?.current) return undefined;
     this.paused = true;
     this.shutter.hidden = true;
     const done = this.flowState?.phase === "done";
-    const useBest = this.best !== undefined && done;
+    const best = done ? this.best : undefined;
     let canvas: HTMLCanvasElement;
-    if (useBest) {
-      canvas = this.best!.canvas;
+    let box: Box | undefined;
+    if (best) {
+      canvas = best.canvas;
+      box = best.box;
     } else {
-      canvas = createCanvas(this.video.videoWidth, this.video.videoHeight);
-      context2d(canvas).drawImage(this.video, 0, 0);
+      const shot = this.snapshotVideo();
+      canvas = shot.canvas;
+      box = this.lastPose?.box && scaleBox(this.lastPose.box, shot.scale);
     }
-    const blob = await canvasToBlob(canvas);
-    if (generation !== this.generation) return undefined;
     const metadata: FaceCaptureMetadata = {
       width: canvas.width,
       height: canvas.height,
-      sharpness: useBest ? this.best!.score : 0,
-      box: useBest ? this.best!.box : this.lastPose?.box,
-      pose: useBest ? this.best!.pose : (this.lastPose?.pose ?? "none"),
-      liveness: done && this.steps,
+      sharpness: best ? best.score : 0,
+      box,
+      pose: best ? best.pose : (this.lastPose?.pose ?? "none"),
+      challengePassed: done && this.steps,
       durationMs: Math.round(performance.now() - this.startedAt),
       capturedAt: new Date().toISOString(),
       mirrored: false,
     };
-    const detail: FaceCaptureDetail = { blob, image: canvasPixels(canvas), metadata };
-    this.resultValue = detail;
-    this.showStill(blob);
+    let blob: Blob;
+    let image: ImageData | undefined;
+    try {
+      blob = await canvasToBlob(canvas);
+      image = this.includeImageData && token.current ? canvasPixels(canvas) : undefined;
+    } finally {
+      // The encoded copy is all that's needed from here on; free the frame either way.
+      zeroCanvas(canvas);
+    }
+    if (!token.current) return undefined;
+    const detail: FaceCaptureDetail = image ? { blob, image, metadata } : { blob, metadata };
     this.stop();
+    this.showStill(blob);
     this.setViewState("done");
     this.hidePanel();
     this.container.dataset.tone = "success";
@@ -604,7 +649,7 @@ export class FaceCaptureElement extends CaptureElement {
     this.retake.parentElement!.hidden = false;
     this.setInstruction(this.text.faceDone);
     vibrate(HAPTICS.success);
-    this.emit<FaceCaptureDetail>("pv-capture", detail);
+    this.emitPayload<FaceCaptureDetail>("pv-capture", detail);
     this.emit<CompleteDetail>("pv-complete", {
       durationMs: metadata.durationMs,
       stepsDone: this.flowState?.stepsDone ?? 0,
@@ -830,16 +875,20 @@ export class FaceCaptureElement extends CaptureElement {
     this.landmarksEl.style.opacity = String(round(opacity));
   }
 
+  /**
+   * Shows the capture as a still; its Blob URL is revoked once it has decoded.
+   *
+   * @param blob - The capture.
+   */
   private showStill(blob: Blob): void {
-    this.hideStill();
-    this.stillUrl = URL.createObjectURL(blob);
-    this.still.src = this.stillUrl;
     this.still.hidden = false;
+    void this.showBlob(this.still, blob).then((shown) => {
+      if (!shown) this.still.hidden = true;
+    });
   }
 
+  /** Removes the still. */
   private hideStill(): void {
-    if (this.stillUrl) URL.revokeObjectURL(this.stillUrl);
-    this.stillUrl = undefined;
     this.still.hidden = true;
     this.still.removeAttribute("src");
   }
@@ -859,20 +908,6 @@ function scaleBox(box: Box, scale: number): Box {
     width: box.width * scale,
     height: box.height * scale,
   };
-}
-
-/**
- * Loads pixelvision's frontal and profile cascades on demand, so they're
- * only downloaded when the default detector is used.
- *
- * @returns The cascades.
- */
-async function loadCascades(): Promise<HeadPoseCascades> {
-  const [{ frontalFace }, { profileFace }] = await Promise.all([
-    import("pixelvision/cascades/frontal-face"),
-    import("pixelvision/cascades/profile-face"),
-  ]);
-  return { frontal: frontalFace, profile: profileFace };
 }
 
 /** Radius of the turn gauge around the head illustration. */

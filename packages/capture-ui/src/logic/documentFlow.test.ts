@@ -41,6 +41,32 @@ describe("createDocumentFlow", () => {
     expect(flow.update(rect(100, 60)).progress).toBe(0);
   });
 
+  it("follows a hand-held document: small shake, a stray detection and missed frames", () => {
+    const flow = createDocumentFlow({ holdFrames: 4 });
+    const shaken = (dx: number): Quad =>
+      rect(100, 60).map((p) => ({ x: p.x + dx, y: p.y })) as Quad;
+    const stray: Quad = rect(30, 30).map((p) => ({ x: p.x + 300, y: p.y + 300 })) as Quad;
+    flow.update(shaken(0));
+    // Each detection moves 2 px (under 5% of the 117 px diagonal), one is far off, one is missing.
+    for (const corners of [shaken(2), stray, shaken(-1), undefined, shaken(1)]) {
+      expect(flow.update(corners).phase).toBe("holding");
+    }
+    const state = flow.update(shaken(0));
+    expect(state).toMatchObject({ phase: "ready", progress: 1, message: "docFound" });
+    expect(state.corners![1].x).toBeCloseTo(100, 0);
+  });
+
+  it("drains the ring when the document moves, and loses it after missed frames", () => {
+    const flow = createDocumentFlow({ holdFrames: 4, maxMisses: 1 });
+    flow.update(rect(100, 60));
+    flow.update(rect(100, 60));
+    expect(flow.update(rect(100, 60)).progress).toBe(0.5);
+    const moved = rect(100, 60).map((p) => ({ x: p.x + 9, y: p.y })) as Quad;
+    expect(flow.update(moved).progress).toBe(0);
+    expect(flow.update(undefined).phase).toBe("holding");
+    expect(flow.update(undefined).phase).toBe("searching");
+  });
+
   it("uses defaults", () => {
     const flow = createDocumentFlow();
     let state = flow.update(rect(10, 10));

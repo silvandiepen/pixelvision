@@ -1,14 +1,9 @@
 import { extractDocument, fromImageData, toImageData } from "pixelvision";
 import type { FoundDocument, Quad } from "pixelvision";
-import {
-  canvasPixels,
-  canvasToBlob,
-  context2d,
-  createCanvas,
-  imageToCanvas,
-} from "../camera/frames";
+import { canvasPixels, canvasToBlob, imageToCanvas } from "../camera/frames";
 import type { GrabbedFrame } from "../camera/frames";
 import { parseBoolean, parseNumber } from "../logic/attributes";
+import { zeroCanvas } from "../logic/disposal";
 import {
   createDocumentFlow,
   defaultQuad,
@@ -30,6 +25,7 @@ import {
 import type { ViewTransform } from "../logic/geometry.model";
 import { HAPTICS, vibrate } from "../logic/haptics";
 import type { LabelKey } from "../logic/labels.model";
+import type { RunToken } from "../logic/runToken.model";
 import { createPointsTracker } from "../logic/smoothing";
 import { mainThreadDocumentFinder } from "../sources/document";
 import { createInlineWorker } from "../sources/inlineWorker";
@@ -53,12 +49,12 @@ const CORNER_LABELS: LabelKey[] = [
 
 /** A captured photo waiting for review. */
 interface Shot {
+  /** The photo, at most `max-pixels` pixels; its pixels are read again to re-straighten. */
   canvas: HTMLCanvasElement;
-  pixels: ImageData;
+  /** Corners in the photo's pixels. */
   corners: Quad;
   /** The straightened result for the current corners and aspect. */
-  result?: { blob: Blob; image: ImageData; aspectRatio?: number };
-  url?: string;
+  result?: { blob: Blob; image?: ImageData; aspectRatio?: number };
 }
 
 /**
@@ -66,6 +62,9 @@ interface Shot {
  * outlines it with smoothly animated corners, captures it once it holds
  * still, and shows it straightened for review. The person can switch the
  * shape (auto, ID card, A4), drag the corners, retake or confirm.
+ *
+ * This captures and crops a document photo; it does not verify that the
+ * document is genuine, unaltered or the applicant's.
  *
  * @example
  * <pv-document-scanner autostart aspect="id-card"></pv-document-scanner>
@@ -85,6 +84,7 @@ export class DocumentScannerElement extends CaptureElement {
   private flowState: DocumentFlowState | undefined;
   private readonly tracker = createPointsTracker({ halfLifeMs: 80 });
   private lastFound: { corners: Quad; area: number } | undefined;
+  private lastArea = 0;
   private shot: Shot | undefined;
   private adjustCorners: Quad | undefined;
   private capturing = false;
@@ -330,6 +330,12 @@ export class DocumentScannerElement extends CaptureElement {
     this.quad.removeAttribute("d");
   }
 
+  protected clearCaptures(): void {
+    this.discardShot();
+    this.lastFound = undefined;
+    this.adjustCorners = undefined;
+  }
+
   /** Builds the finder on first use: the built-in worker where possible. */
   private ensureFinder(): DocumentFinder {
     if (this.activeFinder) return this.activeFinder;
@@ -346,13 +352,14 @@ export class DocumentScannerElement extends CaptureElement {
     return this.activeFinder;
   }
 
-  protected async processFrame(frame: GrabbedFrame, generation: number): Promise<void> {
+  protected async processFrame(frame: GrabbedFrame, token: RunToken): Promise<void> {
     const finder = this.ensureFinder();
     let found: FoundDocument | null;
     try {
       found = await finder.find(frame.image);
     } catch (error) {
-      if (this.finderKind === "findDocument (worker)") {
+      if (!token.current) return;
+      if (finder === this.activeFinder && this.finderKind === "findDocument (worker)") {
         // The worker failed to start (a strict Content Security Policy): find on the main thread.
         finder.dispose?.();
         this.activeFinder = mainThreadDocumentFinder();
@@ -361,12 +368,15 @@ export class DocumentScannerElement extends CaptureElement {
       }
       throw error;
     }
-    if (generation !== this.generation || !this.flow || this.paused) return;
-    const corners = found ? scaleQuad(found.corners, frame.scale) : undefined;
-    this.lastFound = corners && found ? { corners, area: found.area } : undefined;
+    if (!token.current || !this.flow || this.paused) return;
+    // Corners in video pixels; the flow smooths them (median, stray and missed-frame tolerant).
+    const detected = found ? scaleQuad(found.corners, frame.scale) : undefined;
     const previous = this.flowState;
-    const state = this.flow.update(corners);
+    const state = this.flow.update(detected);
     this.flowState = state;
+    const corners = state.corners;
+    if (found) this.lastArea = found.area;
+    this.lastFound = corners ? { corners, area: this.lastArea } : undefined;
     const t = this.viewTransform();
     this.tracker.setTarget(corners?.map((p) => toView(p, t)));
     this.container.dataset.phase = state.phase;
@@ -374,7 +384,7 @@ export class DocumentScannerElement extends CaptureElement {
     this.setInstruction(this.text[state.message], previous?.message !== state.message);
     this.emit<DetectDetail>("pv-detect", {
       corners: corners ?? null,
-      area: found?.area,
+      area: corners ? this.lastArea : undefined,
       progress: state.progress,
       stable: state.phase === "ready",
     });
@@ -433,17 +443,20 @@ export class DocumentScannerElement extends CaptureElement {
    * @returns Resolves once the review shows.
    */
   async capture(): Promise<void> {
-    if (!this.running || this.capturing) return;
+    const token = this.token;
+    if (!this.running || this.capturing || !token?.current) return;
     this.capturing = true;
     this.paused = true;
-    const { videoWidth: width, videoHeight: height } = this.video;
-    const canvas = createCanvas(width, height);
-    context2d(canvas).drawImage(this.video, 0, 0, width, height);
-    const corners = this.lastFound?.corners ?? defaultQuad(width, height);
+    // The photo at full resolution (bounded by max-pixels); the smoothed corners come from the
+    // detection frames in video pixels and are scaled to it.
+    const { canvas, scale } = this.snapshotVideo();
+    const found = this.lastFound?.corners;
+    const corners = found ? scaleQuad(found, scale) : defaultQuad(canvas.width, canvas.height);
     this.discardShot();
-    this.shot = { canvas, pixels: canvasPixels(canvas), corners };
+    this.shot = { canvas, corners };
     vibrate(HAPTICS.success);
     await this.straighten();
+    if (!token.current || !this.shot) return;
     if (!this.reviewEnabled) {
       await this.confirm();
       return;
@@ -456,15 +469,21 @@ export class DocumentScannerElement extends CaptureElement {
     const shot = this.shot;
     if (!shot) return;
     const aspectRatio = resolveAspect(this.aspect, shot.corners);
-    const flat = extractDocument(fromImageData(shot.pixels), shot.corners, { aspectRatio });
-    const image = toImageData(flat);
-    const canvas = imageToCanvas(image);
-    const blob = await canvasToBlob(canvas);
+    const flat = extractDocument(fromImageData(canvasPixels(shot.canvas)), shot.corners, {
+      aspectRatio,
+    });
+    const canvas = imageToCanvas(toImageData(flat));
+    let blob: Blob;
+    let image: ImageData | undefined;
+    try {
+      blob = await canvasToBlob(canvas);
+      image = this.includeImageData ? canvasPixels(canvas) : undefined;
+    } finally {
+      zeroCanvas(canvas);
+    }
     if (shot !== this.shot) return;
-    if (shot.url) URL.revokeObjectURL(shot.url);
-    shot.url = URL.createObjectURL(blob);
-    shot.result = { blob, image: canvasPixels(canvas), aspectRatio };
-    this.resultImage.src = shot.url;
+    shot.result = image ? { blob, image, aspectRatio } : { blob, aspectRatio };
+    void this.showBlob(this.resultImage, blob);
   }
 
   private showReview(): void {
@@ -583,19 +602,29 @@ export class DocumentScannerElement extends CaptureElement {
     this.showReview();
   }
 
-  /** Fires `pv-capture` with the straightened document and stops the camera. */
+  /**
+   * Fires `pv-capture` (on the element only) with the straightened document and stops the
+   * camera. The element then keeps no reference to the photo or the result; the shown result
+   * stays visible until retake, reset or `clearSensitiveData()`.
+   */
   private async confirm(): Promise<void> {
     const shot = this.shot;
     if (!shot?.result) return;
+    const { blob, image, aspectRatio } = shot.result;
     const detail: DocumentCaptureDetail = {
-      blob: shot.result.blob,
-      image: shot.result.image,
+      blob,
+      ...(image ? { image } : {}),
       corners: shot.corners,
       aspect: this.aspect,
-      aspectRatio: shot.result.aspectRatio,
+      aspectRatio,
       source: { width: shot.canvas.width, height: shot.canvas.height },
     };
     this.stop();
+    // Hand-off: free the photo and drop the result; only the decoded preview remains.
+    zeroCanvas(shot.canvas);
+    shot.canvas.remove();
+    this.shot = undefined;
+    this.lastFound = undefined;
     this.setViewState("done");
     this.hidePanel();
     this.review.hidden = false;
@@ -604,12 +633,16 @@ export class DocumentScannerElement extends CaptureElement {
     this.adjustButton.hidden = true;
     this.confirmButton.hidden = true;
     this.aspectGroup.hidden = true;
-    this.emit<DocumentCaptureDetail>("pv-capture", detail);
+    this.emitPayload<DocumentCaptureDetail>("pv-capture", detail);
   }
 
-  /** Starts over: back to the live camera when it runs, otherwise to the intro. */
+  /**
+   * Starts over and clears the previous capture (see `clearSensitiveData`): back to the live
+   * camera when it runs, otherwise to the intro.
+   */
   reset(): void {
     if (!this.ready) return;
+    this.clearSensitiveData();
     this.adjustButton.hidden = false;
     this.confirmButton.hidden = false;
     this.aspectGroup.hidden = false;
@@ -625,8 +658,9 @@ export class DocumentScannerElement extends CaptureElement {
     this.showIntro();
   }
 
+  /** Frees the shot's photo and removes the shown result. */
   private discardShot(): void {
-    if (this.shot?.url) URL.revokeObjectURL(this.shot.url);
+    zeroCanvas(this.shot?.canvas);
     this.shot?.canvas.remove();
     this.shot = undefined;
     this.resultImage.removeAttribute("src");

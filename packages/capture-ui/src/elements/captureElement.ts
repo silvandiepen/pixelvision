@@ -1,13 +1,29 @@
 import { cameraConstraints, openCamera, stopStream } from "../camera/camera";
 import { cameraContext, classifyCameraError } from "../camera/errors";
-import { FrameGrabber } from "../camera/frames";
+import { FrameGrabber, snapshot } from "../camera/frames";
 import type { GrabbedFrame } from "../camera/frames";
+import {
+  DEFAULT_START_TIMEOUT_MS,
+  StreamError,
+  liveVideoTrack,
+  waitForVideo,
+  watchVideo,
+} from "../camera/startup";
 import { parseBoolean, parseNumber } from "../logic/attributes";
+import {
+  DEFAULT_MAX_CAPTURE_PIXELS,
+  MAX_CAPTURE_PIXELS,
+  MIN_CAPTURE_PIXELS,
+  fitToPixels,
+} from "../logic/captureSize";
+import { createBlobUrls, showBlobImage } from "../logic/disposal";
 import { coverTransform } from "../logic/geometry";
 import type { ViewTransform } from "../logic/geometry.model";
 import { HAPTICS, vibrate } from "../logic/haptics";
 import { resolveLabels } from "../logic/labels";
 import type { CaptureLabels, LabelKey } from "../logic/labels.model";
+import { createRunCounter } from "../logic/runToken";
+import type { RunToken } from "../logic/runToken.model";
 import type { CaptureErrorCode, ErrorDetail, ReadyDetail } from "./events.model";
 import { baseStyles } from "./styles";
 
@@ -34,7 +50,28 @@ const ERROR_LABELS: Record<CaptureErrorCode, [LabelKey, LabelKey]> = {
   unknown: ["cameraErrorTitle", "cameraErrorBody"],
   timeout: ["timeoutTitle", "timeoutBody"],
   detector: ["cameraErrorTitle", "cameraErrorBody"],
+  "no-video": ["cameraUnavailableTitle", "cameraUnavailableBody"],
+  ended: ["cameraUnavailableTitle", "cameraUnavailableBody"],
+  "media-error": ["cameraErrorTitle", "cameraErrorBody"],
+  "start-timeout": ["cameraErrorTitle", "cameraErrorBody"],
 };
+
+/** Status events: they bubble and cross the shadow root, and never carry images. */
+const STATUS_EVENT: EventInit = { bubbles: true, composed: true };
+/**
+ * Events with image data: they stay on the element (no bubbling, no crossing the shadow
+ * root), so only listeners on the element itself receive the capture.
+ */
+const PAYLOAD_EVENT: EventInit = { bubbles: false, composed: false };
+
+/**
+ * The `pv-error` code for a stream that failed to start.
+ *
+ * @param error - What `waitForVideo` rejected with.
+ * @returns The stream failure, or `unknown` for anything else.
+ */
+const startFailureCode = (error: unknown): CaptureErrorCode =>
+  error instanceof StreamError && error.reason !== "aborted" ? error.reason : "unknown";
 
 /**
  * Waits.
@@ -74,8 +111,10 @@ export abstract class CaptureElement extends ElementBase {
   protected paused = false;
   protected startedAt = 0;
   protected viewState: ViewState = "intro";
-  /** Bumped on every start and stop, so stale async work can tell it's stale. */
-  protected generation = 0;
+  /** The current run's token, until it stops; async work checks it after every await. */
+  protected token: RunToken | undefined;
+  /** Every Blob URL the element created, so all of them can be revoked. */
+  protected readonly blobUrls = createBlobUrls();
   /** The subclass has built its DOM (one microtask after construction). */
   protected ready = false;
 
@@ -83,6 +122,9 @@ export abstract class CaptureElement extends ElementBase {
   private externalStream: MediaStream | undefined;
   private activeStream: MediaStream | undefined;
   private readonly grabber = new FrameGrabber();
+  private readonly runs = createRunCounter();
+  private imageLoads = new AbortController();
+  private unwatchStream: (() => void) | undefined;
   private animationId = 0;
   private resizeObserver: ResizeObserver | undefined;
   private announced = "";
@@ -95,8 +137,8 @@ export abstract class CaptureElement extends ElementBase {
   protected abstract stageMarkup(): string;
   /** Called once the shadow DOM exists. */
   protected abstract setup(): void;
-  /** Analyses one detection frame. */
-  protected abstract processFrame(frame: GrabbedFrame, generation: number): Promise<void>;
+  /** Analyses one detection frame; checks `token` after every await. */
+  protected abstract processFrame(frame: GrabbedFrame, token: RunToken): Promise<void>;
   /** Draws one display frame. */
   protected abstract drawFrame(now: number): void;
   /** The view was resized. */
@@ -105,8 +147,10 @@ export abstract class CaptureElement extends ElementBase {
   protected abstract showIntro(): void;
   /** The camera started: reset the flow. */
   protected abstract onStarted(): void;
-  /** The camera stopped: free detectors. */
+  /** The camera stopped: free detectors and working buffers. */
   protected abstract onStopped(): void;
+  /** Drops the element's captured images, canvases and results (see {@link clearSensitiveData}). */
+  protected abstract clearCaptures(): void;
   /** Labels or language changed: re-render text. */
   protected abstract renderText(): void;
 
@@ -205,6 +249,41 @@ export abstract class CaptureElement extends ElementBase {
     return parseBoolean(this.getAttribute("show-debug"), false);
   }
 
+  /** Milliseconds the stream gets to deliver its first frame size (`start-timeout`). */
+  protected get startTimeout(): number {
+    return parseNumber(this.getAttribute("start-timeout"), DEFAULT_START_TIMEOUT_MS, 100, 120_000);
+  }
+
+  /**
+   * The most pixels a capture may have (`max-pixels`, default 1920 × 1440). A larger camera
+   * frame is scaled down before it is encoded, so an unexpectedly large stream can't exhaust
+   * memory. Kept between 320 × 240 and 4096 × 4096.
+   */
+  get maxPixels(): number {
+    return parseNumber(
+      this.getAttribute("max-pixels"),
+      DEFAULT_MAX_CAPTURE_PIXELS,
+      MIN_CAPTURE_PIXELS,
+      MAX_CAPTURE_PIXELS,
+    );
+  }
+
+  set maxPixels(value: number) {
+    this.setAttribute("max-pixels", String(value));
+  }
+
+  /**
+   * Whether `pv-capture` also carries the raw `ImageData` (`include-image-data`, default off).
+   * Off, the capture is only the encoded JPEG, so the pixels aren't held twice in memory.
+   */
+  get includeImageData(): boolean {
+    return parseBoolean(this.getAttribute("include-image-data"), false);
+  }
+
+  set includeImageData(value: boolean) {
+    this.setAttribute("include-image-data", value ? "on" : "off");
+  }
+
   connectedCallback(): void {
     this.resizeObserver ??= new ResizeObserver((entries) => {
       const rect = entries[entries.length - 1].contentRect;
@@ -220,7 +299,7 @@ export abstract class CaptureElement extends ElementBase {
 
   disconnectedCallback(): void {
     this.resizeObserver?.disconnect();
-    this.stop();
+    this.dispose();
   }
 
   attributeChangedCallback(name: string): void {
@@ -242,35 +321,53 @@ export abstract class CaptureElement extends ElementBase {
    */
   async start(): Promise<void> {
     if (this.running || this.viewState === "starting") return;
-    const generation = ++this.generation;
+    const token = this.runs.begin();
+    this.token = token;
     this.setViewState("starting");
     this.hidePanel();
     this.setInstruction(this.text.startingCamera, true);
+    const external = this.externalStream;
     let stream: MediaStream;
     try {
-      stream = this.externalStream ?? (await openCamera(cameraConstraints(this.facingMode)));
+      stream = external ?? (await openCamera(cameraConstraints(this.facingMode)));
     } catch (error) {
-      if (generation !== this.generation) return;
+      if (!token.current) return;
       this.fail(classifyCameraError(error, cameraContext()), error);
       return;
     }
-    if (generation !== this.generation) {
-      if (stream !== this.externalStream) stopStream(stream);
+    if (!token.current) {
+      if (stream !== external) stopStream(stream);
+      return;
+    }
+    const track = liveVideoTrack(stream);
+    if (!track) {
+      if (stream !== external) stopStream(stream);
+      this.fail("no-video", new StreamError("no-video"));
       return;
     }
     this.activeStream = stream;
     this.video.srcObject = stream;
+    // Autoplay rules can reject play() even for a muted inline video, and frames still arrive
+    // once metadata loads, so the outcome is decided by waitForVideo. A rejection is kept as the
+    // cause in case the stream then never starts.
+    let playFailure: unknown;
+    this.video.play().catch((error: unknown) => {
+      playFailure = error;
+    });
     try {
-      await this.video.play();
-    } catch {
-      // Autoplay rules can reject play() even for a muted inline video; frames still arrive once metadata loads.
-    }
-    if (!this.video.videoWidth) {
-      await new Promise<void>((resolve) => {
-        this.video.addEventListener("loadedmetadata", () => resolve(), { once: true });
+      await waitForVideo(this.video, track, {
+        timeoutMs: this.startTimeout,
+        signal: token.signal,
       });
+    } catch (error) {
+      if (!token.current) return;
+      this.fail(startFailureCode(error), playFailure ?? error);
+      return;
     }
-    if (generation !== this.generation) return;
+    if (!token.current) return;
+    this.unwatchStream = watchVideo(this.video, track, (reason) => {
+      if (token.current) this.fail(reason, new StreamError(reason));
+    });
     this.running = true;
     this.paused = false;
     this.startedAt = performance.now();
@@ -283,9 +380,9 @@ export abstract class CaptureElement extends ElementBase {
       facingMode: this.facingMode,
     });
     this.layout();
-    void this.detectionLoop(generation);
+    void this.detectionLoop(token);
     const frame = (now: number) => {
-      if (generation !== this.generation) return;
+      if (!token.current) return;
       this.drawFrame(now);
       this.animationId = requestAnimationFrame(frame);
     };
@@ -294,14 +391,18 @@ export abstract class CaptureElement extends ElementBase {
 
   /** Stops the camera and detection. The camera light goes off. */
   stop(): void {
-    this.generation++;
+    this.runs.cancel();
+    this.token = undefined;
     this.running = false;
     cancelAnimationFrame(this.animationId);
+    this.unwatchStream?.();
+    this.unwatchStream = undefined;
     if (this.activeStream && this.activeStream !== this.externalStream) {
       stopStream(this.activeStream);
     }
     this.activeStream = undefined;
     this.video.srcObject = null;
+    this.grabber.release();
     if (!this.ready) return;
     this.onStopped();
     if (this.viewState === "starting" || this.viewState === "live") {
@@ -311,23 +412,73 @@ export abstract class CaptureElement extends ElementBase {
   }
 
   /**
+   * Stops the camera and clears every captured image (see {@link clearSensitiveData}). Called
+   * when the element is removed from the page. Safe to call repeatedly; `start()` works again
+   * afterwards.
+   */
+  dispose(): void {
+    this.stop();
+    this.clearSensitiveData();
+  }
+
+  /**
+   * Clears every captured image the element holds: revokes its Blob URLs, sets its canvases to
+   * zero size, removes shown stills, and drops its references to blobs, `ImageData`, kept
+   * frames and results. The element keeps no copy of a capture after this; your own references
+   * (from `pv-capture` or `capture()`) are untouched. Called on disconnect, reset, retake and
+   * errors. Safe to call repeatedly.
+   */
+  clearSensitiveData(): void {
+    this.imageLoads.abort();
+    this.imageLoads = new AbortController();
+    this.blobUrls.revokeAll();
+    this.grabber.release();
+    if (this.ready) this.clearCaptures();
+  }
+
+  /**
+   * Shows a captured image in an `<img>` and revokes its Blob URL as soon as it has decoded.
+   *
+   * @param image - The `<img>`.
+   * @param blob - The encoded image.
+   * @returns True once shown; false when it failed to decode or the data was cleared first.
+   */
+  protected showBlob(image: HTMLImageElement, blob: Blob): Promise<boolean> {
+    return showBlobImage(image, blob, this.blobUrls, this.imageLoads.signal);
+  }
+
+  /**
+   * Draws the current video frame for a capture, scaled down to at most {@link maxPixels}.
+   *
+   * @returns The canvas, and its pixels per video pixel.
+   */
+  protected snapshotVideo(): { canvas: HTMLCanvasElement; scale: number } {
+    const { width, height, scale } = fitToPixels(
+      this.video.videoWidth,
+      this.video.videoHeight,
+      this.maxPixels,
+    );
+    return { canvas: snapshot(this.video, width, height), scale };
+  }
+
+  /**
    * Analyses frames until stopped: grab a small frame, wait for the
    * detector, wait out the rest of the interval. Only one frame is in
    * flight at a time, so a slow detector lowers the rate instead of
    * queueing work.
    *
-   * @param generation - The run this loop belongs to.
+   * @param token - The run this loop belongs to.
    */
-  private async detectionLoop(generation: number): Promise<void> {
-    while (generation === this.generation) {
+  private async detectionLoop(token: RunToken): Promise<void> {
+    while (token.current) {
       const began = performance.now();
       if (!this.paused && document.visibilityState !== "hidden") {
         const frame = this.grabber.grab(this.video, this.detectSize);
         if (frame) {
           try {
-            await this.processFrame(frame, generation);
+            await this.processFrame(frame, token);
           } catch (error) {
-            if (generation !== this.generation) return;
+            if (!token.current) return;
             this.fail("detector", error);
             return;
           }
@@ -349,7 +500,7 @@ export abstract class CaptureElement extends ElementBase {
   }
 
   /**
-   * Shows an error, stops the camera and fires `pv-error`.
+   * Shows an error, stops the camera, clears captured data and fires `pv-error`.
    *
    * @param code - What went wrong.
    * @param cause - The underlying error.
@@ -357,6 +508,7 @@ export abstract class CaptureElement extends ElementBase {
   protected fail(code: CaptureErrorCode, cause?: unknown): void {
     const [titleKey, bodyKey] = ERROR_LABELS[code];
     this.stop();
+    this.clearSensitiveData();
     this.setViewState("error");
     this.setInstruction("", false);
     this.errorCode = code;
@@ -455,13 +607,26 @@ export abstract class CaptureElement extends ElementBase {
   }
 
   /**
-   * Dispatches a bubbling, composed `CustomEvent`.
+   * Dispatches a status event: bubbling and composed, so page-level listeners see it. Never
+   * use it for image data; see {@link emitPayload}.
    *
    * @param type - Event name.
    * @param detail - Event detail.
    */
   protected emit<T>(type: string, detail: T): void {
-    this.dispatchEvent(new CustomEvent<T>(type, { detail, bubbles: true, composed: true }));
+    this.dispatchEvent(new CustomEvent<T>(type, { ...STATUS_EVENT, detail }));
+  }
+
+  /**
+   * Dispatches an event that carries image data. It neither bubbles nor crosses the shadow
+   * root, so only listeners on the element itself receive it, not ones on `document` or
+   * `window`.
+   *
+   * @param type - Event name.
+   * @param detail - Event detail.
+   */
+  protected emitPayload<T>(type: string, detail: T): void {
+    this.dispatchEvent(new CustomEvent<T>(type, { ...PAYLOAD_EVENT, detail }));
   }
 
   /** Applies the `mirrored` attribute to the preview. */

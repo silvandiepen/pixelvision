@@ -20,12 +20,17 @@ for (const element of [face, scanner]) {
   element.addEventListener("pv-error", (e) =>
     write(`pv-error ${e.detail.code}: ${e.detail.message}`),
   );
+  // pv-capture doesn't bubble: listen on the element itself.
   element.addEventListener("pv-capture", (e) => {
+    const { metadata, source, blob } = e.detail;
+    const size = metadata ?? source;
+    const challenge = metadata ? `, challengePassed ${metadata.challengePassed}` : "";
     write(
-      `pv-capture ${e.detail.image.width}×${e.detail.image.height}, ${Math.round(e.detail.blob.size / 1024)} kB`,
+      `pv-capture ${size.width}×${size.height}, ${Math.round(blob.size / 1024)} kB${challenge}`,
     );
-    if (result.src) URL.revokeObjectURL(result.src);
-    result.src = URL.createObjectURL(e.detail.blob);
+    const url = URL.createObjectURL(blob);
+    result.addEventListener("load", () => URL.revokeObjectURL(url), { once: true });
+    result.src = url;
     result.hidden = false;
   });
 }

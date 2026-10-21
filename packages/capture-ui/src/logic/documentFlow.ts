@@ -1,4 +1,4 @@
-import { createStabilityTracker } from "./stability";
+import { createDocumentTracker } from "pixelvision";
 import type {
   AspectPreset,
   DocumentFlow,
@@ -14,12 +14,16 @@ export const ID_CARD_ASPECT = 85.6 / 53.98;
 export const A4_ASPECT = 210 / 297;
 
 /**
- * Creates the document scanner's live-view flow: searching until a
- * document is found, then a hold-still ring that fills while the corners
- * stay put, then ready to capture.
+ * Creates the document scanner's live-view flow on pixelvision's
+ * `createDocumentTracker`: searching until a document is found, then a
+ * hold-still ring that fills while the smoothed outline stays within 5% of
+ * the document's diagonal (and drains when it moves), then ready to
+ * capture. Stray detections are ignored and a few missed frames keep the
+ * outline, so a hand-held document can get there.
  *
- * @param options - Frames to hold and movement tolerance.
+ * @param options - Tracker options; see `DocumentTrackerOptions`.
  * @returns The flow.
+ * @throws {RangeError} When an option is out of range (from the tracker).
  *
  * @example
  * const flow = createDocumentFlow();
@@ -27,22 +31,22 @@ export const A4_ASPECT = 210 / 297;
  * if (state.phase === "ready") capture(state.corners);
  */
 export function createDocumentFlow(options: DocumentFlowOptions = {}): DocumentFlow {
-  const { holdFrames = 8, tolerance = 0.02 } = options;
-  const stability = createStabilityTracker({ holdFrames, tolerance });
+  const tracker = createDocumentTracker(options);
   return {
     update(corners) {
-      const { stable, progress } = stability.update(corners);
-      if (!corners) return { phase: "searching", progress: 0, message: "docSearching" };
+      const { status, corners: outline, progress } = tracker.update(corners ?? null);
+      if (!outline) return { phase: "searching", progress: 0, message: "docSearching" };
+      const ready = status === "steady";
       const state: DocumentFlowState = {
-        phase: stable ? "ready" : "holding",
+        phase: ready ? "ready" : "holding",
         progress,
-        message: stable ? "docFound" : "docHoldStill",
-        corners,
+        message: ready ? "docFound" : "docHoldStill",
+        corners: outline,
       };
       return state;
     },
     reset() {
-      stability.reset();
+      tracker.reset();
     },
   };
 }
