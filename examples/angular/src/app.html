@@ -1,0 +1,16 @@
+<main>
+  <h1>pixelvision · Angular</h1>
+  <p>Upload a photo of a document, or take one with the camera.</p>
+  <div class="controls">
+    <input
+      type="file"
+      accept="image/*"
+      aria-label="Photo"
+      data-upload
+      (change)="onUpload($event)"
+    />
+    <button type="button" data-camera (click)="scan(readCameraFrame)">Use camera</button>
+  </div>
+  <p role="status" data-status>{{ status() }}</p>
+  <canvas #canvas data-result [attr.data-found]="found()" [attr.data-corners]="corners()"></canvas>
+</main>

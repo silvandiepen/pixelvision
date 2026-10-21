@@ -9,6 +9,7 @@ export default tseslint.config(
       "**/coverage/**",
       "**/node_modules/**",
       "**/.turbo/**",
+      "**/.angular/**",
       "**/.out/**",
       "packages/pixelvision/src/cascades/*.ts",
       "!packages/pixelvision/src/cascades/*.test.ts",

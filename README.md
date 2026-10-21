@@ -72,14 +72,14 @@ const onFrame = (frame: ImageData) => {
 
 ## Repository
 
-| Path                   | What                                                                                           |
-| ---------------------- | ---------------------------------------------------------------------------------------------- |
-| `packages/pixelvision` | The library, published to npm as `pixelvision`                                                 |
-| `packages/face-neural` | Optional neural face detection (YuNet on onnxruntime), published as `@pixelvision/face-neural` |
-| `packages/parity`      | Tests against reference implementations (private)                                              |
-| `packages/compat`      | Runs the same pipeline in Node and Hermes (React Native) and compares the results (private)    |
-| `apps/examples`        | Documentation site: guides, API reference and a live, tested example for every function        |
-| `examples/*`           | Small starter apps (Vanilla, Vue, React, Svelte, Web Worker, Node) that use the built package  |
+| Path                   | What                                                                                                   |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `packages/pixelvision` | The library, published to npm as `pixelvision`                                                         |
+| `packages/face-neural` | Optional neural face detection (YuNet on onnxruntime), published as `@pixelvision/face-neural`         |
+| `packages/parity`      | Tests against reference implementations (private)                                                      |
+| `packages/compat`      | Runs the same pipeline in Node and Hermes (React Native) and compares the results (private)            |
+| `apps/examples`        | Documentation site: guides, API reference and a live, tested example for every function                |
+| `examples/*`           | Small starter apps (Vanilla, Vue, React, Svelte, Angular, Web Worker, Node) that use the built package |
 
 ```sh
 pnpm install

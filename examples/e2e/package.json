@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@pixelvision/example-angular": "workspace:*",
     "@pixelvision/example-react": "workspace:*",
     "@pixelvision/example-svelte": "workspace:*",
     "@pixelvision/example-vanilla": "workspace:*",

@@ -1,4 +1,5 @@
 dist
+.angular
 coverage
 pnpm-lock.yaml
 .turbo

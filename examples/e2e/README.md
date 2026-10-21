@@ -1,9 +1,10 @@
 # Example browser tests
 
-Playwright tests for the web examples (`vanilla`, `vue`, `react`, `svelte` and `worker`), in
-Chromium, Firefox and WebKit. Each example's production build is served with `vite preview` on its
-own port (listed in `examples.ts`). The tests upload a generated photo of a document, and feed the
-same photo to the camera, and check that every corner the example finds is within 4 px.
+Playwright tests for the web examples (`vanilla`, `vue`, `react`, `svelte`, `worker` and
+`angular`), in Chromium, Firefox and WebKit. Each example's production build is served with
+`vite preview` on its own port (listed in `examples.ts`). The tests upload a generated photo of a
+document, and feed the same photo to the camera, and check that every corner the example finds is
+within 4 px.
 
 From the repository root:
 
