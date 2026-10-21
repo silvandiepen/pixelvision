@@ -2,18 +2,18 @@ import { defineExample } from "../define";
 import { demo } from "./demo";
 import type { ScanDocumentDemoOptions } from "./demo.model";
 import code from "./demo.ts?raw";
-import stabilityCode from "./stability.ts?raw";
+import liveCode from "../../composables/useDocumentScan/useDocumentScan.ts?raw";
 
 export const scanDocumentExample = defineExample<ScanDocumentDemoOptions>({
   slug: "scan-document",
   title: "Scan a document with the camera",
-  functions: ["findDocument", "extractDocument"],
+  functions: ["findDocument", "createDocumentTracker", "extractDocument"],
   category: "pipeline",
   description:
     "Point the camera at a document. When it has been found and held still for a moment, it's captured and straightened. You can also upload a photo.",
   howItWorks: [
     "Every frame (about 10 a second), `findDocument` converts the frame to gray, scales it down, blurs it, and builds two masks: Canny edges thickened with `dilate`, and an Otsu threshold that separates a light document from a dark background by brightness. It traces the outer contours of both, simplifies each with Douglas–Peucker at a growing tolerance until it has four corners, and keeps the largest convex four-cornered shape.",
-    "The outline is drawn over the video. When the document has been found in 8 detections in a row and no corner moved more than 6 pixels between them, the frame is captured and `extractDocument` straightens it with a perspective warp, to the proportions you pick: auto (from the photo), an ID card (85.6 : 53.98) or A4 (210 : 297).",
+    "`createDocumentTracker` turns those per-frame results into a calm outline: each corner is the median of the last 5 detections, a detection that jumps away is ignored until it repeats 3 times, and up to 4 missed frames keep the outline. Once 8 detections agree with the outline to within 5% of the document's diagonal, the full-resolution frame is captured and `extractDocument` straightens it with a perspective warp, to the proportions you pick: auto (from the photo), an ID card (85.6 : 53.98) or A4 (210 : 297).",
     "Limits: the whole document must be in view, and it needs some contrast with the background. A white page on a white desk, glare across an edge or a corner outside the frame stops it being found.",
   ],
   howToTest:
@@ -36,7 +36,7 @@ export const scanDocumentExample = defineExample<ScanDocumentDemoOptions>({
       default: "id-card",
     },
   ],
-  code: `${code}\n// stability.ts\n${stabilityCode}`,
+  code: `${code}\n// useDocumentScan.ts (the camera loop)\n${liveCode}`,
   demo,
   expectations: [
     { key: "found", label: "Finds the card", equals: true },

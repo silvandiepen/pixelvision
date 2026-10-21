@@ -29,6 +29,7 @@ import { estimateHomographyExample } from "./estimate-homography";
 import { extractDocumentExample } from "./extract-document";
 import { findContoursExample } from "./find-contours";
 import { findDocumentExample } from "./find-document";
+import { documentTrackerExample } from "./document-tracker";
 import { findLinesExample } from "./find-lines";
 import { flipExample } from "./flip";
 import { fromImageDataExample } from "./from-image-data";
@@ -127,6 +128,7 @@ export const EXAMPLES: readonly Example[] = [
   groupRectanglesExample,
   detectHeadPoseExample,
   findDocumentExample,
+  documentTrackerExample,
   extractDocumentExample,
   detectFastExample,
   detectYape06Example,

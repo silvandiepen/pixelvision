@@ -15,7 +15,7 @@ export const ASPECT_RATIOS: Record<DocumentAspect, number | undefined> = {
 /**
  * Finds a document in one frame and straightens it. The camera page runs
  * `findDocument` on every frame and calls `extractDocument` once the
- * corners are stable (see `isStable`).
+ * tracker built by `createDocumentTracker` reports the document steady.
  *
  * @param frame - A photo or camera frame.
  * @param aspect - The document's proportions.

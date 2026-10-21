@@ -219,6 +219,9 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "find-document": icon(
     `<path d="${TILTED}"/>${dot(5, 6.5, 1.6)}${dot(17.5, 4.5, 1.6)}${dot(19, 16.5, 1.6)}${dot(6.5, 19.5, 1.6)}`,
   ),
+  "document-tracker": icon(
+    `<path d="${TILTED}" transform="translate(-1.5 1.5)" ${SOFT}/><path d="${TILTED}"/>${dot(17.5, 4.5, 1.6)}<path d="M3 21.5H9" ${SOFT}/><path d="M3 21.5H6.5"/>`,
+  ),
   "extract-document": icon(
     `<rect x="6" y="5" width="12" height="15" rx="1"/><path d="M8.5 9H15.5M8.5 12H15.5M8.5 15H13" ${SOFT}/><path d="M2.5 5H4M5 2.5V3.5M21.5 5H20M19 2.5V3.5M2.5 20H4M5 21.5V22.5M21.5 20H20M19 21.5V22.5"/>`,
   ),
