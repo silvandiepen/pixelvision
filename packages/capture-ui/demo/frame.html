@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Capture UI in a frame</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 32px;
+        display: grid;
+        gap: 16px;
+        background: #f9fafb;
+        color: #121316;
+        font-family: system-ui, sans-serif;
+      }
+      iframe {
+        width: 100%;
+        max-width: 960px;
+        height: 760px;
+        border: 0;
+        border-radius: 34px;
+      }
+    </style>
+  </head>
+  <body>
+    <p>
+      This iframe has no <code>allow="camera"</code>, so the camera is blocked by the permissions
+      policy. The component explains what the embedding page must change.
+    </p>
+    <iframe title="Capture UI demo"></iframe>
+    <script>
+      // A cross-origin frame: localhost and 127.0.0.1 are different origins, and only
+      // same-origin frames get the camera without allow="camera".
+      const other = location.hostname === "localhost" ? "127.0.0.1" : "localhost";
+      const url = new URL("./index.html?autostart", location.href);
+      url.hostname = other;
+      document.querySelector("iframe").src = url.href;
+    </script>
+  </body>
+</html>

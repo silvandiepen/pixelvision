@@ -1,0 +1,307 @@
+import { describe, expect, it } from "vitest";
+import type { HeadPose } from "pixelvision";
+import { createFaceFlow, turnProgress } from "./faceFlow";
+import type { FaceFlow, FaceFlowOptions, FaceFlowState } from "./faceFlow.model";
+import type { FaceGuidance } from "./geometry.model";
+
+/** A flow on a fake clock that advances 200 ms per detection (5 Hz, like HAAR). */
+const make = (options: FaceFlowOptions = {}) => {
+  let t = 0;
+  const flow = createFaceFlow({
+    holdFrames: 2,
+    acceptPauseMs: 0,
+    hintDelayMs: 800,
+    hintHoldMs: 1200,
+    now: () => t,
+    ...options,
+  });
+  const feed = (
+    pose: HeadPose,
+    times = 1,
+    guidance: FaceGuidance = pose === "none" ? "no-face" : "aligned",
+    dt = 200,
+  ): FaceFlowState => {
+    let state = flow.state;
+    for (let i = 0; i < times; i++) {
+      t += dt;
+      state = flow.update({ pose, guidance });
+    }
+    return state;
+  };
+  return { flow, feed, advance: (ms: number) => (t += ms) };
+};
+
+/** Runs alignment and the first look-at-camera step. */
+const toFirstTurn = (feed: ReturnType<typeof make>["feed"]) => feed("frontal", 3);
+
+describe("turnProgress", () => {
+  it("measures towards the asked side", () => {
+    expect(turnProgress(9, "left")).toBe(0.5);
+    expect(turnProgress(-9, "left")).toBe(0);
+    expect(turnProgress(-36, "right")).toBe(1);
+    expect(turnProgress(-9, "either", 9)).toBe(1);
+  });
+
+  it("is undefined without yaw, a turn or a threshold", () => {
+    expect(turnProgress(undefined, "left")).toBeUndefined();
+    expect(turnProgress(10, undefined)).toBeUndefined();
+    expect(turnProgress(10, "left", 0)).toBeUndefined();
+  });
+});
+
+describe("createFaceFlow", () => {
+  it("starts searching with the main instruction", () => {
+    expect(make().flow.state).toEqual({
+      phase: "searching",
+      stepsDone: 0,
+      totalSteps: 4,
+      progress: 0,
+      hold: 0,
+      message: "noFace",
+      accepted: false,
+      stalled: false,
+      tone: "idle",
+      frontal: false,
+    });
+  });
+
+  it("shows positional hints only once they persist, as a secondary line", () => {
+    const { feed } = make();
+    let s = feed("frontal", 3, "too-far");
+    expect(s).toMatchObject({ phase: "aligning", message: "noFace", tone: "idle" });
+    expect(s.hint).toBeUndefined();
+    s = feed("frontal", 1, "too-far");
+    expect(s.tone).toBe("found");
+    expect(s.hint).toBeUndefined();
+    s = feed("frontal", 1, "too-far");
+    expect(s.hint).toBe("tooFar");
+    expect(s.message).toBe("noFace");
+    // A brief change doesn't replace it, and it stays for at least the hold time.
+    s = feed("frontal", 1, "too-close");
+    expect(s.hint).toBe("tooFar");
+    s = feed("frontal", 4, "too-close");
+    expect(s.hint).toBe("tooFar");
+    s = feed("frontal", 1, "too-close");
+    expect(s.hint).toBe("tooClose");
+    s = feed("frontal", 8, "off-centre");
+    expect(s.hint).toBe("offCentre");
+  });
+
+  it("says hold still while aligned but not yet held", () => {
+    const { feed } = make({ holdFrames: 10 });
+    expect(feed("frontal", 4).hint).toBeUndefined();
+    const s = feed("frontal", 1);
+    expect(s).toMatchObject({ hint: "holdStill", tone: "hold", frontal: true, hold: 0.5 });
+  });
+
+  it("treats frames without a face as neutral during alignment", () => {
+    const { feed } = make();
+    feed("frontal");
+    feed("none");
+    const s = feed("frontal");
+    expect(s).toMatchObject({ phase: "challenge", step: "face-camera" });
+  });
+
+  it("completes the steps despite flickering detections", () => {
+    const { feed } = make();
+    let s = toFirstTurn(feed);
+    expect(s).toMatchObject({
+      step: "turn-one-side",
+      stepsDone: 1,
+      message: "turnOneSide",
+      turn: "either",
+    });
+    // A profile, a stray frontal and a lost face: still counts.
+    s = feed("profile");
+    expect(s.hold).toBe(0.5);
+    expect(s.progress).toBeCloseTo(1.5 / 4);
+    feed("frontal");
+    feed("none");
+    s = feed("profile");
+    expect(s).toMatchObject({
+      step: "turn-other-side",
+      message: "turnOtherSide",
+      turn: "either",
+      stepsDone: 2,
+    });
+    s = feed("profile", 3);
+    expect(s.stepsDone).toBe(2);
+    s = feed("mirrored-profile", 2);
+    expect(s).toMatchObject({
+      step: "face-camera-again",
+      message: "faceCameraAgain",
+      turn: undefined,
+    });
+    s = feed("frontal", 2);
+    expect(s).toMatchObject({
+      phase: "done",
+      message: "faceDone",
+      tone: "success",
+      progress: 1,
+      stepsDone: 4,
+    });
+    expect(s.hint).toBeUndefined();
+    expect(feed("none").phase).toBe("done");
+  });
+
+  it("pauses on each accepted step, keeping its instruction, then moves on", () => {
+    const { feed } = make({ acceptPauseMs: 900 });
+    let s = toFirstTurn(feed);
+    expect(s).toMatchObject({
+      accepted: true,
+      message: "faceCamera",
+      step: "turn-one-side",
+      stepsDone: 1,
+      hold: 1,
+      progress: 0.25,
+      tone: "hold",
+      turn: undefined,
+    });
+    expect(s.hint).toBeUndefined();
+    // Detections during the pause are ignored.
+    s = feed("profile", 4);
+    expect(s).toMatchObject({ accepted: true, stepsDone: 1 });
+    s = feed("profile");
+    expect(s).toMatchObject({ accepted: false, message: "turnOneSide", hold: 0.5 });
+    s = feed("profile");
+    expect(s).toMatchObject({ accepted: true, message: "turnOneSide", stepsDone: 2 });
+    s = feed("mirrored-profile", 6);
+    expect(s).toMatchObject({ accepted: true, stepsDone: 3, message: "turnOtherSide" });
+    s = feed("frontal", 7);
+    expect(s).toMatchObject({ phase: "done", accepted: true });
+  });
+
+  it("uses its default timings", () => {
+    const { feed } = make({
+      acceptPauseMs: undefined,
+      hintDelayMs: undefined,
+      hintHoldMs: undefined,
+    });
+    toFirstTurn(feed);
+    expect(feed("profile", 2).accepted).toBe(true);
+    expect(feed("frontal", 3, "too-close").hint).toBeUndefined();
+    expect(feed("frontal", 4, "too-close").hint).toBe("tooClose");
+  });
+
+  it("keeps the main instruction while the face flickers in and out", () => {
+    const { feed } = make();
+    toFirstTurn(feed);
+    const messages = new Set<string>();
+    for (let i = 0; i < 3; i++) {
+      messages.add(feed("none").message);
+      messages.add(feed("frontal").message);
+    }
+    expect([...messages]).toEqual(["turnOneSide"]);
+  });
+
+  it("never shows a lost face for brief gaps, but does for longer ones", () => {
+    const { feed } = make();
+    toFirstTurn(feed);
+    expect(feed("none", 5).hint).toBeUndefined();
+    feed("frontal");
+    expect(feed("none", 6).hint).toBeUndefined();
+    const s = feed("none");
+    expect(s).toMatchObject({ hint: "faceLost", tone: "found" });
+  });
+
+  it("doesn't nag about centring during turns, but does about distance", () => {
+    const { feed } = make();
+    toFirstTurn(feed);
+    expect(feed("frontal", 10, "off-centre").hint).toBeUndefined();
+    expect(feed("frontal", 5, "too-close").hint).toBe("tooClose");
+    // Once the face is back in place, the hint clears (after its hold time).
+    expect(feed("frontal", 2).hint).toBe("tooClose");
+    expect(feed("frontal", 5).hint).toBeUndefined();
+  });
+
+  it("shows one helper hint when a step stalls, until it progresses", () => {
+    const { feed } = make();
+    toFirstTurn(feed);
+    let s = feed("frontal", 29);
+    expect(s).toMatchObject({ stalled: false, hint: undefined });
+    s = feed("frontal");
+    expect(s).toMatchObject({ stalled: true, hint: "turnFurther" });
+    s = feed("profile");
+    expect(s).toMatchObject({ stalled: false, hint: undefined });
+  });
+
+  it("has helpers for the other steps and for alignment", () => {
+    const align = make();
+    expect(align.feed("none", 31)).toMatchObject({
+      phase: "searching",
+      stalled: true,
+      hint: "alignHelp",
+    });
+    const facing = make();
+    facing.feed("frontal");
+    facing.feed("frontal");
+    expect(facing.feed("profile", 30)).toMatchObject({
+      step: "face-camera",
+      hint: "faceCameraHelp",
+    });
+  });
+
+  it("names the side with a directional source and ignores the wrong first turn", () => {
+    const { feed } = make({ directional: true });
+    let s = toFirstTurn(feed);
+    expect(s).toMatchObject({ step: "turn-one-side", message: "turnLeft", turn: "left" });
+    s = feed("turned-right", 3);
+    expect(s.step).toBe("turn-one-side");
+    s = feed("turned-left", 2);
+    expect(s).toMatchObject({ step: "turn-other-side", message: "turnRight", turn: "right" });
+    s = feed("turned-right", 2);
+    expect(s.step).toBe("face-camera-again");
+  });
+
+  it("can ask for the right side first", () => {
+    const { flow, feed } = make({ directional: true, firstTurn: "right" });
+    toFirstTurn(feed);
+    expect(flow.state).toMatchObject({ message: "turnRightFirst", turn: "right" });
+    feed("turned-right", 2);
+    expect(flow.state).toMatchObject({ message: "turnLeftNow", turn: "left" });
+  });
+
+  it("passes non-directional poses through in directional mode", () => {
+    const { feed } = make({ directional: true });
+    toFirstTurn(feed);
+    expect(feed("profile", 2)).toMatchObject({
+      step: "turn-other-side",
+      turn: "either",
+      message: "turnOtherSide",
+    });
+  });
+
+  it("finishes once aligned when steps are off", () => {
+    const { feed } = make({ steps: false });
+    const s = feed("frontal");
+    expect(s.progress).toBe(0.5);
+    expect(s.totalSteps).toBe(0);
+    expect(feed("frontal")).toMatchObject({ phase: "done", stepsDone: 0, totalSteps: 0 });
+  });
+
+  it("times out and resets", () => {
+    const { flow, feed, advance } = make({ timeoutMs: 1000 });
+    toFirstTurn(feed);
+    advance(1000);
+    const s = feed("frontal");
+    expect(s).toMatchObject({
+      phase: "failed",
+      message: "timeoutTitle",
+      tone: "error",
+      hint: undefined,
+    });
+    expect(feed("frontal").phase).toBe("failed");
+    flow.reset();
+    expect(flow.state.phase).toBe("searching");
+    expect(feed("frontal").phase).toBe("aligning");
+  });
+
+  it("never times out with a timeout of 0, and uses defaults", () => {
+    const { feed, advance } = make({ timeoutMs: 0 });
+    advance(1e9);
+    expect(feed("frontal").phase).toBe("aligning");
+    const flow: FaceFlow = createFaceFlow();
+    expect(flow.state.phase).toBe("searching");
+    expect(flow.update({ pose: "frontal", guidance: "aligned" }).phase).toBe("aligning");
+  });
+});

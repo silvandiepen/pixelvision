@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Capture UI demo</title>
+    <script type="importmap">
+      {
+        "imports": {
+          "@pixelvision/capture-ui": "../dist/index.js",
+          "pixelvision": "../../pixelvision/dist/index.js",
+          "pixelvision/cascades/frontal-face": "../../pixelvision/dist/cascades/frontal-face.js",
+          "pixelvision/cascades/profile-face": "../../pixelvision/dist/cascades/profile-face.js",
+          "@pixelvision/face-neural": "../../face-neural/dist/index.js"
+        }
+      }
+    </script>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --page: #f9fafb;
+        --surface: #ebebed;
+        --ink: #121316;
+        --secondary: #4e4f52;
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --page: #121316;
+          --surface: #1c1d20;
+          --ink: #f9fafb;
+          --secondary: #abacaf;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--page);
+        color: var(--ink);
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 20rem;
+        gap: 24px;
+        max-width: 1120px;
+        margin: 0 auto;
+        padding: 32px;
+      }
+      @media (max-width: 720px) {
+        main {
+          grid-template-columns: 1fr;
+          padding: 16px;
+        }
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 1.5rem;
+        font-weight: 600;
+      }
+      p.lede {
+        margin: 0 0 16px;
+        color: var(--secondary);
+      }
+      .tabs {
+        display: inline-flex;
+        gap: 4px;
+        padding: 4px;
+        margin-bottom: 16px;
+        border-radius: 28px;
+        background: var(--surface);
+      }
+      .tabs button {
+        font: inherit;
+        font-weight: 600;
+        min-height: 44px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 24px;
+        background: transparent;
+        color: var(--ink);
+        cursor: pointer;
+      }
+      .tabs button[aria-selected="true"] {
+        background: var(--ink);
+        color: var(--page);
+      }
+      .precise-toggle {
+        display: flex;
+        justify-content: flex-start;
+        gap: 12px;
+        align-items: flex-start;
+        margin-bottom: 16px;
+        padding: 12px 16px;
+        border-radius: 16px;
+        background: var(--surface);
+        cursor: pointer;
+      }
+      .precise-toggle input {
+        width: 20px;
+        height: 20px;
+        margin: 2px 0 0;
+      }
+      .precise-toggle span {
+        display: grid;
+        gap: 2px;
+      }
+      .precise-toggle small {
+        color: var(--secondary);
+      }
+      .stage {
+        height: min(78vh, 760px);
+        border-radius: 34px;
+        overflow: hidden;
+      }
+      aside {
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+      fieldset {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+        padding: 16px;
+        border: 0;
+        border-radius: 16px;
+        background: var(--surface);
+      }
+      legend {
+        float: left;
+        width: 100%;
+        padding: 0;
+        margin-bottom: 4px;
+        font-weight: 600;
+      }
+      label {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+      }
+      select,
+      input[type="color"] {
+        font: inherit;
+        min-height: 36px;
+      }
+      pre#log {
+        margin: 0;
+        max-height: 14rem;
+        overflow: auto;
+        font:
+          12px/1.45 ui-monospace,
+          SFMono-Regular,
+          Menlo,
+          monospace;
+        white-space: pre-wrap;
+        color: var(--secondary);
+      }
+      img#result {
+        max-width: 100%;
+        border-radius: 16px;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section>
+        <h1>Capture UI</h1>
+        <p class="lede">
+          pixelvision camera components: a selfie with head-turn liveness, and a document scanner.
+        </p>
+        <div class="tabs" role="tablist">
+          <button role="tab" aria-selected="true" data-tab="face">Selfie</button>
+          <button role="tab" aria-selected="false" data-tab="document">Document</button>
+        </div>
+        <label class="precise-toggle" data-panel="face">
+          <input type="checkbox" id="precise" />
+          <span>
+            <strong>Use precise detection</strong>
+            <small id="precise-status"
+              >YuNet face landmarks: names left and right, counts turns from 18°. Downloads about 14
+              MB (onnxruntime-web and the model) once.</small
+            >
+          </span>
+        </label>
+        <div class="stage" data-panel="face">
+          <pv-face-capture id="face"></pv-face-capture>
+        </div>
+        <div class="stage" data-panel="document" hidden>
+          <pv-document-scanner id="document"></pv-document-scanner>
+        </div>
+      </section>
+      <aside>
+        <fieldset>
+          <legend>Options</legend>
+          <label
+            >Guide shape
+            <select id="shape">
+              <option value="oval">Oval</option>
+              <option value="circle">Circle</option>
+              <option value="rect">Rectangle</option>
+            </select>
+          </label>
+          <label
+            >Language
+            <select id="lang">
+              <option value="en">English</option>
+              <option value="nl">Nederlands</option>
+            </select>
+          </label>
+          <label>Accent <input type="color" id="accent" value="#f9fafb" /></label>
+          <label>Landmarks <input type="checkbox" id="landmarks" /></label>
+          <label>Debug <input type="checkbox" id="debug" /></label>
+          <label>Liveness steps <input type="checkbox" id="steps" checked /></label>
+          <label>Synthetic document <input type="checkbox" id="synthetic" /></label>
+        </fieldset>
+        <fieldset>
+          <legend>Result</legend>
+          <img id="result" alt="" hidden />
+          <pre id="log"></pre>
+        </fieldset>
+      </aside>
+    </main>
+    <script type="module" src="./demo.js"></script>
+  </body>
+</html>
