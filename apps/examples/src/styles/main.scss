@@ -1,0 +1,182 @@
+// Design tokens and the global base.
+//
+// Colour, type, space, shape, depth and motion are copied from the Auno core
+// system (communicate repository, docs/brand/tokens/auno.css; names kept so
+// the two can be compared). pixelvision isn't an Auno product, so, as the
+// guide's "Beyond Auno" chapter allows, it adds one accent hue: OKLCH 290,
+// clear of the signal hues, used only for links and for shapes drawn over
+// demo images. Dark mode swaps the anchors; an explicit
+// [data-theme="light" | "dark"] on <html> overrides the device setting.
+
+:root {
+  // Colour: positions between page (0) and ink (1).
+  --auno-page: #f9fafb;
+  --auno-surface: #ebebed;
+  --auno-raised: #f9fafb;
+  --auno-pressed: #dcdddf;
+  --auno-separator: #dcdddf;
+  --auno-secondary: #4e4f52;
+  --auno-faint: #5f6064;
+  --auno-ink: #121316;
+  --auno-on-ink: #f9fafb;
+
+  --auno-refuse: #b3261e;
+  --auno-caution: #8a5a00;
+  --auno-affirm: #1a6f35;
+  --auno-help: #1f5fa8;
+
+  // The product's one accent (links, overlays on images).
+  --pv-accent: oklch(0.47 0.2 290);
+  --pv-overlay: oklch(0.62 0.26 290);
+
+  // Type
+  --auno-font:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+  --auno-font-display:
+    -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, system-ui, sans-serif;
+  --auno-font-mono: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+  --auno-text-caption: 13px;
+  --auno-text-small: 15px;
+  --auno-text-body: 17px;
+  --auno-text-lead: 20px;
+  --auno-text-title: 24px;
+  --auno-text-headline: 32px;
+  --auno-text-display: clamp(40px, 6vw, 64px);
+
+  // Space: 4 pt base.
+  --auno-space-2xs: 4px;
+  --auno-space-xs: 8px;
+  --auno-space-s: 12px;
+  --auno-space-m: 16px;
+  --auno-space-l: 24px;
+  --auno-space-xl: 32px;
+  --auno-space-2xl: 48px;
+  --auno-space-3xl: 64px;
+  --auno-space-4xl: 96px;
+
+  // Shape
+  --auno-radius-s: 8px;
+  --auno-radius-control: 16px;
+  --auno-radius-action: 28px;
+  --auno-radius-sheet: 34px;
+  --auno-target: 60px;
+  --auno-target-min: 44px;
+  --auno-content-width: 1120px;
+  --auno-measure: 64ch;
+  --auno-chrome-height: 64px;
+
+  // Depth and motion
+  --auno-shadow-sheet: 0 18px 68px rgb(0 0 0 / 0.16);
+  --auno-fast: 150ms;
+  --auno-base: 200ms;
+  --auno-slow: 300ms;
+  --auno-ease: ease;
+
+  color-scheme: light;
+}
+
+@mixin dark-tokens {
+  --auno-page: #121316;
+  --auno-surface: #1c1d20;
+  --auno-raised: #121316;
+  --auno-pressed: #26282a;
+  --auno-separator: #26282a;
+  --auno-secondary: #abacaf;
+  --auno-faint: #9a9b9f;
+  --auno-ink: #f9fafb;
+  --auno-on-ink: #121316;
+  --auno-refuse: #f2b8b5;
+  --auno-caution: #f0c46c;
+  --auno-affirm: #7fd49a;
+  --auno-help: #9cc4f2;
+  --pv-accent: oklch(0.8 0.12 290);
+  --pv-overlay: oklch(0.72 0.2 290);
+  --auno-shadow-sheet: 0 18px 68px rgb(0 0 0 / 0.4);
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @include dark-tokens;
+  }
+}
+
+:root[data-theme="dark"] {
+  @include dark-tokens;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--auno-page);
+  color: var(--auno-ink);
+  font-family: var(--auno-font);
+  font-size: var(--auno-text-body);
+  line-height: 1.5;
+  overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+dl,
+dd,
+figure,
+pre,
+blockquote {
+  margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+a {
+  color: var(--pv-accent);
+}
+
+code,
+pre {
+  font-family: var(--auno-font-mono);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+// The only outline anywhere: focus, never selection.
+:focus-visible {
+  outline: 2px solid var(--auno-ink);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    transition:
+      background-color var(--auno-slow) var(--auno-ease),
+      color var(--auno-slow) var(--auno-ease);
+  }
+}

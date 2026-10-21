@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"],
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "paths": { "@build/*": ["./build/*"] },
+    "declaration": false,
+    "sourceMap": false,
+    "jsx": "preserve"
+  },
+  "include": ["src", "tests", "build", "*.config.ts"]
+}

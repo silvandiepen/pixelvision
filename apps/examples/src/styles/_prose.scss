@@ -1,0 +1,75 @@
+// Typography for rendered Markdown. The HTML comes from Markdown, so it has
+// no classes; these element styles are scoped to the one block that holds it.
+@mixin prose {
+  display: flex;
+  flex-direction: column;
+  gap: var(--auno-space-m);
+  min-width: 0;
+
+  h2 {
+    padding-top: var(--auno-space-l);
+    font-size: var(--auno-text-title);
+    letter-spacing: -0.01em;
+    line-height: 1.2;
+  }
+
+  h3 {
+    padding-top: var(--auno-space-s);
+    font-size: var(--auno-text-lead);
+  }
+
+  ul,
+  ol {
+    display: flex;
+    flex-direction: column;
+    gap: var(--auno-space-xs);
+    padding-left: var(--auno-space-l);
+  }
+
+  code {
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+    background: var(--auno-surface);
+    font-size: 0.88em;
+  }
+
+  pre {
+    overflow-x: auto;
+    padding: var(--auno-space-m);
+    border-radius: var(--auno-radius-control);
+    background: var(--auno-surface);
+    font-size: var(--auno-text-caption);
+    line-height: 1.55;
+
+    code {
+      padding: 0;
+      background: none;
+      font-size: inherit;
+    }
+  }
+
+  table {
+    display: block;
+    overflow-x: auto;
+    border-collapse: collapse;
+    font-size: var(--auno-text-small);
+  }
+
+  th,
+  td {
+    padding: var(--auno-space-xs) var(--auno-space-s);
+    border-bottom: 1px solid var(--auno-separator);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: 600;
+  }
+
+  blockquote {
+    padding: var(--auno-space-s) var(--auno-space-m);
+    border-radius: var(--auno-radius-control);
+    background: var(--auno-surface);
+  }
+}

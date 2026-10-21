@@ -1,0 +1,34 @@
+{
+  "name": "@pixelvision/examples",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A gallery with one live, tested example page per pixelvision function.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@pixelvision/face-neural": "workspace:*",
+    "bemm": "^1.4.0",
+    "marked": "^16.4.2",
+    "onnxruntime-web": "1.29.0",
+    "pixelvision": "workspace:*",
+    "vue": "^3.5.0",
+    "vue-router": "^4.6.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.0",
+    "@vitejs/plugin-vue": "^6.0.0",
+    "eslint-plugin-vue": "^10.5.0",
+    "sass-embedded": "^1.93.0",
+    "typescript": "~6.0.3",
+    "vite": "^8.3.4",
+    "vue-tsc": "^3.1.0"
+  }
+}

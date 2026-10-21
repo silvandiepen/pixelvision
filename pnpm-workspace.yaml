@@ -7,3 +7,5 @@ allowBuilds:
   esbuild: true
   # Its postinstall only downloads optional CUDA binaries; CPU binaries ship in the package.
   onnxruntime-node: false
+  # Dependency of onnxruntime-web; its install script isn't needed at runtime.
+  protobufjs: false
