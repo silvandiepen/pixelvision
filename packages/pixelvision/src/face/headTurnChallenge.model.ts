@@ -6,8 +6,15 @@ export type HeadTurnStep =
 
 /** Options for {@link createHeadTurnChallenge}. */
 export interface HeadTurnChallengeOptions {
-  /** Consecutive frames a pose must hold to count (default 3). */
+  /** Matching frames a step needs before it counts (default 3). */
   holdFrames?: number;
+  /**
+   * How many recent frames with a face are considered (default
+   * `holdFrames * 2`). A step completes once `holdFrames` of them match,
+   * so one stray detection slows progress instead of resetting it. Frames
+   * without a face are neutral: they neither count nor break a hold.
+   */
+  windowFrames?: number;
   /** Give up after this many milliseconds (default 30 000). */
   timeoutMs?: number;
   /** Clock, injectable for tests (default `Date.now`). */
@@ -22,6 +29,8 @@ export interface HeadTurnState {
   instruction: string;
   /** Completed steps, 0–4. */
   progress: number;
+  /** How far the current step is, 0–1: smooth enough to drive a progress ring. */
+  holdProgress: number;
   /** The first side shown, once known. */
   firstSide?: Exclude<HeadPose, "frontal" | "none">;
 }

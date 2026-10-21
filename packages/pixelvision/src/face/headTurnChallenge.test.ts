@@ -40,13 +40,34 @@ describe("createHeadTurnChallenge", () => {
     expect(feed(challenge, times("profile", 5)).step).toBe("turn-other-side");
   });
 
-  it("needs the pose held for consecutive frames", () => {
+  it("ignores frames without a face and tolerates a stray pose", () => {
     const challenge = createHeadTurnChallenge({ holdFrames: 3 });
 
-    expect(feed(challenge, ["frontal", "frontal", "none", "frontal", "frontal"]).step).toBe(
+    // "none" is neutral; one stray profile doesn't reset progress.
+    expect(feed(challenge, ["frontal", "none", "none", "profile", "frontal"])).toMatchObject({
+      step: "face-camera",
+      holdProgress: 2 / 3,
+    });
+    expect(challenge.update("frontal")).toMatchObject({ step: "turn-one-side", holdProgress: 0 });
+  });
+
+  it("only counts matches within the recent window", () => {
+    const challenge = createHeadTurnChallenge({ holdFrames: 2, windowFrames: 3 });
+
+    // The first frontal leaves the 3-frame window before the second arrives.
+    expect(feed(challenge, ["frontal", "profile", "profile", "profile", "frontal"]).step).toBe(
       "face-camera",
     );
     expect(challenge.update("frontal").step).toBe("turn-one-side");
+  });
+
+  it("picks the side seen most often as the first side", () => {
+    const challenge = createHeadTurnChallenge({ holdFrames: 2, windowFrames: 4 });
+    feed(challenge, ["frontal", "frontal"]);
+
+    expect(feed(challenge, ["turned-left", "turned-right", "turned-left"]).firstSide).toBe(
+      "turned-left",
+    );
   });
 
   it("fails after the timeout and can be reset", () => {
