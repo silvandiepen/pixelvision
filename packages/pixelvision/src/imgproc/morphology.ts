@@ -86,3 +86,34 @@ export function dilate(image: Matrix<"u8">, options: MorphologyOptions = {}): Ma
 export function erode(image: Matrix<"u8">, options: MorphologyOptions = {}): Matrix<"u8"> {
   return morph("erode", image, options, Math.min);
 }
+
+/**
+ * Opening, closing or the morphological gradient, as OpenCV's
+ * `morphologyEx`: `"open"` (erode, then dilate) removes specks; `"close"`
+ * (dilate, then erode) fills small holes and gaps; `"gradient"` (dilate
+ * minus erode) outlines shapes.
+ *
+ * @param image - Single-channel `u8` matrix.
+ * @param operation - `"open"`, `"close"` or `"gradient"`.
+ * @param options - Radius and iterations of each step, output matrix.
+ * @returns The result.
+ * @throws {TypeError} When the image isn't `u8`.
+ * @throws {RangeError} When it has more than one channel or the radius or iterations are invalid.
+ *
+ * @example
+ * const solid = morphology(threshold(gray), "close", { radius: 2 });
+ */
+export function morphology(
+  image: Matrix<"u8">,
+  operation: "open" | "close" | "gradient",
+  options: MorphologyOptions = {},
+): Matrix<"u8"> {
+  const step = { radius: options.radius, iterations: options.iterations };
+  if (operation === "open") return dilate(erode(image, step), { ...step, out: options.out });
+  if (operation === "close") return erode(dilate(image, step), { ...step, out: options.out });
+  const grown = dilate(image, step);
+  const shrunk = erode(image, step);
+  const out = prepareOutput(options.out, "u8", grown.width, grown.height, 1);
+  for (let i = 0; i < grown.width * grown.height; i++) out.data[i] = grown.data[i] - shrunk.data[i];
+  return out;
+}

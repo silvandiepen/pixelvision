@@ -51,6 +51,8 @@ export { findContours } from "./shape/contours";
 export { approxPolygon, arcLength, contourArea, isConvex } from "./shape/polygon";
 export type { Moments, Rect, RotatedRect } from "./shape/shapes.model";
 export { boundingRect, convexHull, huMoments, minAreaRect, moments } from "./shape/shapes";
+export type { Component, ConnectedComponents } from "./shape/connectedComponents.model";
+export { connectedComponents } from "./shape/connectedComponents";
 
 // Face
 export type {
@@ -121,9 +123,15 @@ export type { IntegralImage, IntegralImageOptions } from "./imgproc/integralImag
 export { integralImage } from "./imgproc/integralImage";
 export type { PyrDownOptions } from "./imgproc/pyrDown.model";
 export { pyrDown } from "./imgproc/pyrDown";
+export type { AdaptiveThresholdOptions } from "./imgproc/adaptiveThreshold.model";
+export { adaptiveThreshold } from "./imgproc/adaptiveThreshold";
+export { rgbToHsv } from "./imgproc/color";
 export { flip } from "./imgproc/flip";
+export { inRange } from "./imgproc/inRange";
+export { laplacian } from "./imgproc/laplacian";
+export { medianBlur } from "./imgproc/medianBlur";
 export type { MorphologyOptions } from "./imgproc/morphology.model";
-export { dilate, erode } from "./imgproc/morphology";
+export { dilate, erode, morphology } from "./imgproc/morphology";
 export type { ThresholdOptions } from "./imgproc/threshold.model";
 export { otsuLevel, threshold } from "./imgproc/threshold";
 export type { ResampleOptions } from "./imgproc/resample.model";

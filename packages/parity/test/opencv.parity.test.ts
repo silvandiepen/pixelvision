@@ -1,4 +1,11 @@
 import {
+  adaptiveThreshold,
+  connectedComponents,
+  inRange,
+  laplacian,
+  medianBlur,
+  morphology,
+  rgbToHsv,
   arcLength,
   boundingRect,
   convexHull,
@@ -47,7 +54,9 @@ const values = (mat: OpenCv): number[] => {
         ? mat.data32F
         : depth === cv.CV_32S
           ? mat.data32S
-          : mat.data;
+          : depth === cv.CV_16S
+            ? mat.data16S
+            : mat.data;
   return Array.from(view as ArrayLike<number>);
 };
 
@@ -403,4 +412,142 @@ describe("shape analysis matches OpenCV", () => {
       });
     }
   });
+});
+
+describe("OpenCV tier 1 filters match exactly", () => {
+  const rgbaMat = (fixture: (typeof fixtures)[number]) =>
+    cv.matFromArray(fixture.height, fixture.width, cv.CV_8UC4, Array.from(fixture.data));
+
+  for (const fixture of fixtures) {
+    it(`inRange and rgbToHsv: ${fixture.name}`, () => {
+      const rgba = rgbaMat(fixture);
+      const rgb = new cv.Mat();
+      const hsv = new cv.Mat();
+      const lo = cv.matFromArray(1, 3, cv.CV_8UC1, [0, 40, 30]);
+      const hi = cv.matFromArray(1, 3, cv.CV_8UC1, [90, 255, 220]);
+      const mask = new cv.Mat();
+      withMats([rgba, rgb, hsv, lo, hi, mask], () => {
+        cv.cvtColor(rgba, rgb, cv.COLOR_RGBA2RGB);
+        cv.cvtColor(rgb, hsv, cv.COLOR_RGB2HSV);
+        const ours = rgbToHsv(fixture);
+        expectIdentical(ours.data, values(hsv), fixture.width * fixture.height * 3);
+
+        const lower = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), new cv.Scalar(0, 40, 30));
+        const upper = new cv.Mat(hsv.rows, hsv.cols, hsv.type(), new cv.Scalar(90, 255, 220));
+        withMats([lower, upper], () => {
+          cv.inRange(hsv, lower, upper, mask);
+          expectIdentical(
+            inRange(ours, [0, 40, 30], [90, 255, 220]).data,
+            values(mask),
+            fixture.width * fixture.height,
+          );
+        });
+      });
+    });
+
+    it(`medianBlur, morphology and laplacian: ${fixture.name}`, () => {
+      const image = gray(fixture);
+      const n = image.width * image.height;
+      const src = toMat(cv, image);
+      const median3 = new cv.Mat();
+      const median5 = new cv.Mat();
+      const kernel = cv.getStructuringElement(cv.MORPH_RECT, new cv.Size(3, 3));
+      const opened = new cv.Mat();
+      const closed = new cv.Mat();
+      const gradient = new cv.Mat();
+      const lap1 = new cv.Mat();
+      const lap3 = new cv.Mat();
+      withMats([src, median3, median5, kernel, opened, closed, gradient, lap1, lap3], () => {
+        cv.medianBlur(src, median3, 3);
+        cv.medianBlur(src, median5, 5);
+        expectIdentical(medianBlur(image, 3).data, values(median3), n);
+        expectIdentical(medianBlur(image, 5).data, values(median5), n);
+
+        cv.morphologyEx(src, opened, cv.MORPH_OPEN, kernel);
+        cv.morphologyEx(src, closed, cv.MORPH_CLOSE, kernel);
+        cv.morphologyEx(src, gradient, cv.MORPH_GRADIENT, kernel);
+        expectIdentical(morphology(image, "open").data, values(opened), n);
+        expectIdentical(morphology(image, "close").data, values(closed), n);
+        expectIdentical(morphology(image, "gradient").data, values(gradient), n);
+
+        // OpenCV.js has no 8-bit to 32-bit Laplacian; 16-bit holds every value.
+        cv.Laplacian(src, lap1, cv.CV_16S, 1);
+        cv.Laplacian(src, lap3, cv.CV_16S, 3);
+        expectIdentical(laplacian(image).data, values(lap1), n);
+        expectIdentical(laplacian(image, { size: 3 }).data, values(lap3), n);
+      });
+    });
+
+    it(`adaptiveThreshold and connectedComponents: ${fixture.name}`, () => {
+      const image = gray(fixture);
+      const n = image.width * image.height;
+      const src = toMat(cv, image);
+      const mean = new cv.Mat();
+      const meanInv = new cv.Mat();
+      const gauss = new cv.Mat();
+      withMats([src, mean, meanInv, gauss], () => {
+        cv.adaptiveThreshold(src, mean, 255, cv.ADAPTIVE_THRESH_MEAN_C, cv.THRESH_BINARY, 11, 2.5);
+        cv.adaptiveThreshold(
+          src,
+          meanInv,
+          255,
+          cv.ADAPTIVE_THRESH_MEAN_C,
+          cv.THRESH_BINARY_INV,
+          7,
+          3,
+        );
+        cv.adaptiveThreshold(
+          src,
+          gauss,
+          255,
+          cv.ADAPTIVE_THRESH_GAUSSIAN_C,
+          cv.THRESH_BINARY,
+          11,
+          2,
+        );
+        expectIdentical(
+          adaptiveThreshold(image, { blockSize: 11, offset: 2.5 }).data,
+          values(mean),
+          n,
+        );
+        expectIdentical(
+          adaptiveThreshold(image, { blockSize: 7, offset: 3, invert: true }).data,
+          values(meanInv),
+          n,
+        );
+        // Gaussian method: float mean vs OpenCV fixed point; under 1% of pixels may differ.
+        const ours = adaptiveThreshold(image, { blockSize: 11, method: "gaussian" }).data;
+        const theirs = values(gauss);
+        let differ = 0;
+        for (let i = 0; i < n; i++) if (ours[i] !== theirs[i]) differ++;
+        expect(differ / n).toBeLessThan(0.01);
+      });
+
+      const binary = threshold(gaussianBlur(image, { kernelSize: 5 }));
+      const bin = toMat(cv, binary);
+      const labels = new cv.Mat();
+      const stats = new cv.Mat();
+      const centroids = new cv.Mat();
+      withMats([bin, labels, stats, centroids], () => {
+        const count = cv.connectedComponentsWithStats(bin, labels, stats, centroids, 8, cv.CV_32S);
+        const ours = connectedComponents(binary);
+        expect(ours.components).toHaveLength(count - 1);
+        expectIdentical(ours.labels.data, values(labels), n);
+        const s = values(stats);
+        const c = values(centroids);
+        ours.components.forEach((component, k) => {
+          const row = (k + 1) * 5;
+          expect([
+            component.x,
+            component.y,
+            component.width,
+            component.height,
+            component.area,
+          ]).toEqual(s.slice(row, row + 5));
+          expect(component.centroid.x).toBeCloseTo(c[(k + 1) * 2], 9);
+          expect(component.centroid.y).toBeCloseTo(c[(k + 1) * 2 + 1], 9);
+        });
+      });
+    });
+  }
 });
