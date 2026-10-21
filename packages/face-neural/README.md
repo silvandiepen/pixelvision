@@ -25,6 +25,9 @@ if (face) {
 In Node use `onnxruntime-node` and pass the model as a path or its bytes; in React Native use
 `onnxruntime-react-native`.
 
+`onnxruntime-node` sends usage telemetry by default. Set `ORT_DISABLE_TELEMETRY=1` in the
+environment before it loads when you process faces on a server.
+
 pixelvision's built-in HAAR detection keeps working without this package; this is an upgrade for
 accuracy and for telling left from right.
 
