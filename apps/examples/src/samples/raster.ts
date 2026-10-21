@@ -83,7 +83,7 @@ function blend(image: RGBAImage, index: number, color: Color, coverage: number):
  * @param color - Fill colour.
  * @param inside - Whether a point lies in the shape.
  */
-function fillShape(
+export function fillShape(
   image: RGBAImage,
   bounds: readonly [number, number, number, number],
   color: Color,

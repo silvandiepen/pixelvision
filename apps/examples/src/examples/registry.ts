@@ -1,16 +1,29 @@
 import type { Example } from "./example.model";
+import { adaptiveThresholdExample } from "./adaptive-threshold";
 import { affineTransformExample } from "./affine-transform";
 import { approxPolygonExample } from "./approx-polygon";
 import { arcLengthExample } from "./arc-length";
+import { bilateralFilterExample } from "./bilateral-filter";
+import { boundingRectExample } from "./bounding-rect";
 import { boxBlurExample } from "./box-blur";
 import { boxSumExample } from "./box-sum";
 import { buildPyramidExample } from "./build-pyramid";
+import { calcBackProjectExample } from "./calc-back-project";
+import { calcHistExample } from "./calc-hist";
+import { camShiftExample } from "./cam-shift";
 import { cannyExample } from "./canny";
 import { choleskySolveExample } from "./cholesky-solve";
+import { claheExample } from "./clahe";
+import { cleanUpScanExample } from "./clean-up-scan";
 import { cloneMatrixExample } from "./clone-matrix";
+import { colorPickerExample } from "./color-picker";
+import { connectedComponentsExample } from "./connected-components";
 import { contourAreaExample } from "./contour-area";
+import { convexHullExample } from "./convex-hull";
+import { countObjectsExample } from "./count-objects";
 import { createMatrixExample } from "./create-matrix";
 import { describeOrbExample } from "./describe-orb";
+import { detectArucoMarkersExample } from "./detect-aruco-markers";
 import { detectBbfExample } from "./detect-bbf";
 import { detectFastExample } from "./detect-fast";
 import { detectHaarExample } from "./detect-haar";
@@ -20,6 +33,8 @@ import { detectYapeExample } from "./detect-yape";
 import { detectYape06Example } from "./detect-yape06";
 import { determinant3x3Example } from "./determinant3x3";
 import { dilateExample } from "./dilate";
+import { distanceTransformExample } from "./distance-transform";
+import { documentTrackerExample } from "./document-tracker";
 import { edgeDetectionExample } from "./edge-detection";
 import { eigenSymmetricExample } from "./eigen-symmetric";
 import { equalizeHistogramExample } from "./equalize-histogram";
@@ -27,38 +42,66 @@ import { erodeExample } from "./erode";
 import { estimateAffineExample } from "./estimate-affine";
 import { estimateHomographyExample } from "./estimate-homography";
 import { extractDocumentExample } from "./extract-document";
+import { filter2DExample } from "./filter-2d";
 import { findContoursExample } from "./find-contours";
 import { findDocumentExample } from "./find-document";
-import { documentTrackerExample } from "./document-tracker";
 import { findLinesExample } from "./find-lines";
 import { flipExample } from "./flip";
+import { floodFillExample } from "./flood-fill";
 import { fromImageDataExample } from "./from-image-data";
 import { gaussianBlurExample } from "./gaussian-blur";
 import { gaussianKernelExample } from "./gaussian-kernel";
+import { generateArucoMarkerExample } from "./generate-aruco-marker";
 import { grayscaleExample } from "./grayscale";
 import { groupRectanglesExample } from "./group-rectangles";
 import { hammingDistanceExample } from "./hamming-distance";
 import { headTurnExample } from "./head-turn";
+import { hlsToRgbExample } from "./hls-to-rgb";
+import { houghCirclesExample } from "./hough-circles";
 import { houghLinesExample } from "./hough-lines";
+import { houghLinesPExample } from "./hough-lines-p";
+import { hsvToRgbExample } from "./hsv-to-rgb";
+import { huMomentsExample } from "./hu-moments";
 import { identityExample } from "./identity";
+import { inRangeExample } from "./in-range";
 import { integralImageExample } from "./integral-image";
 import { invert3x3Example } from "./invert3x3";
 import { isConvexExample } from "./is-convex";
 import { keypointOrientationExample } from "./keypoint-orientation";
+import { labToRgbExample } from "./lab-to-rgb";
+import { laplacianExample } from "./laplacian";
+import { loadOpenCvCascadeExample } from "./load-opencv-cascade";
 import { luSolveExample } from "./lu-solve";
 import { matchDescriptorsExample } from "./match-descriptors";
+import { matchTemplateExample } from "./match-template";
 import { matrixFromRowsExample } from "./matrix-from-rows";
 import { matrixToRowsExample } from "./matrix-to-rows";
+import { meanShiftExample } from "./mean-shift";
 import { medianExample } from "./median";
+import { medianBlurExample } from "./median-blur";
+import { minAreaRectExample } from "./min-area-rect";
+import { minMaxLocExample } from "./min-max-loc";
+import { momentsExample } from "./moments";
+import { morphologyExample } from "./morphology";
 import { multiplyExample } from "./multiply";
 import { otsuLevelExample } from "./otsu-level";
 import { perspectiveTransformExample } from "./perspective-transform";
+import { projectPointsExample } from "./project-points";
 import { pseudoInverseExample } from "./pseudo-inverse";
 import { pyrDownExample } from "./pyr-down";
+import { readQrCodeExample } from "./read-qr-code";
 import { resampleExample } from "./resample";
-import { scharrDerivativesExample } from "./scharr-derivatives";
+import { rgbToHlsExample } from "./rgb-to-hls";
+import { rgbToHsvExample } from "./rgb-to-hsv";
+import { rgbToLabExample } from "./rgb-to-lab";
+import { rgbToYCrCbExample } from "./rgb-to-ycrcb";
+import { rodriguesExample } from "./rodrigues";
 import { scanDocumentExample } from "./scan-document";
+import { scharrDerivativesExample } from "./scharr-derivatives";
+import { shapeAnalysisExample } from "./shape-analysis";
+import { sharpnessExample } from "./sharpness";
 import { sobelDerivativesExample } from "./sobel-derivatives";
+import { solvePnPExample } from "./solve-pnp";
 import { straightenDocumentExample } from "./straighten-document";
 import { svdExample } from "./svd";
 import { svdSolveExample } from "./svd-solve";
@@ -69,46 +112,7 @@ import { transformPointExample } from "./transform-point";
 import { transposeExample } from "./transpose";
 import { warpAffineExample } from "./warp-affine";
 import { warpPerspectiveExample } from "./warp-perspective";
-import { adaptiveThresholdExample } from "./adaptive-threshold";
-import { boundingRectExample } from "./bounding-rect";
-import { cleanUpScanExample } from "./clean-up-scan";
-import { colorPickerExample } from "./color-picker";
-import { connectedComponentsExample } from "./connected-components";
-import { convexHullExample } from "./convex-hull";
-import { countObjectsExample } from "./count-objects";
-import { huMomentsExample } from "./hu-moments";
-import { inRangeExample } from "./in-range";
-import { laplacianExample } from "./laplacian";
-import { medianBlurExample } from "./median-blur";
-import { minAreaRectExample } from "./min-area-rect";
-import { momentsExample } from "./moments";
-import { morphologyExample } from "./morphology";
-import { rgbToHsvExample } from "./rgb-to-hsv";
-import { bilateralFilterExample } from "./bilateral-filter";
-import { calcHistExample } from "./calc-hist";
-import { claheExample } from "./clahe";
-import { distanceTransformExample } from "./distance-transform";
-import { filter2DExample } from "./filter-2d";
-import { floodFillExample } from "./flood-fill";
-import { hlsToRgbExample } from "./hls-to-rgb";
-import { hsvToRgbExample } from "./hsv-to-rgb";
-import { labToRgbExample } from "./lab-to-rgb";
-import { matchTemplateExample } from "./match-template";
-import { minMaxLocExample } from "./min-max-loc";
-import { rgbToHlsExample } from "./rgb-to-hls";
-import { rgbToLabExample } from "./rgb-to-lab";
-import { rgbToYCrCbExample } from "./rgb-to-ycrcb";
 import { yCrCbToRgbExample } from "./ycrcb-to-rgb";
-import { calcBackProjectExample } from "./calc-back-project";
-import { camShiftExample } from "./cam-shift";
-import { houghCirclesExample } from "./hough-circles";
-import { houghLinesPExample } from "./hough-lines-p";
-import { meanShiftExample } from "./mean-shift";
-import { projectPointsExample } from "./project-points";
-import { rodriguesExample } from "./rodrigues";
-import { solvePnPExample } from "./solve-pnp";
-import { shapeAnalysisExample } from "./shape-analysis";
-import { sharpnessExample } from "./sharpness";
 
 /**
  * Every example, in gallery order. The router makes a page of each and the
@@ -162,9 +166,13 @@ export const EXAMPLES: readonly Example[] = [
   floodFillExample,
   detectSkinExample,
   detectHaarExample,
+  loadOpenCvCascadeExample,
   detectBbfExample,
   matchTemplateExample,
   groupRectanglesExample,
+  readQrCodeExample,
+  detectArucoMarkersExample,
+  generateArucoMarkerExample,
   detectHeadPoseExample,
   findDocumentExample,
   documentTrackerExample,

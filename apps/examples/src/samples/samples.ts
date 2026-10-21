@@ -1,8 +1,17 @@
 import type { Point, RGBAImage } from "pixelvision";
 import { seededRandom } from "./random";
-import { addNoise, createImage, fillCircle, fillPolygon, fillRect, quadPoint } from "./raster";
+import { generateArucoMarker } from "pixelvision";
+import {
+  addNoise,
+  createImage,
+  fillCircle,
+  fillPolygon,
+  fillRect,
+  fillShape,
+  quadPoint,
+} from "./raster";
 import type { Color, Vec } from "./raster.model";
-import type { Sample, SampleId } from "./samples.model";
+import type { Sample, SampleId, TurnedSquare } from "./samples.model";
 
 /** Width of every sample. */
 export const SAMPLE_WIDTH = 320;
@@ -360,6 +369,153 @@ function pebbles(): RGBAImage {
   return image;
 }
 
+/**
+ * The QR code in the qr-code sample: "https://pixelvision.dev" as version 2
+ * (25 x 25 modules), error correction M, mask 4, made by pixelvision's test
+ * encoder. Rows top to bottom, 1 for a dark module.
+ */
+export const QR_MODULES: readonly string[] = [
+  "1111111011011011101111111",
+  "1000001000001000101000001",
+  "1011101001111011101011101",
+  "1011101011001110101011101",
+  "1011101010111011101011101",
+  "1000001011111000101000001",
+  "1111111010101010101111111",
+  "0000000011100000100000000",
+  "1000101110111010111111001",
+  "0000110100100011100011010",
+  "0000101000100111011001100",
+  "0010010110110001100000110",
+  "1011101011111001011001111",
+  "1110010011100111110010010",
+  "0000111100100011111111100",
+  "0011100111001000010110110",
+  "1110011110010000111111100",
+  "0000000011001111100010000",
+  "1111111010011010101010000",
+  "1000001001010010100011101",
+  "1011101010001000111111111",
+  "1011101001000100011100111",
+  "1011101001100110011001010",
+  "1000001000001001000111110",
+  "1111111011011111011000111",
+];
+
+/** Where the qr-code sample's symbol is drawn (5 pixels per module, no quiet zone). */
+export const QR_SYMBOL: TurnedSquare = { x: 160, y: 120, side: 125, angle: 8 };
+
+/**
+ * Corners of a turned square: top-left, top-right, bottom-right, bottom-left
+ * as it is drawn, wherever the turn puts them.
+ *
+ * @param square - Centre, side and turn.
+ * @returns The four corners.
+ */
+export function squareCorners({ x, y, side, angle }: TurnedSquare): Vec[] {
+  const a = (angle * Math.PI) / 180;
+  return [
+    [-1, -1],
+    [1, -1],
+    [1, 1],
+    [-1, 1],
+  ].map(([dx, dy]) => ({
+    x: x + (side / 2) * (dx * Math.cos(a) - dy * Math.sin(a)),
+    y: y + (side / 2) * (dx * Math.sin(a) + dy * Math.cos(a)),
+  }));
+}
+
+/**
+ * Paints a grid of cells over a turned square, anti-aliased in one pass so
+ * neighbouring cells don't leave seams.
+ *
+ * @param image - Image to draw on.
+ * @param square - Where the grid goes.
+ * @param cells - Cells per side.
+ * @param dark - Whether a cell (column, row) is dark.
+ * @param color - Colour of the dark cells.
+ */
+function paintGrid(
+  image: RGBAImage,
+  square: TurnedSquare,
+  cells: number,
+  dark: (column: number, row: number) => boolean,
+  color: Color,
+): void {
+  const a = (square.angle * Math.PI) / 180;
+  const corners = squareCorners(square);
+  fillShape(
+    image,
+    [
+      Math.min(...corners.map((c) => c.x)),
+      Math.min(...corners.map((c) => c.y)),
+      Math.max(...corners.map((c) => c.x)),
+      Math.max(...corners.map((c) => c.y)),
+    ],
+    color,
+    (x, y) => {
+      // Turn the point back into the square's own frame, 0-1 across.
+      const u = ((x - square.x) * Math.cos(a) + (y - square.y) * Math.sin(a)) / square.side + 0.5;
+      const v = (-(x - square.x) * Math.sin(a) + (y - square.y) * Math.cos(a)) / square.side + 0.5;
+      if (u < 0 || v < 0 || u >= 1 || v >= 1) return false;
+      return dark(Math.floor(u * cells), Math.floor(v * cells));
+    },
+  );
+}
+
+/**
+ * Draws the generated QR code printed on a card, turned a little on a gray
+ * desk.
+ *
+ * @returns The image.
+ */
+function qrCode(): RGBAImage {
+  const image = createImage(SAMPLE_WIDTH, SAMPLE_HEIGHT, [150, 146, 140]);
+  // The card: the symbol plus a quiet zone of 4 modules on every side.
+  fillPolygon(
+    image,
+    squareCorners({ ...QR_SYMBOL, side: (QR_SYMBOL.side * 33) / 25 }),
+    [242, 240, 234],
+  );
+  paintGrid(image, QR_SYMBOL, 25, (column, row) => QR_MODULES[row][column] === "1", [24, 24, 30]);
+  addNoise(image, 4, seededRandom(17));
+  return image;
+}
+
+/** The ArUco markers (DICT_4X4_50) in the markers sample: id and where each is drawn. */
+export const MARKERS: readonly ({ id: number } & TurnedSquare)[] = [
+  { id: 3, x: 70, y: 75, side: 72, angle: 0 },
+  { id: 17, x: 232, y: 72, side: 64, angle: 30 },
+  { id: 42, x: 160, y: 178, side: 60, angle: -15 },
+];
+
+/**
+ * Draws three ArUco markers (DICT_4X4_50, as `generateArucoMarker` makes
+ * them) on a light table, turned different ways.
+ *
+ * @returns The image.
+ */
+function markers(): RGBAImage {
+  const image = createImage(SAMPLE_WIDTH, SAMPLE_HEIGHT, [0, 0, 0]);
+  const { data } = image;
+  for (let y = 0; y < SAMPLE_HEIGHT; y++) {
+    for (let x = 0; x < SAMPLE_WIDTH; x++) {
+      const shade = Math.round(214 - (x / SAMPLE_WIDTH) * 18);
+      const i = (y * SAMPLE_WIDTH + x) * 4;
+      data[i] = shade;
+      data[i + 1] = shade;
+      data[i + 2] = shade - 6;
+    }
+  }
+  for (const marker of MARKERS) {
+    // 6 x 6 cells: the black border and the 4 x 4 bits.
+    const cells = generateArucoMarker(marker.id, { size: 6 });
+    paintGrid(image, marker, 6, (column, row) => cells.data[row * 6 + column] === 0, [22, 22, 26]);
+  }
+  addNoise(image, 4, seededRandom(19));
+  return image;
+}
+
 /** Every bundled sample. */
 export const SAMPLES: readonly Sample[] = [
   {
@@ -398,6 +554,20 @@ export const SAMPLES: readonly Sample[] = [
     description:
       "Lines of text on a page, lit from the top left: the paper on the right is darker than the ink on the left.",
     generate: page,
+  },
+  {
+    id: "qr-code",
+    label: "QR code",
+    description:
+      'A QR code for "https://pixelvision.dev" (version 2, 25 x 25 modules) printed on a card, turned 8° on a gray desk.',
+    generate: qrCode,
+  },
+  {
+    id: "markers",
+    label: "ArUco markers",
+    description:
+      "Three ArUco markers from DICT_4X4_50 (ids 3, 17 and 42) on a light table, turned 0°, 30° and -15°.",
+    generate: markers,
   },
   {
     id: "pebbles",

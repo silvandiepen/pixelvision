@@ -268,6 +268,22 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
     `<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="2.5 2" ${SOFT}/><circle cx="12" cy="12" r="6.5"/><rect x="7.5" y="8.5" width="9" height="2.75" fill="currentColor" stroke="none" opacity="0.8"/><rect x="7.5" y="11.25" width="9" height="2.75"/>`,
   ),
   // BBF: a face found by comparing single pixels, shown as pairs of dots joined by a line.
+  // An XML file (folded corner, tag brackets) becoming the dashed Haar window.
+  "load-opencv-cascade": icon(
+    `<path d="M4 3.5H11L14 6.5V12" ${SOFT}/><path d="M11 3.5V6.5H14" ${SOFT}/><path d="M4 3.5V16" ${SOFT}/><path d="M6.5 9.5L5 11L6.5 12.5M9.5 9.5L11 11L9.5 12.5"/><rect x="11" y="13" width="9.5" height="7.5" rx="1.5" stroke-dasharray="2 1.5"/><rect x="13.5" y="15.5" width="4.5" height="2.5" fill="currentColor" stroke="none" opacity="0.8"/>`,
+  ),
+  // Three finder squares of a QR code, data dots in the fourth corner.
+  "read-qr-code": icon(
+    `<rect x="3.5" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="14" y="3.5" width="6.5" height="6.5" rx="1"/><rect x="3.5" y="14" width="6.5" height="6.5" rx="1"/>${dot(6.75, 6.75, 1.2)}${dot(17.25, 6.75, 1.2)}${dot(6.75, 17.25, 1.2)}${dot(15, 15, 1, SOFT)}${dot(19, 15, 1, SOFT)}${dot(17, 17.5, 1, SOFT)}${dot(15, 20, 1, SOFT)}${dot(19.5, 20, 1, SOFT)}`,
+  ),
+  // A marker turned in the frame, its top-left corner marked.
+  "detect-aruco-markers": icon(
+    `<rect x="3" y="3" width="18" height="18" rx="2" stroke-dasharray="2.5 2" ${SOFT}/><path d="M8 5.5L18.5 8L16 18.5L5.5 16Z"/><path d="M10.2 9.2L12.6 9.8L12 12.2L9.6 11.6Z" fill="currentColor" stroke="none" opacity="0.8"/><path d="M13.4 12.4L15.2 12.9L14.7 14.7L12.9 14.2Z" fill="currentColor" stroke="none" opacity="0.8"/>${dot(8, 5.5, 1.4)}`,
+  ),
+  // A marker drawn on a grid of cells: black border, a few black cells inside.
+  "generate-aruco-marker": icon(
+    `<rect x="4" y="4" width="16" height="16" rx="1"/><path d="M6.5 6.5H17.5V17.5H6.5Z" ${SOFT}/><rect x="6.5" y="6.5" width="2.75" height="2.75" fill="currentColor" stroke="none" opacity="0.8"/><rect x="12" y="9.25" width="2.75" height="2.75" fill="currentColor" stroke="none" opacity="0.8"/><rect x="9.25" y="12" width="2.75" height="2.75" fill="currentColor" stroke="none" opacity="0.8"/><rect x="14.75" y="14.75" width="2.75" height="2.75" fill="currentColor" stroke="none" opacity="0.8"/>`,
+  ),
   "match-template": icon(
     `<rect x="3" y="3" width="18" height="18" rx="2" ${SOFT}/><rect x="5.5" y="5.5" width="5" height="5" rx="1" stroke-dasharray="1.5 1.5"/>${arrow(10.5, 10.5, 13, 13)}<rect x="13.5" y="13.5" width="5" height="5" rx="1"/>`,
   ),

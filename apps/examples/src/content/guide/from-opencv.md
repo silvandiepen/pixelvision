@@ -1,12 +1,13 @@
-pixelvision covers the parts of OpenCV.js that web and React Native apps use most: colour conversion, filtering, thresholds, morphology, contours and shapes, geometry, camera pose, features, tracking and face detection. Each function listed below is tested against OpenCV.js 4.12 on the same images, and gives the same result unless the table says otherwise.
+pixelvision covers the parts of OpenCV.js that web and React Native apps use most: colour conversion, filtering, thresholds, morphology, contours and shapes, geometry, camera pose, features, tracking, face detection, QR codes and ArUco markers. Each function listed below is tested against OpenCV.js 4.12 on the same images, and gives the same result unless the table says otherwise.
 
 ## Size
 
 | What you load                                        | Raw     | Gzipped |
 | ---------------------------------------------------- | ------- | ------- |
 | OpenCV.js 4.12 (`@techstark/opencv-js`)              | 10.9 MB | 3.5 MB  |
-| pixelvision, everything                              | 92 KB   | 38 KB   |
-| pixelvision, `findDocument` + `extractDocument` only | 18 KB   | 7.9 KB  |
+| pixelvision, everything                              | 119 KB  | 50 KB   |
+| pixelvision, `readQrCode` only                       | 30 KB   | 13 KB   |
+| pixelvision, `findDocument` + `extractDocument` only | 19 KB   | 8.6 KB  |
 
 pixelvision is plain JavaScript with no WebAssembly, so there is nothing to wait for before the first call, and bundlers drop the functions you don't import. Sizes are bundled and minified, as an app ships them: pixelvision with esbuild, OpenCV.js 4.12.0 as published (already minified).
 
@@ -47,6 +48,10 @@ pixelvision is plain JavaScript with no WebAssembly, so there is nothing to wait
 | `cv.FastFeatureDetector`                                                 | `detectFast`                                                                                          |
 | `cv.ORB` (describe), `cv.BFMatcher` (Hamming)                            | `describeOrb`, `matchDescriptors`                                                                     |
 | `cv.CascadeClassifier.detectMultiScale`, `cv.groupRectangles`            | `detectHaar`, `groupRectangles`                                                                       |
+| `cv.CascadeClassifier.load` (a `haarcascade_*.xml` file)                 | `loadOpenCvCascade` (pass the file's text)                                                            |
+| `cv.QRCodeDetector.detectAndDecode`                                      | `readQrCode` (text and corners in one call)                                                           |
+| `cv.aruco_ArucoDetector.detectMarkers`                                   | `detectArucoMarkers` (`DICT_4X4_50`, `DICT_6X6_250`)                                                  |
+| `cv.getPredefinedDictionary(…).generateImageMarker`                      | `generateArucoMarker`                                                                                 |
 | `cv.solve`, `cv.SVDecomp`, `cv.eigen`                                    | `luSolve`, `svd`, `eigenSymmetric`                                                                    |
 
 Where results aren't identical:
@@ -61,6 +66,10 @@ Where results aren't identical:
 - **`solvePnP`** refines until the steps reach double-precision rounding; OpenCV stops at single-precision steps. Poses agree within 1e-7, and pixelvision's reprojection error on exact data is far below a millionth of a pixel. Lens distortion is radial only: `k1` and `k2`.
 - **`rodrigues`** and **`projectPoints`** agree within rounding, except that `rodrigues` keeps rotations under 1e-5 radians, which OpenCV returns as zero.
 - **`camShift`** returns OpenCV's window exactly and its box to single precision, but the box's centre is the centroid. OpenCV reports the centre of its whole-pixel window, up to a pixel away, and further when the window touches the left or top edge.
+- **`detectHaar`** with a cascade from `loadOpenCvCascade` scores a window at the cascade's own size exactly as OpenCV does. At larger sizes it scales the features where OpenCV scales the image, so raw hits differ; the merged detections agree within OpenCV's grouping tolerance.
+- **`readQrCode`** returns the same text. OpenCV takes three corners from the finder patterns (within 3 pixels of pixelvision's) and extrapolates the fourth, up to 10 pixels off on tilted codes; pixelvision fits all four to the whole symbol, within 2.5 pixels. It also reads some codes OpenCV.js 4.12 misses, including a clean version 1 code it doesn't find at all. Versions 1 to 10 only, no Kanji.
+- **`detectArucoMarkers`** gives OpenCV's ids and corners. It also finds a marker on a card whose edge runs close to it; OpenCV.js 4.12 loses some of those. No corner refinement, no inverted markers.
+- **`approxPolygon`** gives `approxPolyDP`'s vertices for the same list of points. `findContours` traces each outline the other way round from the same first pixel, so on its outlines the vertices come in the opposite order, and where two points are equally far from a chord the other one can be kept.
 - **Borders** repeat the edge pixel (`BORDER_REPLICATE`) wherever a function takes a neighbourhood.
 
 ## Working differently
@@ -72,4 +81,4 @@ Where results aren't identical:
 
 ## Not covered
 
-DNN, machine learning, camera calibration, `solvePnP` methods other than the iterative one, lens distortion beyond `k1` and `k2`, stitching, video I/O, QR codes and ArUco markers. If you need those, OpenCV.js is the better tool; you can use both in one app.
+DNN, machine learning, camera calibration, `solvePnP` methods other than the iterative one, lens distortion beyond `k1` and `k2`, stitching, video I/O, QR codes above version 10, ArUco dictionaries other than `DICT_4X4_50` and `DICT_6X6_250`, ChArUco boards, AprilTags, barcodes, and LBP or HOG cascades. If you need those, OpenCV.js is the better tool; you can use both in one app.
