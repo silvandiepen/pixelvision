@@ -12,6 +12,7 @@ import type { Point } from "../math/transforms.model";
 import { findContours } from "../shape/contours";
 import { approxPolygon, arcLength, contourArea, isConvex } from "../shape/polygon";
 import type {
+  CutDocument,
   ExtractDocumentOptions,
   FindDocumentOptions,
   FoundDocument,
@@ -94,8 +95,10 @@ const toGray = (image: ImageLike | Matrix, order: FindDocumentOptions["order"]):
  * capturing.
  *
  * @param image - Camera frame or photo: `ImageData`, a colour matrix or a gray matrix.
- * @param options - Working size, area limits, channel order.
- * @returns The corners (top-left, top-right, bottom-right, bottom-left) and area, or null when none is found.
+ * @param options - Working size, area limits, channel order, and whether to report a cut-off document.
+ * @returns The corners (top-left, top-right, bottom-right, bottom-left) and area, or null when none is
+ *   found. With `reportCut`, a document running off the image edge comes back as a {@link CutDocument}
+ *   (`cut: true`) when no whole one is found.
  *
  * @example
  * const found = findDocument(context.getImageData(0, 0, width, height));
@@ -105,8 +108,16 @@ const toGray = (image: ImageLike | Matrix, order: FindDocumentOptions["order"]):
  */
 export function findDocument(
   image: ImageLike | Matrix,
+  options: FindDocumentOptions & { reportCut: true },
+): FoundDocument | CutDocument | null;
+export function findDocument(
+  image: ImageLike | Matrix,
+  options?: FindDocumentOptions,
+): FoundDocument | null;
+export function findDocument(
+  image: ImageLike | Matrix,
   options: FindDocumentOptions = {},
-): FoundDocument | null {
+): FoundDocument | CutDocument | null {
   const { maxSize = 400, minArea = 0.02, maxArea = 0.98 } = options;
   const gray = toGray(image, options.order);
   const { width, height } = gray;
@@ -142,10 +153,64 @@ export function findDocument(
       if (!best || area > best.area) best = { quad, area };
     }
   }
-  if (!best) return null;
-  const corners = orderCorners(best.quad.map((p) => ({ x: p.x / scale, y: p.y / scale })));
-  return { corners, area: best.area };
+  if (best) {
+    const corners = orderCorners(best.quad.map((p) => ({ x: p.x / scale, y: p.y / scale })));
+    return { corners, area: best.area };
+  }
+  if (!options.reportCut) return null;
+
+  // Nothing whole: look for a light region cut off by the image edge.
+  let cut: { outline: Point[]; area: number } | null = null;
+  for (const contour of findContours(bright, { minPixels })) {
+    const outline = toCutOutline(contour, small.width, small.height);
+    if (!outline) continue;
+    const area = Math.abs(contourArea(outline)) / imageArea;
+    if (area < minArea || area > maxArea) continue;
+    if (!cut || area > cut.area) cut = { outline, area };
+  }
+  if (!cut) return null;
+  return {
+    cut: true,
+    outline: cut.outline.map((p) => ({ x: p.x / scale, y: p.y / scale })),
+    area: cut.area,
+  };
 }
+
+/**
+ * Simplifies a contour to the outline of a document cut off by the image
+ * edge: 4 to 6 convex corners, at least two of them on the edge, touching at
+ * most two sides of the image (a region touching three or four is
+ * background, not a document).
+ *
+ * @param contour - Outer contour of a light region.
+ * @param width - Image width.
+ * @param height - Image height.
+ * @returns The outline, or null when the contour isn't one.
+ */
+const toCutOutline = (contour: readonly Point[], width: number, height: number): Point[] | null => {
+  const perimeter = arcLength(contour);
+  const area = Math.abs(contourArea(contour));
+  for (const fraction of [0.02, 0.03, 0.04, 0.06]) {
+    const polygon = approxPolygon(contour, fraction * perimeter);
+    if (polygon.length < 4) return null;
+    if (polygon.length > 6 || !isConvex(polygon)) continue;
+    if (Math.abs(Math.abs(contourArea(polygon)) - area) > 0.1 * area) return null;
+    const sides = new Set<string>();
+    let onEdge = 0;
+    for (const p of polygon) {
+      const touches = [
+        p.x <= 1 && "left",
+        p.y <= 1 && "top",
+        p.x >= width - 2 && "right",
+        p.y >= height - 2 && "bottom",
+      ].filter((side): side is string => Boolean(side));
+      if (touches.length > 0) onEdge++;
+      touches.forEach((side) => sides.add(side));
+    }
+    return onEdge >= 2 && sides.size <= 2 ? polygon : null;
+  }
+  return null;
+};
 
 /**
  * Straightens and crops a document given its four corners: a perspective

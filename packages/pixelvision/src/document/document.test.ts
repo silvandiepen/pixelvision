@@ -191,3 +191,100 @@ describe("extractDocument", () => {
     expect(extractDocument(gray, quad).channels).toBe(1);
   });
 });
+
+describe("findDocument with reportCut", () => {
+  // The right-hand corners lie beyond the 640 px wide image.
+  const offRight: Quad = [
+    { x: 300, y: 100 },
+    { x: 760, y: 120 },
+    { x: 760, y: 380 },
+    { x: 280, y: 360 },
+  ];
+  const dark = (n: number) => 40 + n * 50;
+
+  it("reports a document running off the edge as cut, only when asked", () => {
+    const image = scene(640, 480, offRight, 215, dark);
+
+    expect(findDocument(image)).toBeNull();
+    const found = findDocument(image, { reportCut: true });
+
+    expect(found?.cut).toBe(true);
+    if (!found?.cut) return;
+    expect(found.outline.filter((p) => p.x >= 636).length).toBeGreaterThanOrEqual(2);
+    expect(found.area).toBeGreaterThan(0.2);
+  });
+
+  it("prefers a whole document and returns it unflagged", () => {
+    const found = findDocument(scene(640, 480, quad, 215, dark), { reportCut: true });
+
+    expect(found?.cut).toBeUndefined();
+    if (found?.cut !== undefined) return;
+    close(found!.corners, quad, 4);
+  });
+
+  it("doesn't call a region touching three sides a document", () => {
+    const wall: Quad = [
+      { x: -20, y: -20 },
+      { x: 660, y: -20 },
+      { x: 660, y: 300 },
+      { x: -20, y: 280 },
+    ];
+
+    expect(findDocument(scene(640, 480, wall, 215, dark), { reportCut: true })).toBeNull();
+  });
+
+  it("finds nothing in a plain image", () => {
+    expect(
+      findDocument(
+        scene(64, 48, quad, 60, () => 60),
+        { reportCut: true },
+      ),
+    ).toBeNull();
+  });
+});
+
+describe("findDocument with reportCut: shapes that aren't a cut document", () => {
+  /** A light shape given by `inside` on a dark textured 640×480 background. */
+  const shapeScene = (inside: (x: number, y: number) => boolean) => {
+    const width = 640;
+    const height = 480;
+    const data = new Uint8ClampedArray(width * height * 4);
+    let seed = 5;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+        const n = (seed >>> 24) / 255;
+        const v = inside(x, y) ? 215 + n * 12 : 40 + n * 50;
+        data.set([v, v, v, 255], (y * width + x) * 4);
+      }
+    }
+    return { width, height, data };
+  };
+  const report = (inside: (x: number, y: number) => boolean) =>
+    findDocument(shapeScene(inside), { reportCut: true });
+
+  it("keeps the largest of two cut documents", () => {
+    const found = report(
+      (x, y) => (x > 400 && y > 100 && y < 380) || (x < 120 && y > 200 && y < 330),
+    );
+
+    expect(found?.cut).toBe(true);
+    if (!found?.cut) return;
+    expect(Math.min(...found.outline.map((p) => p.x))).toBeGreaterThan(390);
+  });
+
+  it("ignores a cut region below the smallest size", () => {
+    expect(report((x, y) => x > 620 && y > 200 && y < 240)).toBeNull();
+  });
+
+  it("rejects a triangle, a half disc and an L shape", () => {
+    // Triangle with one side on the right edge.
+    expect(report((x, y) => x > 400 && Math.abs(y - 240) < (x - 400) * 0.8)).toBeNull();
+    // Half a disc centred on the right edge: round, so not a document.
+    expect(report((x, y) => (x - 639) ** 2 + (y - 240) ** 2 < 180 ** 2)).toBeNull();
+    // An L running off the bottom: never convex.
+    expect(
+      report((x, y) => (x > 200 && x < 300 && y > 150) || (x > 200 && x < 520 && y > 380)),
+    ).toBeNull();
+  });
+});

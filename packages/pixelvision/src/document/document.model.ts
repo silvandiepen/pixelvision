@@ -14,6 +14,12 @@ export interface FindDocumentOptions {
   maxArea?: number;
   /** Colour layout when passing colour pixels (default `"rgba"`). */
   order?: "rgba" | "rgb" | "bgra" | "bgr";
+  /**
+   * When no whole document is found, report a light one that runs off the
+   * edge of the image as a {@link CutDocument}, so a camera view can ask the
+   * person to move back (default false).
+   */
+  reportCut?: boolean;
 }
 
 /** A document found in an image. */
@@ -21,6 +27,17 @@ export interface FoundDocument {
   /** Corners in image pixels: top-left, top-right, bottom-right, bottom-left. */
   corners: Quad;
   /** Area as a fraction of the image. */
+  area: number;
+  /** Never set on a whole document; see {@link CutDocument}. */
+  cut?: false;
+}
+
+/** A document that runs off the edge of the image: it can't be straightened. */
+export interface CutDocument {
+  cut: true;
+  /** The visible part's outline in image pixels, including the stretch along the image edge. */
+  outline: Point[];
+  /** Visible area as a fraction of the image. */
   area: number;
 }
 
