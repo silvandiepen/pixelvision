@@ -44,6 +44,12 @@ export type {
   Quad,
 } from "./document/document.model";
 export { extractDocument, findDocument } from "./document/document";
+export type {
+  DocumentTracker,
+  DocumentTrackerOptions,
+  DocumentTrackerState,
+} from "./document/documentTracker.model";
+export { createDocumentTracker } from "./document/documentTracker";
 
 // Shapes
 export type { Contour, FindContoursOptions } from "./shape/contours.model";
