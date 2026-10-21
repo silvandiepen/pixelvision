@@ -39,7 +39,7 @@ export const findDocumentExample = defineExample<FindDocumentDemoOptions>({
       min: 0.01,
       max: 0.5,
       step: 0.01,
-      default: 0.1,
+      default: 0.02,
     },
   ],
   code,

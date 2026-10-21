@@ -61,7 +61,7 @@ export function useCamera(): UseCamera {
     }
     try {
       stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
         audio: false,
       });
       if (!video.value) throw new Error("No video element");
