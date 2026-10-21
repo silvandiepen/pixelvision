@@ -10,6 +10,8 @@ import {
   fakeCameraWithScene,
   parseCorners,
   scenePng,
+  CANVAS_CAMERA_SKIP,
+  canvasCameraUnsupported,
 } from "./scene";
 
 const GUIDES = [
@@ -185,7 +187,8 @@ test.describe("document scanner", () => {
     expect(ratio).toBeCloseTo(85.6 / 53.98, 1);
   });
 
-  test("asks to move back when the document runs off the frame", async ({ page }) => {
+  test("asks to move back when the document runs off the frame", async ({ page, browserName }) => {
+    test.skip(canvasCameraUnsupported(browserName), CANVAS_CAMERA_SKIP);
     // The right-hand corners lie beyond the 640 px wide frame.
     await fakeCameraWithScene(page, [
       { x: 300, y: 110 },
@@ -207,7 +210,8 @@ test.describe("document scanner", () => {
     );
   });
 
-  test("captures from the camera once the document is still", async ({ page }) => {
+  test("captures from the camera once the document is still", async ({ page, browserName }) => {
+    test.skip(canvasCameraUnsupported(browserName), CANVAS_CAMERA_SKIP);
     await fakeCameraWithScene(page);
     await page.goto("/scan-document");
     await page.locator("[data-scanner-camera]").click();
@@ -235,7 +239,11 @@ test.describe("head-turn check", () => {
     expect(result?.values.progress).toBe(4);
   });
 
-  test("the neural detector loads and finds no face in a blank frame", async ({ page }) => {
+  test("the neural detector loads and finds no face in a blank frame", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(canvasCameraUnsupported(browserName), CANVAS_CAMERA_SKIP);
     const errors = collectErrors(page);
     await blankCamera(page);
     await page.goto("/head-turn");

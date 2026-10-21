@@ -150,3 +150,21 @@ export function parseCorners(text: string): { x: number; y: number }[] {
     return { x, y };
   });
 }
+
+/**
+ * Whether the fake camera can deliver frames in this browser. WebKit on Linux
+ * never plays a video fed from `canvas.captureStream()`: `play()`, `loadeddata`
+ * and `requestVideoFrameCallback` all time out, attached or detached, visible
+ * or hidden, while Chromium and Firefox on the same machine play it at once.
+ * Real cameras don't go through this path, so only the fake camera is affected.
+ *
+ * @param browserName - Playwright's browser name for the test.
+ * @returns True when the camera tests can't run here.
+ */
+export function canvasCameraUnsupported(browserName: string): boolean {
+  return browserName === "webkit" && process.platform === "linux";
+}
+
+/** Why camera tests are skipped where {@link canvasCameraUnsupported} is true. */
+export const CANVAS_CAMERA_SKIP =
+  "WebKit on Linux can't play a canvas-stream camera; covered by Chromium, Firefox and WebKit on macOS";

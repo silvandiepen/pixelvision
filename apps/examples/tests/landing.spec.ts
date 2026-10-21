@@ -3,7 +3,14 @@ import { expect, test } from "@playwright/test";
 import type { Download, Page } from "@playwright/test";
 import type { PublishedResult } from "../src/results.model";
 import { collectErrors } from "./helpers";
-import { blankCamera, denyCamera, fakeCameraWithScene, scenePng } from "./scene";
+import {
+  CANVAS_CAMERA_SKIP,
+  blankCamera,
+  canvasCameraUnsupported,
+  denyCamera,
+  fakeCameraWithScene,
+  scenePng,
+} from "./scene";
 
 /**
  * Reads what a landing-page section published.
@@ -89,7 +96,11 @@ test.describe("landing page: scan a document", () => {
     expect(errors).toEqual([]);
   });
 
-  test("the camera captures on its own once the document is still", async ({ page }) => {
+  test("the camera captures on its own once the document is still", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(canvasCameraUnsupported(browserName), CANVAS_CAMERA_SKIP);
     await fakeCameraWithScene(page);
     await page.goto("/");
     const section = page.locator("[data-home-scan]");

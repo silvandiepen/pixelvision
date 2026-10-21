@@ -1,7 +1,14 @@
 import { expect, test } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import { EXAMPLES } from "../examples";
-import { SCENE_CORNERS, fakeCameraWithScene, parseCorners, scenePng } from "./scene";
+import {
+  CANVAS_CAMERA_SKIP,
+  SCENE_CORNERS,
+  canvasCameraUnsupported,
+  fakeCameraWithScene,
+  parseCorners,
+  scenePng,
+} from "./scene";
 
 /**
  * Waits for the example to find the document, then checks every corner is
@@ -43,7 +50,8 @@ for (const { name, port } of EXAMPLES) {
       expect(errors).toEqual([]);
     });
 
-    test("finds the document in a camera frame", async ({ page }) => {
+    test("finds the document in a camera frame", async ({ page, browserName }) => {
+      test.skip(canvasCameraUnsupported(browserName), CANVAS_CAMERA_SKIP);
       await fakeCameraWithScene(page);
       await page.goto("/");
       await page.locator("[data-camera]").click();
