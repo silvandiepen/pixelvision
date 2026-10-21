@@ -13,6 +13,7 @@
     "pixelvision": "workspace:*"
   },
   "devDependencies": {
-    "jsfeat": "0.0.8"
+    "jsfeat": "0.0.8",
+    "@techstark/opencv-js": "4.12.0-release.1"
   }
 }
