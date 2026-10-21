@@ -2,9 +2,24 @@ import { describe, expect, it } from "vitest";
 import { createMatrix } from "../core/matrix";
 import type { Matrix } from "../core/matrix.model";
 import type { Point } from "../math/transforms.model";
-import { drawMask, ink, iou, parseSvg, rasterize } from "../test-svg";
+import {
+  LOGO_BADGE,
+  LOGO_PILL,
+  LOGO_SQUARE,
+  LOGO_TRIANGLE,
+  drawLogo,
+  drawMask,
+  ink,
+  iou,
+  parsePathData,
+  parseSvg,
+  parseSvgItems,
+  rasterize,
+  rasterizeSvg,
+} from "../test-svg";
+import { pathData } from "./svg";
 import { vectorize } from "./vectorize";
-import type { PathSegment, VectorImage } from "./vectorize.model";
+import type { PathSegment, VectorImage, VectorPath } from "./vectorize.model";
 
 /**
  * Whether a point is inside a polygon (even-odd).
@@ -420,5 +435,283 @@ describe("vectorize", () => {
     const white = createMatrix(10, 10) as Matrix<"u8">;
     white.data.fill(255);
     expect(vectorize(white).paths).toEqual([]);
+  });
+});
+
+const LOGO = drawLogo();
+
+/**
+ * The path drawn round a point: the smallest whose corners' bounds contain it.
+ *
+ * @param paths - The paths.
+ * @param x - Point x.
+ * @param y - Point y.
+ * @returns Its index.
+ */
+const pathAt = (paths: readonly VectorPath[], x: number, y: number): number => {
+  let best = -1;
+  let bestArea = Infinity;
+  paths.forEach((path, i) => {
+    const points = path.segments.flatMap((segment) => segment.points);
+    const xs = points.map((p) => p.x);
+    const ys = points.map((p) => p.y);
+    const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+    const area = (x1 - x0) * (y1 - y0);
+    if (x >= x0 && x <= x1 && y >= y0 && y <= y1 && area < bestArea) [best, bestArea] = [i, area];
+  });
+  return best;
+};
+
+/**
+ * The end points of a path's segments: its corners, when it's all lines.
+ *
+ * @param path - The path.
+ * @returns The points after each `M`, `L` and `C`.
+ */
+const ends = (path: VectorPath): Point[] =>
+  path.segments.filter((s) => s.type !== "Z").map((s) => s.points[s.points.length - 1]);
+
+/**
+ * Whether two points are within a distance.
+ *
+ * @param a - One point.
+ * @param b - The other.
+ * @param within - The distance.
+ * @returns `true` when they're that close.
+ */
+const near = (a: Point, b: Point, within: number) => Math.hypot(a.x - b.x, a.y - b.y) <= within;
+
+const [SQUARE_LEFT, SQUARE_TOP, SQUARE_SIDE] = LOGO_SQUARE;
+const SQUARE_CORNERS = [
+  { x: SQUARE_LEFT, y: SQUARE_TOP },
+  { x: SQUARE_LEFT + SQUARE_SIDE, y: SQUARE_TOP },
+  { x: SQUARE_LEFT + SQUARE_SIDE, y: SQUARE_TOP + SQUARE_SIDE },
+  { x: SQUARE_LEFT, y: SQUARE_TOP + SQUARE_SIDE },
+];
+
+describe("vectorize in colour, on the logo sheet", () => {
+  // Navy, teal, orange and paper: the sheet's own colours.
+  const result = vectorize(LOGO, { colors: 4 });
+  const at = (x: number, y: number) => result.paths[pathAt(result.paths, x, y)];
+
+  it("keeps the square's corners exactly where they're drawn", () => {
+    const square = at(64, 192);
+
+    expect(square.segments.map((s) => s.type).join("")).toBe("MLLLZ");
+    for (const corner of SQUARE_CORNERS) {
+      expect(ends(square).some((p) => near(p, corner, 1))).toBe(true);
+    }
+    // On whole pixels, the square is drawn exactly, as in black and white.
+    expect(pathData(square.segments, 1)).toBe("M40 168h48v48h-48z");
+  });
+
+  it("keeps the triangle's three corners sharp", () => {
+    const triangle = at(150, 200);
+
+    expect(triangle.segments.map((s) => s.type).join("")).toBe("MLLZ");
+    for (const corner of LOGO_TRIANGLE) {
+      expect(ends(triangle).some((p) => near(p, corner, 1))).toBe(true);
+    }
+  });
+
+  it("draws the A with straight sides and sharp feet, as in black and white", () => {
+    // Its 8 corners and the 3 of its counter; the feet at the bottom are where colour
+    // tracing used to round off, after anti-aliased pixels took a third colour.
+    const a = at(250, 60);
+
+    expect(a.segments.map((s) => s.type).join("")).toBe("MLLLLLLLZMLLZ");
+    for (const foot of [216, 228.8, 259.2, 272]) {
+      expect(ends(a).some((p) => near(p, { x: foot, y: 98 }, 1))).toBe(true);
+    }
+  });
+
+  it("keeps the disc within 0.75 px of the circle drawn", () => {
+    const disc = at(LOGO_BADGE.x, LOGO_BADGE.y);
+    const [outline] = parsePathData(pathData(disc.segments, 6));
+
+    const worst = Math.max(
+      ...outline.map((p) =>
+        Math.abs(Math.hypot(p.x - LOGO_BADGE.x, p.y - LOGO_BADGE.y) - LOGO_BADGE.disc),
+      ),
+    );
+    expect(worst).toBeLessThan(0.75);
+  });
+});
+
+describe("vectorize with shapes, on the logo sheet", () => {
+  const plain = vectorize(LOGO, { colors: 4 });
+  const result = vectorize(LOGO, { colors: 4, shapes: true });
+  const svg = result.toSvg();
+  const items = parseSvgItems(svg);
+  const shapeAt = (x: number, y: number) => result.shapes[pathAt(result.paths, x, y)];
+
+  it("draws the disc as one circle, within half a pixel of the one drawn", () => {
+    const disc = shapeAt(LOGO_BADGE.x, LOGO_BADGE.y);
+
+    expect(disc).toMatchObject({ kind: "circle", color: "#ea590e" });
+    expect(disc.kind === "circle" && disc.strokeWidth).toBe(undefined);
+    if (disc.kind !== "circle") return;
+    expect(Math.hypot(disc.cx - LOGO_BADGE.x, disc.cy - LOGO_BADGE.y)).toBeLessThan(0.5);
+    expect(Math.abs(disc.r - LOGO_BADGE.disc)).toBeLessThan(0.5);
+    expect(items.filter((item) => item.tag === "circle" && !item.attributes.stroke)).toHaveLength(
+      1,
+    );
+  });
+
+  it("draws the ring as one stroked circle, both radii within half a pixel", () => {
+    const ring = result.shapes.find((shape) => shape.kind === "circle" && shape.strokeWidth);
+
+    expect(ring).toMatchObject({ kind: "circle", color: "#1f2a53" });
+    if (ring?.kind !== "circle" || ring.strokeWidth === undefined) return;
+    expect(Math.hypot(ring.cx - LOGO_BADGE.x, ring.cy - LOGO_BADGE.y)).toBeLessThan(0.5);
+    expect(Math.abs(ring.r + ring.strokeWidth / 2 - LOGO_BADGE.outer)).toBeLessThan(0.5);
+    expect(Math.abs(ring.r - ring.strokeWidth / 2 - LOGO_BADGE.inner)).toBeLessThan(0.5);
+    expect(svg).toContain(
+      '<circle fill="none" stroke="#1f2a53" stroke-width="11.9" cx="80" cy="88" r="50"/>',
+    );
+    // Its path is the two circles: one hole.
+    expect(result.paths[result.shapes.indexOf(ring)].holes).toBe(1);
+  });
+
+  it("draws the square as a rect", () => {
+    expect(shapeAt(64, 192)).toMatchObject({ kind: "rect", rx: 0, angle: 0 });
+    expect(svg).toContain('<rect fill="#159289" x="40" y="168" width="48" height="48"/>');
+  });
+
+  it("draws the triangle as a polygon of its 3 corners", () => {
+    const triangle = shapeAt(150, 200);
+
+    expect(triangle.kind).toBe("polygon");
+    if (triangle.kind !== "polygon") return;
+    expect(triangle.points).toHaveLength(3);
+    for (const corner of LOGO_TRIANGLE) {
+      expect(triangle.points.some((p) => near(p, corner, 1))).toBe(true);
+    }
+  });
+
+  it("draws the pill as a rect with corners of half its height", () => {
+    const pill = shapeAt(LOGO_PILL.left + 10, LOGO_PILL.y);
+
+    expect(pill.kind).toBe("rect");
+    if (pill.kind !== "rect") return;
+    expect(Math.abs(pill.height - 2 * LOGO_PILL.radius)).toBeLessThan(0.5);
+    expect(
+      Math.abs(pill.width - (LOGO_PILL.right - LOGO_PILL.left + 2 * LOGO_PILL.radius)),
+    ).toBeLessThan(0.5);
+    expect(Math.abs(pill.rx - pill.height / 2)).toBeLessThan(0.5);
+    expect(items.some((item) => item.tag === "rect" && Number(item.attributes.rx) > 15)).toBe(true);
+  });
+
+  it("keeps the letters as paths, recognising only what really is a primitive", () => {
+    const [o, a, b] = [shapeAt(186, 70), shapeAt(250, 60), shapeAt(290, 70)];
+
+    // The O is drawn as two concentric ellipses (17.6 by 25.6 px, and 8.8 by 16),
+    // so it truly is one, with an elliptical counter: a path of two ellipses.
+    expect(o.kind).toBe("path");
+    expect(o.kind === "path" && o.parts?.map((part) => part.kind)).toEqual(["ellipse", "ellipse"]);
+    if (o.kind !== "path" || o.parts?.[0].kind !== "ellipse") return;
+    expect(Math.abs(o.parts[0].rx - 17.6)).toBeLessThan(0.5);
+    expect(Math.abs(o.parts[0].ry - 25.6)).toBeLessThan(0.5);
+    // The A is an 8-cornered polygon with a triangular counter.
+    expect(a.kind === "path" && a.parts?.map((part) => part.kind)).toEqual(["polygon", "polygon"]);
+    // The B's bowls are half ellipses joined to a stem: no primitive, a fitted path.
+    expect(b).toMatchObject({ kind: "path", holes: 2 });
+    expect(b.kind === "path" && b.parts).toBe(undefined);
+    expect(items.filter((item) => item.tag === "path")).toHaveLength(3);
+    expect(items.filter((item) => item.evenOdd)).toHaveLength(2);
+  });
+
+  it("writes a smaller SVG that fills the same pixels", () => {
+    expect(svg.length).toBeLessThan(plain.toSvg().length * 0.7);
+    // Everything but the paper, filled again, against the same from the paths.
+    const drawn = rasterizeSvg(svg, LOGO.width, LOGO.height, "#f6f4ef");
+    const traced = rasterizeSvg(plain.toSvg(), LOGO.width, LOGO.height, "#f6f4ef");
+    expect(iou(drawn, traced)).toBeGreaterThanOrEqual(0.98);
+    // And the paths, which still hold every shape as segments.
+    const segments = rasterize(
+      result.paths.slice(1).flatMap((path) => parsePathData(pathData(path.segments, 3))),
+      LOGO.width,
+      LOGO.height,
+    );
+    expect(iou(segments, traced)).toBeGreaterThanOrEqual(0.98);
+  });
+
+  it("finds the same shapes in black and white", () => {
+    const bw = vectorize(LOGO, { shapes: true });
+
+    expect(bw.shapes.map((shape) => shape.kind).sort()).toEqual([
+      "circle",
+      "circle",
+      "path",
+      "path",
+      "path",
+      "polygon",
+      "rect",
+      "rect",
+    ]);
+    expect(bw.toSvg()).toContain('<circle fill="none" stroke="#000"');
+    expect(bw.toSvg({ fill: "#123456" })).toContain('stroke="#123456"');
+  });
+});
+
+describe("vectorize with shapes", () => {
+  it("finds a turned rectangle and a turned ellipse", () => {
+    const turn = (x: number, y: number, cx: number, cy: number, degrees: number) => {
+      const t = (-degrees * Math.PI) / 180;
+      const [dx, dy] = [x - cx, y - cy];
+      return [dx * Math.cos(t) - dy * Math.sin(t), dx * Math.sin(t) + dy * Math.cos(t)];
+    };
+    const mask = drawMask(200, 100, (x, y) => {
+      const [u, v] = turn(x, y, 50, 50, 25);
+      const [p, q] = turn(x, y, 145, 50, -40);
+      return (Math.abs(u) < 30 && Math.abs(v) < 15) || (p / 40) ** 2 + (q / 18) ** 2 < 1;
+    });
+
+    const result = vectorize(ink(mask), { shapes: true });
+
+    const rect = result.shapes.find((shape) => shape.kind === "rect")!;
+    const ellipse = result.shapes.find((shape) => shape.kind === "ellipse")!;
+    expect(result.shapes).toHaveLength(2);
+    expect(rect).toMatchObject({ kind: "rect", rx: 0 });
+    expect(ellipse).toMatchObject({ kind: "ellipse" });
+    if (rect.kind !== "rect" || ellipse.kind !== "ellipse") return;
+    expect(rect.angle).toBeCloseTo(25, 0);
+    expect(Math.abs(rect.width - 60)).toBeLessThan(0.5);
+    expect(Math.abs(rect.height - 30)).toBeLessThan(0.5);
+    expect(ellipse.angle).toBeCloseTo(-40, 0);
+    expect(Math.abs(ellipse.rx - 40)).toBeLessThan(0.5);
+    expect(Math.abs(ellipse.ry - 18)).toBeLessThan(0.5);
+    const svg = result.toSvg();
+    expect(svg).toMatch(/<rect [^>]*transform="rotate\(2[45]/);
+    expect(svg).toMatch(/<ellipse [^>]*transform="rotate\(-(39|40)/);
+    expect(iou(rasterizeSvg(svg, 200, 100), mask.data)).toBeGreaterThanOrEqual(0.98);
+  });
+
+  it.each([
+    ["circle", DISC],
+    ["square", SQUARE],
+    ["ring", RING],
+    ["glyphs", GLYPHS],
+  ])("writes an SVG of the %s that fills the same pixels", (_, mask) => {
+    const plain = vectorize(ink(mask));
+    const result = vectorize(ink(mask), { shapes: true });
+
+    // Smaller, except a square, whose <rect> is a few bytes longer than "M20 25h50v55h-50z".
+    if (mask !== SQUARE) expect(result.toSvg().length).toBeLessThan(plain.toSvg().length);
+    expect(
+      iou(rasterizeSvg(result.toSvg(), mask.width, mask.height), mask.data),
+    ).toBeGreaterThanOrEqual(0.98);
+  });
+
+  it("takes a tolerance and the kinds to look for", () => {
+    const disc = ink(DISC);
+
+    expect(vectorize(disc, { shapes: {} }).shapes[0].kind).toBe("circle");
+    expect(vectorize(disc, { shapes: { kinds: ["polygon"] } }).shapes[0].kind).toBe("path");
+    expect(vectorize(disc, { shapes: { tolerance: 0.1 } }).shapes[0].kind).toBe("path");
+    expect(vectorize(disc).shapes[0]).toEqual({ kind: "path", ...vectorize(disc).paths[0] });
+    expect(() => vectorize(disc, { shapes: { tolerance: 0 } })).toThrow(
+      "shapes.tolerance must be above 0, got 0",
+    );
   });
 });

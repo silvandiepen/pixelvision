@@ -62,17 +62,26 @@ export { connectedComponents } from "./shape/connectedComponents";
 
 // Vectorising
 export type {
+  CircleShape,
   CloseSegment,
   CurveSegment,
+  EllipseShape,
   LineToSegment,
   MoveSegment,
   PathSegment,
+  PathShape,
+  PolygonShape,
+  PrimitiveShape,
+  RectShape,
+  ShapeKind,
+  ShapesOptions,
   SnapLinesOptions,
   SvgOptions,
   VectorImage,
   VectorizeOptions,
   VectorizeThreshold,
   VectorPath,
+  VectorShape,
 } from "./vector/vectorize.model";
 export { vectorize } from "./vector/vectorize";
 

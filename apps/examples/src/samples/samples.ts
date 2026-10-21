@@ -523,6 +523,16 @@ export const LOGO_BADGE = { x: 80, y: 88, outer: 56, inner: 44, disc: 20 };
 /** The square of the logo sample: `[left, top, width, height]`, on whole pixels. */
 export const LOGO_SQUARE: readonly [number, number, number, number] = [40, 168, 48, 48];
 
+/** Corners of the triangle in the logo sample. */
+export const LOGO_TRIANGLE: readonly Point[] = [
+  { x: 120, y: 216 },
+  { x: 150, y: 166 },
+  { x: 180, y: 216 },
+];
+
+/** The pill of the logo sample: the centres of its two round ends, and its radius. */
+export const LOGO_PILL = { left: 216, right: 280, y: 192, radius: 16 };
+
 /** Shapes in the logo sample, and holes among them (ring 1, O 1, A 1, B 2). */
 export const LOGO_COUNTS = { shapes: 8, holes: 5 };
 
@@ -604,18 +614,17 @@ function logo(): RGBAImage {
     inWordmark((px - 160) / 0.8, (py - 30) / 0.8),
   );
   fillRect(image, LOGO_SQUARE, [13, 148, 136]);
-  fillPolygon(
-    image,
-    [
-      { x: 120, y: 216 },
-      { x: 150, y: 166 },
-      { x: 180, y: 216 },
-    ],
-    navy,
-  );
-  fillShape(image, [200, 176, 296, 208], orange, (px, py) => {
-    const cx = Math.min(Math.max(px, 216), 280);
-    return Math.hypot(px - cx, py - 192) <= 16;
+  fillPolygon(image, LOGO_TRIANGLE, navy);
+  const pill = LOGO_PILL;
+  const pillBounds = [
+    pill.left - pill.radius,
+    pill.y - pill.radius,
+    pill.right + pill.radius,
+    pill.y + pill.radius,
+  ] as const;
+  fillShape(image, pillBounds, orange, (px, py) => {
+    const cx = Math.min(Math.max(px, pill.left), pill.right);
+    return Math.hypot(px - cx, py - pill.y) <= pill.radius;
   });
   return image;
 }
