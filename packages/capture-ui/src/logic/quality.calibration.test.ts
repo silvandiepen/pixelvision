@@ -158,63 +158,72 @@ const calibrate = (
 };
 
 describe("default thresholds", () => {
-  it("separate sharp, blurred, dark, overexposed and hazed faces", () => {
-    const subjects = [0.8, 1.2, 1.6].map((scale) => {
+  // One test per subject size, so each gets the per-test time limit on slow CI runners.
+  it.each([0.8, 1.2, 1.6])(
+    "separate sharp, blurred, dark, overexposed and hazed faces at x%s",
+    (scale) => {
       const { image, box } = faceScene(480, 360, scale);
-      return { name: `face x${scale}`, image, region: box };
-    });
-    const { verdicts, of } = calibrate(
-      subjects,
-      // The face default comes from real faces (see FACE_QUALITY): it rejects a clean blur from
-      // sigma 3 on these drawn faces, but sensor noise reads as detail, so a blurred frame with
-      // noise isn't caught on faces.
-      (image) => degrade(image, [1.6, 2.2, 3], [1.15, 1.25], [3, 4], false),
-      FACE_QUALITY,
-      QUALITY_SIZE,
-    );
-    expect(verdicts).toEqual([]);
+      const subjects = [{ name: `face x${scale}`, image, region: box }];
+      const { verdicts, of } = calibrate(
+        subjects,
+        // The face default comes from real faces (see FACE_QUALITY): it rejects a clean blur from
+        // sigma 3 on these drawn faces, but sensor noise reads as detail, so a blurred frame with
+        // noise isn't caught on faces.
+        (image) => degrade(image, [1.6, 2.2, 3], [1.15, 1.25], [3, 4], false),
+        FACE_QUALITY,
+        QUALITY_SIZE,
+      );
+      expect(verdicts).toEqual([]);
 
-    const sharpness = (q: QualityAssessment) => q.sharpness;
-    const brightness = (q: QualityAssessment) => q.brightness;
-    const contrast = (q: QualityAssessment) => q.contrast;
-    // Sharpness: a fifth clear of both sides.
-    expect(Math.min(...of("good", sharpness))).toBeGreaterThan(FACE_QUALITY.minSharpness * 1.2);
-    // Blurred drawn faces only need to stay below it: the default is set from real faces.
-    expect(Math.max(...of("blurry", sharpness))).toBeLessThan(FACE_QUALITY.minSharpness);
-    // Light and contrast: at least 6 gray levels clear of both sides.
-    expect(Math.min(...of("good", brightness))).toBeGreaterThan(FACE_QUALITY.minBrightness + 6);
-    expect(Math.max(...of("dark", brightness))).toBeLessThan(FACE_QUALITY.minBrightness - 6);
-    expect(Math.max(...of("good", brightness))).toBeLessThan(FACE_QUALITY.maxBrightness - 6);
-    expect(Math.min(...of("bright", brightness))).toBeGreaterThan(FACE_QUALITY.maxBrightness + 6);
-    expect(Math.min(...of("good", contrast))).toBeGreaterThan(FACE_QUALITY.minContrast + 6);
-    expect(Math.max(...of("flat", contrast))).toBeLessThan(FACE_QUALITY.minContrast - 6);
-  });
+      const sharpness = (q: QualityAssessment) => q.sharpness;
+      const brightness = (q: QualityAssessment) => q.brightness;
+      const contrast = (q: QualityAssessment) => q.contrast;
+      // Sharpness: a fifth clear of both sides.
+      expect(Math.min(...of("good", sharpness))).toBeGreaterThan(FACE_QUALITY.minSharpness * 1.2);
+      // Blurred drawn faces only need to stay below it: the default is set from real faces.
+      expect(Math.max(...of("blurry", sharpness))).toBeLessThan(FACE_QUALITY.minSharpness);
+      // Light and contrast: at least 6 gray levels clear of both sides.
+      expect(Math.min(...of("good", brightness))).toBeGreaterThan(FACE_QUALITY.minBrightness + 6);
+      expect(Math.max(...of("dark", brightness))).toBeLessThan(FACE_QUALITY.minBrightness - 6);
+      expect(Math.max(...of("good", brightness))).toBeLessThan(FACE_QUALITY.maxBrightness - 6);
+      expect(Math.min(...of("bright", brightness))).toBeGreaterThan(FACE_QUALITY.maxBrightness + 6);
+      expect(Math.min(...of("good", contrast))).toBeGreaterThan(FACE_QUALITY.minContrast + 6);
+      expect(Math.max(...of("flat", contrast))).toBeLessThan(FACE_QUALITY.minContrast - 6);
+    },
+  );
 
-  it("separate sharp, blurred, dark, overexposed and hazed documents", () => {
-    const subjects = [320, 480, 640].map((width) => {
+  it.each([320, 480, 640])(
+    "separate sharp, blurred, dark, overexposed and hazed documents in %i px",
+    (width) => {
       const { image, corners } = documentScene(width, (width * 3) / 4);
-      return { name: `document in ${width}`, image, region: documentRegion(corners!) };
-    });
-    const { verdicts, of } = calibrate(
-      subjects,
-      (image) => degrade(image, [2.2, 3], [1.15, 1.25, 1.6], [1, 1.5, 2, 3, 4], true),
-      DOCUMENT_QUALITY,
-      DOCUMENT_QUALITY_SIZE,
-    );
-    expect(verdicts).toEqual([]);
+      const subjects = [{ name: `document in ${width}`, image, region: documentRegion(corners!) }];
+      const { verdicts, of } = calibrate(
+        subjects,
+        (image) => degrade(image, [2.2, 3], [1.15, 1.25, 1.6], [1, 1.5, 2, 3, 4], true),
+        DOCUMENT_QUALITY,
+        DOCUMENT_QUALITY_SIZE,
+      );
+      expect(verdicts).toEqual([]);
 
-    const sharpness = (q: QualityAssessment) => q.sharpness;
-    const brightness = (q: QualityAssessment) => q.brightness;
-    const contrast = (q: QualityAssessment) => q.contrast;
-    expect(Math.min(...of("good", sharpness))).toBeGreaterThan(DOCUMENT_QUALITY.minSharpness * 1.2);
-    expect(Math.max(...of("blurry", sharpness))).toBeLessThan(DOCUMENT_QUALITY.minSharpness / 1.2);
-    expect(Math.min(...of("good", brightness))).toBeGreaterThan(DOCUMENT_QUALITY.minBrightness + 6);
-    expect(Math.max(...of("dark", brightness))).toBeLessThan(DOCUMENT_QUALITY.minBrightness - 6);
-    expect(Math.max(...of("good", brightness))).toBeLessThan(DOCUMENT_QUALITY.maxBrightness - 6);
-    expect(Math.min(...of("bright", brightness))).toBeGreaterThan(
-      DOCUMENT_QUALITY.maxBrightness + 4,
-    );
-    expect(Math.min(...of("good", contrast))).toBeGreaterThan(DOCUMENT_QUALITY.minContrast + 6);
-    expect(Math.max(...of("flat", contrast))).toBeLessThan(DOCUMENT_QUALITY.minContrast - 6);
-  });
+      const sharpness = (q: QualityAssessment) => q.sharpness;
+      const brightness = (q: QualityAssessment) => q.brightness;
+      const contrast = (q: QualityAssessment) => q.contrast;
+      expect(Math.min(...of("good", sharpness))).toBeGreaterThan(
+        DOCUMENT_QUALITY.minSharpness * 1.2,
+      );
+      expect(Math.max(...of("blurry", sharpness))).toBeLessThan(
+        DOCUMENT_QUALITY.minSharpness / 1.2,
+      );
+      expect(Math.min(...of("good", brightness))).toBeGreaterThan(
+        DOCUMENT_QUALITY.minBrightness + 6,
+      );
+      expect(Math.max(...of("dark", brightness))).toBeLessThan(DOCUMENT_QUALITY.minBrightness - 6);
+      expect(Math.max(...of("good", brightness))).toBeLessThan(DOCUMENT_QUALITY.maxBrightness - 6);
+      expect(Math.min(...of("bright", brightness))).toBeGreaterThan(
+        DOCUMENT_QUALITY.maxBrightness + 4,
+      );
+      expect(Math.min(...of("good", contrast))).toBeGreaterThan(DOCUMENT_QUALITY.minContrast + 6);
+      expect(Math.max(...of("flat", contrast))).toBeLessThan(DOCUMENT_QUALITY.minContrast - 6);
+    },
+  );
 });

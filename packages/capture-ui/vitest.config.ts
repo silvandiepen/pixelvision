@@ -12,6 +12,9 @@ export default defineConfig({
   },
   test: {
     include: ["src/**/*.test.ts"],
+    // The quality calibration and gate tests blur and measure dozens of frames each; with
+    // coverage on a shared CI runner they run about 25 times slower than locally.
+    testTimeout: 15_000,
     coverage: {
       provider: "v8",
       include: ["src/**/*.ts"],
