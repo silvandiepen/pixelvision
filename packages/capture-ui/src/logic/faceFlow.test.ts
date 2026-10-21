@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { HeadPose } from "pixelvision";
 import { createFaceFlow, turnProgress } from "./faceFlow";
-import type { FaceFlow, FaceFlowOptions, FaceFlowState } from "./faceFlow.model";
+import type { FaceFlow, FaceFlowInput, FaceFlowOptions, FaceFlowState } from "./faceFlow.model";
 import type { FaceGuidance } from "./geometry.model";
 
 /** A flow on a fake clock that advances 200 ms per detection (5 Hz, like HAAR). */
@@ -303,5 +303,92 @@ describe("createFaceFlow", () => {
     const flow: FaceFlow = createFaceFlow();
     expect(flow.state.phase).toBe("searching");
     expect(flow.update({ pose: "frontal", guidance: "aligned" }).phase).toBe("aligning");
+  });
+});
+
+describe("createFaceFlow with quality", () => {
+  /** A flow on a fake clock fed full inputs, 200 ms apart. */
+  const makeGated = (options: FaceFlowOptions = {}) => {
+    let t = 0;
+    const flow = createFaceFlow({
+      holdFrames: 2,
+      acceptPauseMs: 0,
+      hintDelayMs: 800,
+      hintHoldMs: 1200,
+      now: () => t,
+      ...options,
+    });
+    const feed = (input: FaceFlowInput, times = 1): FaceFlowState => {
+      let state = flow.state;
+      for (let i = 0; i < times; i++) {
+        t += 200;
+        state = flow.update(input);
+      }
+      return state;
+    };
+    return { flow, feed, advance: (ms: number) => (t += ms) };
+  };
+  const good: FaceFlowInput = { pose: "frontal", guidance: "aligned", quality: null };
+
+  it("never offers a frame with a quality issue to keep, and names the issue once it persists", () => {
+    const { feed } = makeGated({ steps: false });
+    let s = feed({ ...good, quality: "dark", kept: false });
+    expect(s).toMatchObject({ phase: "aligning", frontal: false });
+    expect(s.hint).toBeUndefined();
+    s = feed({ ...good, quality: "dark", kept: false }, 4);
+    expect(s).toMatchObject({ phase: "finishing", hint: "faceTooDark", frontal: false });
+    expect(feed({ ...good, quality: "flat", kept: false }, 8).hint).toBe("faceLowContrast");
+    expect(feed({ ...good, quality: "bright", kept: false }, 8).hint).toBe("faceTooBright");
+    expect(feed({ ...good, quality: "blurry", kept: false }, 8).hint).toBe("faceBlurry");
+  });
+
+  it("puts positional hints before quality hints", () => {
+    const { feed } = makeGated();
+    expect(feed({ ...good, guidance: "too-far", quality: "dark" }, 6).hint).toBe("tooFar");
+  });
+
+  it("doesn't call a turning head blurry, but does ask for light during turns", () => {
+    const { feed } = makeGated();
+    let s = feed(good, 3);
+    expect(s.step).toBe("turn-one-side");
+    feed({ pose: "profile", guidance: "aligned", quality: "blurry" }, 1);
+    s = feed({ pose: "none", guidance: "aligned", quality: "blurry" }, 6);
+    expect(s.hint).toBeUndefined();
+    s = feed({ pose: "none", guidance: "aligned", quality: "dark" }, 6);
+    expect(s.hint).toBe("faceTooDark");
+  });
+
+  it("waits after the steps for a good frame, then finishes once one is kept", () => {
+    const { feed } = makeGated();
+    feed(good, 3);
+    feed({ ...good, pose: "profile" }, 2);
+    let s = feed({ ...good, pose: "mirrored-profile" }, 2);
+    expect(s.step).toBe("face-camera-again");
+    // Every frontal frame was too dark: nothing was kept.
+    s = feed({ ...good, quality: "dark", kept: false }, 2);
+    expect(s).toMatchObject({
+      phase: "finishing",
+      stepsDone: 4,
+      progress: 1,
+      message: "faceCamera",
+      frontal: false,
+    });
+    s = feed({ pose: "none", guidance: "no-face", kept: false }, 1);
+    expect(s).toMatchObject({ phase: "finishing", frontal: false });
+    s = feed({ ...good, kept: false });
+    expect(s).toMatchObject({ phase: "finishing", frontal: true });
+    expect(feed({ ...good, kept: true }).phase).toBe("done");
+  });
+
+  it("still times out while waiting for a good frame", () => {
+    const { feed, advance } = makeGated({ steps: false, timeoutMs: 2000 });
+    expect(feed({ ...good, quality: "blurry", kept: false }, 2).phase).toBe("finishing");
+    advance(2000);
+    expect(feed({ ...good, quality: "blurry", kept: false }).phase).toBe("failed");
+  });
+
+  it("finishes straight away when a good frame was kept", () => {
+    const { feed } = makeGated({ steps: false });
+    expect(feed({ ...good, kept: true }, 2).phase).toBe("done");
   });
 });

@@ -10,6 +10,8 @@ import type {
 } from "./faceFlow.model";
 import type { FaceGuidance } from "./geometry.model";
 import type { LabelKey } from "./labels.model";
+import { qualityHint } from "./quality";
+import type { QualityIssue } from "./quality.model";
 import { createSettledValue } from "./settle";
 
 const TOTAL_STEPS = 4;
@@ -61,6 +63,13 @@ export function turnProgress(
  *
  * With a directional pose source (`@pixelvision/face-neural`), the first
  * turn must be `firstTurn` and the instructions name the side.
+ *
+ * A detection can carry a quality issue (`checkQuality` on the face
+ * region): such a frame never counts as `frontal`, the frame to keep, and
+ * the issue shows as a settled hint ("Find a bit more light"). When the
+ * steps finish while no good frame has been kept (`kept: false`), the
+ * flow waits in the `finishing` phase for one instead of finishing, and
+ * the timeout still applies.
  *
  * @param options - Hold and window frames, timeout, steps, direction, hint timing, clock.
  * @returns The flow.
@@ -138,8 +147,13 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     return step === "turn-one-side" ? "turnOneSide" : "turnOtherSide";
   };
 
-  /** The positional hint this detection asks for, before settling. */
-  const rawHint = (guidance: FaceGuidance, step: HeadTurnStep | undefined, holding: boolean) => {
+  /** The positional or quality hint this detection asks for, before settling. */
+  const rawHint = (
+    guidance: FaceGuidance,
+    step: HeadTurnStep | undefined,
+    holding: boolean,
+    quality: QualityIssue | null | undefined,
+  ): LabelKey | undefined => {
     switch (guidance) {
       case "no-face":
         // Before the challenge the main instruction already says where to put the face.
@@ -152,6 +166,10 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
         // A turning head's box shifts sideways; don't nag about it during turns.
         return isTurnStep(step) ? undefined : ("offCentre" as const);
       default:
+        // A turning head blurs; only light is worth a word during turns.
+        if (quality && !(quality === "blurry" && isTurnStep(step))) {
+          return qualityHint(quality, "face");
+        }
         return !step && holding ? ("holdStill" as const) : undefined;
     }
   };
@@ -201,15 +219,42 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     };
   };
 
-  /** Combines the settled positional hint with a stall helper. */
+  /** Combines the settled positional or quality hint with a stall helper. */
   const secondary = (
-    guidance: FaceGuidance,
+    input: FaceFlowInput,
     step: HeadTurnStep | undefined,
     holding: boolean,
     stalled: boolean,
     t: number,
   ): LabelKey | undefined =>
-    hint.update(rawHint(guidance, step, holding), t) ?? (stalled ? helperFor(step) : undefined);
+    hint.update(rawHint(input.guidance, step, holding, input.quality), t) ??
+    (stalled ? helperFor(step) : undefined);
+
+  /** A frame worth keeping as the capture: facing the camera, aligned, and good enough. */
+  const isGood = (input: FaceFlowInput): boolean =>
+    input.pose === "frontal" && input.guidance === "aligned" && !input.quality;
+
+  /**
+   * The steps are done: finish when a good frame was kept, otherwise wait
+   * for one with a calm hint, still bound by the timeout.
+   */
+  const complete = (input: FaceFlowInput, t: number): FaceFlowState => {
+    if (input.kept !== false) return finish(t);
+    const good = isGood(input);
+    return {
+      phase: "finishing",
+      stepsDone: totalSteps,
+      totalSteps,
+      progress: 1,
+      hold: 1,
+      message: "faceCamera",
+      hint: secondary(input, undefined, good, false, t),
+      accepted: false,
+      stalled: false,
+      tone: tone.update(input.guidance === "no-face" ? "found" : "hold", t),
+      frontal: good,
+    };
+  };
 
   /** In directional mode, a first turn to the wrong side doesn't count. */
   const filterPose = (pose: HeadPose): HeadPose => {
@@ -221,7 +266,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   const runChallenge = (input: FaceFlowInput, t: number): FaceFlowState => {
     const before = challenge.state.progress;
     const after = challenge.update(filterPose(input.pose));
-    if (after.step === "done") return finish(t);
+    if (after.step === "done") return complete(input, t);
     const step = after.step as HeadTurnStep;
     if (after.progress > before && acceptPauseMs > 0 && current.phase === "challenge") {
       // The acceptance moment: the finished step's instruction stays, the ring is full.
@@ -254,12 +299,12 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
       progress: (after.progress + hold) / TOTAL_STEPS,
       hold,
       message: stepMessage(step, turn),
-      hint: secondary(input.guidance, step, hold > 0, stalled, t),
+      hint: secondary(input, step, hold > 0, stalled, t),
       accepted: false,
       stalled,
       tone: tone.update(raw, t),
       turn,
-      frontal: facing && input.pose === "frontal" && input.guidance === "aligned",
+      frontal: facing && isGood(input),
     };
   };
 
@@ -274,7 +319,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     const count = recent.filter(ok).length;
     if (count >= frames) {
       recent = [];
-      if (!steps) return finish(t);
+      if (!steps) return complete(input, t);
       return runChallenge(input, t);
     }
     const hold = Math.min(1, count / frames);
@@ -286,10 +331,10 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
       phase: seenFace ? "aligning" : "searching",
       hold,
       progress: steps ? 0 : hold,
-      hint: secondary(input.guidance, undefined, aligned, stalled, t),
+      hint: secondary(input, undefined, aligned, stalled, t),
       stalled,
       tone: tone.update(raw, t),
-      frontal: aligned && input.pose === "frontal",
+      frontal: isGood(input),
     };
   };
 
@@ -313,7 +358,12 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
         return current;
       }
       if (t < pausedUntil) return current;
-      current = current.phase === "challenge" ? runChallenge(input, t) : align(input, t);
+      current =
+        current.phase === "challenge"
+          ? runChallenge(input, t)
+          : current.phase === "finishing"
+            ? complete(input, t)
+            : align(input, t);
       return current;
     },
     get state() {

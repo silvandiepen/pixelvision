@@ -100,6 +100,25 @@ export { createSettledValue } from "./logic/settle";
 export type { StabilityOptions, StabilityState, StabilityTracker } from "./logic/stability.model";
 export { createStabilityTracker } from "./logic/stability";
 export { sharpness } from "./logic/sharpness";
+export type {
+  QualityAssessment,
+  QualityCheck,
+  QualityIssue,
+  QualitySubject,
+  QualityThresholds,
+} from "./logic/quality.model";
+export {
+  DOCUMENT_QUALITY,
+  DOCUMENT_QUALITY_SIZE,
+  FACE_QUALITY,
+  QUALITY_SIZE,
+  REFERENCE_CONTRAST,
+  assessRegion,
+  checkQuality,
+  describeQuality,
+  documentRegion,
+  qualityHint,
+} from "./logic/quality";
 export type { CaptureLabels, LabelKey } from "./logic/labels.model";
 export { dutchLabels, englishLabels, resolveLabels } from "./logic/labels";
 

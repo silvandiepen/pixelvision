@@ -1,9 +1,14 @@
 import type { HeadPose, HeadTurnStep } from "pixelvision";
 import type { FaceGuidance } from "./geometry.model";
 import type { LabelKey } from "./labels.model";
+import type { QualityIssue } from "./quality.model";
 
-/** Where the selfie flow is. */
-export type FacePhase = "searching" | "aligning" | "challenge" | "done" | "failed";
+/**
+ * Where the selfie flow is. `finishing`: the steps are done, but no frame
+ * good enough to capture has been kept yet; the flow waits for one (or
+ * the timeout).
+ */
+export type FacePhase = "searching" | "aligning" | "challenge" | "finishing" | "done" | "failed";
 
 /** Colour state of the face guide. */
 export type GuideTone = "idle" | "found" | "aligned" | "hold" | "success" | "error";
@@ -56,6 +61,18 @@ export interface FaceFlowOptions {
 export interface FaceFlowInput {
   pose: HeadPose;
   guidance: FaceGuidance;
+  /**
+   * Why this frame's face region isn't good enough to keep (from
+   * `checkQuality`), or `null` / omitted when it is. A frame with an issue
+   * is never `frontal`, and the issue shows as a settled hint.
+   */
+  quality?: QualityIssue | null;
+  /**
+   * Whether a good frame has been kept for the capture so far (default
+   * `true`). When the steps finish without one, the flow waits in the
+   * `finishing` phase until this is true.
+   */
+  kept?: boolean;
 }
 
 /** The flow's state after a detection. */
@@ -90,7 +107,7 @@ export interface FaceFlowState {
   tone: GuideTone;
   /** Which way to show the turn arrow, during a turn step. */
   turn?: TurnHint;
-  /** This frame is a good frontal frame to keep as the capture. */
+  /** This frame is a good frontal frame to keep as the capture: facing, aligned and without a quality issue. */
   frontal: boolean;
 }
 

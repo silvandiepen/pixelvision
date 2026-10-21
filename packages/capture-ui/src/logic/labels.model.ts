@@ -32,6 +32,11 @@ export interface CaptureLabels {
   alignHelp: string;
   turnFurther: string;
   faceCameraHelp: string;
+  /** Quality hints: the face is too dark, too bright, washed out or blurred. */
+  faceTooDark: string;
+  faceTooBright: string;
+  faceLowContrast: string;
+  faceBlurry: string;
   /** Offer to switch to the neural detector. */
   usePrecise: string;
   loadingPrecise: string;
@@ -43,6 +48,11 @@ export interface CaptureLabels {
   docFound: string;
   docHoldStill: string;
   docReview: string;
+  /** Quality hints: the document is too dark, too bright, washed out or blurred. */
+  docTooDark: string;
+  docTooBright: string;
+  docLowContrast: string;
+  docBlurry: string;
   docAdjust: string;
   capture: string;
   retake: string;

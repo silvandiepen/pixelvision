@@ -17,6 +17,7 @@ interface TestElement extends HTMLElement {
   start(): Promise<void>;
   stop(): void;
   capture(): Promise<unknown>;
+  readonly state: { phase: string } | undefined;
 }
 
 /** What `page.js` and {@link mount} put on `window`. */
@@ -24,6 +25,7 @@ interface PageWindow {
   captureUi: typeof CaptureUi;
   loadCascades: () => Promise<unknown>;
   grayStream: () => MediaStream;
+  darkStream: () => MediaStream;
   streams: MediaStream[];
   record: PageRecord;
   el: TestElement;
@@ -248,6 +250,40 @@ test.describe("<pv-face-capture>", () => {
       };
     });
     expect(state).toEqual({ track: "ended", attached: false });
+  });
+
+  test("asks for more light and doesn't capture in a dark room", async ({ page }) => {
+    await open(page);
+    // A 4:3 view, the camera's shape, so frame and view line up: the face box below sits in the
+    // oval (detection frames are 480 x 360).
+    await mount(
+      page,
+      '<pv-face-capture steps="off" hold-frames="2" hint-delay="0" style="display:block;width:640px;height:480px"></pv-face-capture>',
+    );
+    await page.evaluate(async () => {
+      const w = window as unknown as PageWindow;
+      w.el.source = () => ({ pose: "frontal", box: { x: 180, y: 95, width: 120, height: 140 } });
+      w.el.stream = w.darkStream();
+      await w.el.start();
+    });
+    const hint = () =>
+      page.evaluate(
+        () =>
+          (window as unknown as PageWindow).el.shadowRoot!.querySelector(".instruction-hint")!
+            .textContent,
+      );
+
+    await expect.poll(hint, { timeout: 10_000 }).toBe("Find a bit more light");
+    // Many more detections pass: still no capture.
+    await page.waitForTimeout(1500);
+
+    expect(await hint()).toBe("Find a bit more light");
+    const events = await elementEvents(page);
+    expect(events).toContain("pv-pose");
+    expect(events).not.toContain("pv-capture");
+    expect(await page.evaluate(() => (window as unknown as PageWindow).el.state)).toMatchObject({
+      phase: "finishing",
+    });
   });
 
   test("survives repeated start and stop", async ({ page }) => {

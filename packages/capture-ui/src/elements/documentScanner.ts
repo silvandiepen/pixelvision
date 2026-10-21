@@ -1,4 +1,4 @@
-import { extractDocument, fromImageData, toImageData } from "pixelvision";
+import { extractDocument, fromImageData, grayscale, toImageData } from "pixelvision";
 import type { FoundDocument, Quad } from "pixelvision";
 import { canvasPixels, canvasToBlob, imageToCanvas } from "../camera/frames";
 import type { GrabbedFrame } from "../camera/frames";
@@ -25,7 +25,19 @@ import {
 import type { ViewTransform } from "../logic/geometry.model";
 import { HAPTICS, vibrate } from "../logic/haptics";
 import type { LabelKey } from "../logic/labels.model";
+import {
+  DOCUMENT_QUALITY,
+  DOCUMENT_QUALITY_SIZE,
+  assessRegion,
+  checkQuality,
+  describeQuality,
+  documentRegion,
+  qualityHint,
+} from "../logic/quality";
+import type { QualityAssessment } from "../logic/quality.model";
 import type { RunToken } from "../logic/runToken.model";
+import { createSettledValue } from "../logic/settle";
+import type { SettledValue } from "../logic/settle.model";
 import { createPointsTracker } from "../logic/smoothing";
 import { mainThreadDocumentFinder } from "../sources/document";
 import { createInlineWorker } from "../sources/inlineWorker";
@@ -53,6 +65,8 @@ interface Shot {
   canvas: HTMLCanvasElement;
   /** Corners in the photo's pixels. */
   corners: Quad;
+  /** The document region's quality in the last detection frame, when a document was found. */
+  quality?: QualityAssessment;
   /** The straightened result for the current corners and aspect. */
   result?: { blob: Blob; image?: ImageData; aspectRatio?: number };
 }
@@ -60,7 +74,9 @@ interface Shot {
 /**
  * `<pv-document-scanner>`: finds a document in the back camera's view,
  * outlines it with smoothly animated corners, captures it once it holds
- * still, and shows it straightened for review. The person can switch the
+ * still and passes the quality gate (sharp enough, not too dark, too
+ * bright or washed out; otherwise a hint says what to fix), and shows it
+ * straightened for review. The person can switch the
  * shape (auto, ID card, A4), drag the corners, retake or confirm.
  *
  * This captures and crops a document photo; it does not verify that the
@@ -76,6 +92,7 @@ export class DocumentScannerElement extends CaptureElement {
 
   protected readonly facingMode = "environment" as const;
   protected readonly styles = documentStyles;
+  protected readonly qualityDefaults = DOCUMENT_QUALITY;
 
   private finderValue: DocumentFinder | undefined;
   private activeFinder: DocumentFinder | undefined;
@@ -88,6 +105,11 @@ export class DocumentScannerElement extends CaptureElement {
   private shot: Shot | undefined;
   private adjustCorners: Quad | undefined;
   private capturing = false;
+  private lastQuality: QualityAssessment | undefined;
+  private qualityHintValue: SettledValue<LabelKey | undefined> = createSettledValue<
+    LabelKey | undefined
+  >(undefined);
+  private shownMessage: LabelKey | undefined;
 
   private svg!: SVGSVGElement;
   private scrim!: HTMLDivElement;
@@ -315,6 +337,12 @@ export class DocumentScannerElement extends CaptureElement {
     this.flowState = undefined;
     this.tracker.reset();
     this.lastFound = undefined;
+    this.lastQuality = undefined;
+    this.qualityHintValue = createSettledValue<LabelKey | undefined>(undefined, {
+      delayMs: parseNumber(this.getAttribute("hint-delay"), 700, 0, 5000),
+      minHoldMs: parseNumber(this.getAttribute("hint-hold"), 1500, 0, 10_000),
+    });
+    this.shownMessage = "docSearching";
     this.capturing = false;
     this.shutter.hidden = false;
     this.container.dataset.phase = "searching";
@@ -377,11 +405,25 @@ export class DocumentScannerElement extends CaptureElement {
     const corners = state.corners;
     if (found) this.lastArea = found.area;
     this.lastFound = corners ? { corners, area: this.lastArea } : undefined;
+    // The quality gate, on the document and a margin around it in the detection frame.
+    const quality =
+      corners &&
+      assessRegion(
+        grayscale(frame.image),
+        documentRegion(scaleQuad(corners, 1 / frame.scale)),
+        DOCUMENT_QUALITY_SIZE,
+      );
+    this.lastQuality = quality;
+    const issue = quality ? checkQuality(quality, this.qualityThresholds).issue : null;
+    const hint = this.qualityHintValue.update(qualityHint(issue, "document"), performance.now());
+    const message = hint ?? state.message;
     const t = this.viewTransform();
     this.tracker.setTarget(corners?.map((p) => toView(p, t)));
-    this.container.dataset.phase = state.phase;
+    // Steady but not good enough yet: keep the "hold" look instead of "ready".
+    this.container.dataset.phase = state.phase === "ready" && issue ? "holding" : state.phase;
     this.setHold(state.progress);
-    this.setInstruction(this.text[state.message], previous?.message !== state.message);
+    this.setInstruction(this.text[message], this.shownMessage !== message);
+    this.shownMessage = message;
     this.emit<DetectDetail>("pv-detect", {
       corners: corners ?? null,
       area: corners ? this.lastArea : undefined,
@@ -389,7 +431,9 @@ export class DocumentScannerElement extends CaptureElement {
       stable: state.phase === "ready",
     });
     if (state.phase === "holding" && previous?.phase === "searching") vibrate(HAPTICS.step);
-    if (state.phase === "ready" && this.autoCapture && !this.capturing) await this.capture();
+    if (state.phase === "ready" && !issue && this.autoCapture && !this.capturing) {
+      await this.capture();
+    }
   }
 
   private setHold(progress: number): void {
@@ -431,6 +475,7 @@ export class DocumentScannerElement extends CaptureElement {
         `phase     ${this.flowState?.phase ?? "-"}`,
         `area      ${this.lastFound ? this.lastFound.area.toFixed(2) : "-"}`,
         `hold      ${Math.round((this.flowState?.progress ?? 0) * 100)}%`,
+        `quality   ${describeQuality(this.lastQuality, this.qualityThresholds)}`,
       ].join("\n");
     }
   }
@@ -453,7 +498,7 @@ export class DocumentScannerElement extends CaptureElement {
     const found = this.lastFound?.corners;
     const corners = found ? scaleQuad(found, scale) : defaultQuad(canvas.width, canvas.height);
     this.discardShot();
-    this.shot = { canvas, corners };
+    this.shot = { canvas, corners, quality: found ? this.lastQuality : undefined };
     vibrate(HAPTICS.success);
     await this.straighten();
     if (!token.current || !this.shot) return;
@@ -618,6 +663,7 @@ export class DocumentScannerElement extends CaptureElement {
       aspect: this.aspect,
       aspectRatio,
       source: { width: shot.canvas.width, height: shot.canvas.height },
+      quality: shot.quality,
     };
     this.stop();
     // Hand-off: free the photo and drop the result; only the decoded preview remains.

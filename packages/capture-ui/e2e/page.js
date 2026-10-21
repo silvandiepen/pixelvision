@@ -77,6 +77,34 @@ const grayStream = () => {
   return stream;
 };
 
+/**
+ * A camera stand-in in a nearly dark room: a dim face shape on a dim wall, with some texture.
+ *
+ * @returns The stream.
+ */
+const darkStream = () => {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 480;
+  const context = canvas.getContext("2d");
+  const draw = () => {
+    context.fillStyle = "#121212";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#2a2a2a";
+    context.beginPath();
+    context.ellipse(320, 215, 80, 100, 0, 0, Math.PI * 2);
+    context.fill();
+    context.fillStyle = "#0a0a0a";
+    for (const x of [290, 350]) context.fillRect(x - 12, 190, 24, 8);
+    context.fillRect(300, 265, 40, 8);
+  };
+  draw();
+  const stream = canvas.captureStream(15);
+  const timer = setInterval(draw, 60);
+  stream.getVideoTracks()[0].addEventListener("ended", () => clearInterval(timer));
+  return stream;
+};
+
 /** Every stream handed out, so tests can check that tracks were stopped. */
 const streams = [];
 Object.defineProperty(navigator, "mediaDevices", {
@@ -94,6 +122,7 @@ Object.assign(window, {
   captureUi,
   loadCascades,
   grayStream,
+  darkStream,
   record,
   streams,
   pageReady: true,

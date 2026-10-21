@@ -4,9 +4,10 @@ Camera capture components for [pixelvision](../pixelvision), as framework-agnost
 Components. They work in plain HTML, Vue, React, Svelte and Angular.
 
 - **`<pv-face-capture>`**: a selfie flow with an oval face guide, a progress ring, a smoothed face
-  tracker and a head-turn challenge. It captures the sharpest frontal frame.
+  tracker and a head-turn challenge. It captures the sharpest frontal frame that passes the
+  [quality gate](#quality-gates): sharp, and neither too dark, too bright nor washed out.
 - **`<pv-document-scanner>`**: finds a document with the back camera, outlines it, captures it
-  once it is held still, and straightens it. The person can then pick a shape, drag the corners,
+  once it is held still and passes the quality gate, and straightens it. The person can then pick a shape, drag the corners,
   retake or confirm.
 
 Everything you see can be themed with CSS custom properties and `::part()`. Every text can be
@@ -244,7 +245,11 @@ frame's pixels, or a promise of it. `yaw` is in degrees, positive towards the pe
 | `timeout`            | `45000` | Milliseconds before giving up (`pv-error` with `timeout`). `0` disables it                                                   |
 | `first-turn`         | `left`  | The side asked for first, with a directional source                                                                          |
 | `show-landmarks`     | off     | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                |
-| `show-debug`         | off     | Show detector, phase, step, pose, guidance, sharpness and detection rate                                                     |
+| `show-debug`         | off     | Show detector, phase, step, pose, guidance, quality, sharpness and detection rate                                            |
+| `min-sharpness`      | `70`    | Lowest sharpness of the face region for a frame to be kept. See [Quality gates](#quality-gates)                              |
+| `min-brightness`     | `80`    | Lowest mean brightness of the face region, 0–255                                                                             |
+| `max-brightness`     | `212`   | Highest mean brightness of the face region, 0–255                                                                            |
+| `min-contrast`       | `22`    | Lowest contrast (standard deviation of the levels) of the face region                                                        |
 | `detect-size`        | `480`   | Longest side of the frame handed to the detector                                                                             |
 | `detect-interval`    | `120`   | Minimum milliseconds between detections. One frame is analysed at a time, so a slow detector lowers the rate instead         |
 | `worker`             | on      | Run the built-in detector in a worker                                                                                        |
@@ -258,23 +263,25 @@ on.
 
 ### Properties and methods
 
-| Member                 | What it is                                                                                 |
-| ---------------------- | ------------------------------------------------------------------------------------------ |
-| `labels`               | `Partial<CaptureLabels>`: texts to replace                                                 |
-| `source`               | The face detector (see [Detectors](#detectors))                                            |
-| `preciseSource`        | `() => Promise<PoseSource>`: offered as "Use precise detection" when a step stalls on HAAR |
-| `usePreciseSource()`   | Switches to `preciseSource` now                                                            |
-| `cascades`             | `{ frontal, profile }` for the default detector                                            |
-| `stream`               | A `MediaStream` to use instead of opening the camera (your own device picker)              |
-| `state`                | The flow's current state (read-only)                                                       |
-| `maxPixels`            | The `max-pixels` attribute as a number                                                     |
-| `includeImageData`     | The `include-image-data` attribute as a boolean                                            |
-| `start()`              | Opens the camera and starts the flow                                                       |
-| `stop()`               | Stops the camera and detection                                                             |
-| `reset()`              | Clears the capture and starts over. The camera keeps running if it was                     |
-| `capture()`            | Captures now and finishes. Resolves with the `pv-capture` detail                           |
-| `clearSensitiveData()` | Revokes Blob URLs, zeroes canvases and drops every capture the element holds               |
-| `dispose()`            | `stop()` and `clearSensitiveData()`. Runs on its own when the element is removed           |
+| Member                                                          | What it is                                                                                 |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `labels`                                                        | `Partial<CaptureLabels>`: texts to replace                                                 |
+| `source`                                                        | The face detector (see [Detectors](#detectors))                                            |
+| `preciseSource`                                                 | `() => Promise<PoseSource>`: offered as "Use precise detection" when a step stalls on HAAR |
+| `usePreciseSource()`                                            | Switches to `preciseSource` now                                                            |
+| `cascades`                                                      | `{ frontal, profile }` for the default detector                                            |
+| `stream`                                                        | A `MediaStream` to use instead of opening the camera (your own device picker)              |
+| `state`                                                         | The flow's current state (read-only)                                                       |
+| `maxPixels`                                                     | The `max-pixels` attribute as a number                                                     |
+| `includeImageData`                                              | The `include-image-data` attribute as a boolean                                            |
+| `minSharpness`, `minBrightness`, `maxBrightness`, `minContrast` | The quality attributes as numbers: the default, or the attribute when set                  |
+| `qualityThresholds`                                             | All four as a `QualityThresholds` object (read-only)                                       |
+| `start()`                                                       | Opens the camera and starts the flow                                                       |
+| `stop()`                                                        | Stops the camera and detection                                                             |
+| `reset()`                                                       | Clears the capture and starts over. The camera keeps running if it was                     |
+| `capture()`                                                     | Captures now and finishes. Resolves with the `pv-capture` detail                           |
+| `clearSensitiveData()`                                          | Revokes Blob URLs, zeroes canvases and drops every capture the element holds               |
+| `dispose()`                                                     | `stop()` and `clearSensitiveData()`. Runs on its own when the element is removed           |
 
 ### Events
 
@@ -286,8 +293,8 @@ does neither: listen on the element.
 | `pv-ready`    | `{ width, height, facingMode }`: the camera runs                                                                                                                                                                                                             |
 | `pv-pose`     | `{ pose, guidance, phase, box?, landmarks?, score?, yaw? }`: each detection, in camera pixels                                                                                                                                                                |
 | `pv-detector` | `{ name }`: the detector was switched through "Use precise detection"                                                                                                                                                                                        |
-| `pv-step`     | `{ step, stepsDone, totalSteps, progress }`: a head-turn step started, or `step: "done"`                                                                                                                                                                     |
-| `pv-capture`  | `{ blob, image?, metadata }`: a JPEG, its `ImageData` with `include-image-data`, and `{ width, height, sharpness, box, pose, challengePassed, durationMs, capturedAt, mirrored: false }`. On the element only                                                |
+| `pv-step`     | `{ step, stepsDone, totalSteps, progress }`: a head-turn step started, or `step: "done"` once the steps are complete                                                                                                                                         |
+| `pv-capture`  | `{ blob, image?, metadata }`: a JPEG, its `ImageData` with `include-image-data`, and `{ width, height, sharpness, quality, box, pose, challengePassed, durationMs, capturedAt, mirrored: false }`. On the element only                                       |
 | `pv-complete` | `{ durationMs, stepsDone }`: the flow is finished                                                                                                                                                                                                            |
 | `pv-error`    | `{ code, message, cause? }`. `code` is one of `denied`, `blocked-frame`, `unavailable`, `in-use`, `insecure`, `unknown`, `timeout`, `detector`, `no-video` (the stream has no live video track), `ended` (the track ended), `media-error` or `start-timeout` |
 
@@ -317,9 +324,16 @@ The flow is built to stay calm with a detector that is wrong now and then:
 - **A step that stalls shows one helper.** After 6 s without progress, a single helper line
   appears, such as "Turn a bit further, then hold for a moment". On HAAR, the "Use precise
   detection" offer appears with it.
-- **The capture is the sharpest frontal frame.** While the face is frontal and aligned, the
-  sharpest frame is kept; sharpness is the variance of the Laplacian over the face. When the flow
-  ends, that frame is captured and the camera stops.
+- **The capture is the sharpest good frontal frame.** While the face is frontal and aligned, each
+  frame's face region goes through the [quality gate](#quality-gates). Only frames that pass are
+  candidates, and the sharpest of them is kept. When the flow ends, that frame is captured and the
+  camera stops.
+- **No good frame, no capture.** A frame that fails the gate shows why as a secondary hint, settled
+  like the positional ones: "Find a bit more light", "Too much light. Move out of direct light",
+  "Wipe the camera lens and find even light" or "Hold still for a moment" (not during turns,
+  which blur on their own). When the steps are done but no frame has passed yet, the flow waits in
+  the `finishing` phase ("Look straight at the camera", with the hint) and captures the first good
+  frame, or times out as usual. `capture()` and the shutter button still capture straight away.
 
 The face tracker eases towards the smoothed box at the display rate, and holds still through
 brief gaps instead of blinking.
@@ -349,7 +363,13 @@ Run it with `CALM_REPORT=1` to print the numbers.
 | `hold-frames`        | `8`     | Steady detections needed before capturing                                                    |
 | `review`             | on      | Show the review (shape, adjust, retake, confirm). When off, `pv-capture` fires right away    |
 | `mirrored`           | off     | Mirror the preview                                                                           |
-| `show-debug`         | off     | Show finder, phase, area and hold progress                                                   |
+| `show-debug`         | off     | Show finder, phase, area, hold progress and quality                                          |
+| `hint-delay`         | `700`   | Milliseconds a quality hint must persist before it replaces the instruction                  |
+| `hint-hold`          | `1500`  | Minimum milliseconds a quality hint stays                                                    |
+| `min-sharpness`      | `230`   | Lowest sharpness of the document region. See [Quality gates](#quality-gates)                 |
+| `min-brightness`     | `85`    | Lowest mean brightness of the document region, 0–255                                         |
+| `max-brightness`     | `214`   | Highest mean brightness of the document region, 0–255                                        |
+| `min-contrast`       | `33`    | Lowest contrast (standard deviation of the levels) of the document region                    |
 | `detect-size`        | `480`   | Longest side of the frame handed to `findDocument`                                           |
 | `detect-interval`    | `120`   | Minimum milliseconds between detections                                                      |
 | `worker`             | on      | Run `findDocument` in a worker                                                               |
@@ -361,17 +381,18 @@ Run it with `CALM_REPORT=1` to print the numbers.
 ### Properties and methods
 
 `labels`, `stream`, `finder` (a `DocumentFinder`), `aspect`, `corners` (the smoothed outline,
-read-only), `maxPixels`, `includeImageData`, `start()`, `stop()`, `reset()`, `capture()`,
+read-only), `maxPixels`, `includeImageData`, `minSharpness`, `minBrightness`, `maxBrightness`,
+`minContrast`, `qualityThresholds`, `start()`, `stop()`, `reset()`, `capture()`,
 `clearSensitiveData()` and `dispose()`, as for `<pv-face-capture>`.
 
 ### Events
 
-| Event        | `detail`                                                                                                                                                                                     |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pv-ready`   | `{ width, height, facingMode }`                                                                                                                                                              |
-| `pv-detect`  | `{ corners, area?, progress, stable }`: each detection. `corners` is null when no document was found                                                                                         |
-| `pv-capture` | `{ blob, image?, corners, aspect, aspectRatio?, source: { width, height } }`: the straightened JPEG, its pixels with `include-image-data`, and the corners in the photo. On the element only |
-| `pv-error`   | As above                                                                                                                                                                                     |
+| Event        | `detail`                                                                                                                                                                                                                                                          |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pv-ready`   | `{ width, height, facingMode }`                                                                                                                                                                                                                                   |
+| `pv-detect`  | `{ corners, area?, progress, stable }`: each detection. `corners` is null when no document was found                                                                                                                                                              |
+| `pv-capture` | `{ blob, image?, corners, aspect, aspectRatio?, source: { width, height }, quality? }`: the straightened JPEG, its pixels with `include-image-data`, the corners in the photo, and the document region's quality in the last detection frame. On the element only |
+| `pv-error`   | As above                                                                                                                                                                                                                                                          |
 
 ### How it behaves
 
@@ -380,11 +401,72 @@ last few detections, a detection that jumps away is ignored until it repeats, an
 frames keep the outline. The outline is drawn with rounded corners and handles. It eases between
 detections, and the surround outside it dims. A ring at the top fills while the outline stays
 within 5% of the document's diagonal, and drains when it moves, so a hand-held document gets
-there. Then the frame is captured at full resolution (up to `max-pixels`), the corners are scaled
+there. Every detection also measures the document region (the outline's bounding box with a 5%
+margin, so the document's edges count) against the [quality gate](#quality-gates). While it
+fails, the instruction says why ("Find a bit more light", "Too much light. Keep the document out
+of direct light", "Wipe the camera lens and use a dark, plain surface" or "Hold still so the text
+is sharp"), settled by `hint-delay` and `hint-hold`, and the automatic capture waits. Once the
+outline is steady and the region passes, the frame is captured at full resolution (up to `max-pixels`), the corners are scaled
 from the detection frame to it, and it is straightened with `extractDocument`. In the review, the person
 can switch between Auto, ID card and A4. They can also drag the four corners on the still frame:
 each corner is a button that moves with the arrow keys (Shift moves faster). "Use this scan" fires
 `pv-capture`.
+
+## Quality gates
+
+Both elements only capture automatically from a frame that is sharp enough and well lit. The face
+or document region of each detection frame is measured with `assessRegion`:
+
+1. The region is cut out and resampled to a fixed size: 96 pixels on its long side for a face,
+   160 for a document, whose detail is finer. Area averaging when shrinking, bilinear when
+   enlarging. The numbers don't depend on `detect-size` or on how close the subject is.
+2. `brightness` is the mean gray level (0–255) and `contrast` the standard deviation.
+3. `sharpness` is the variance of the 4-neighbour Laplacian, scaled to a contrast of 50
+   (multiplied by `(50 / contrast)²`). Without that scaling, the same face in dimmer light would
+   score as blurred; with it, light and blur are judged separately.
+
+`checkQuality` then compares the measurement with the thresholds, in this order: `dark` (below
+`min-brightness`), `bright` (above `max-brightness`), `flat` (below `min-contrast`) and `blurry`
+(below `min-sharpness`). Light comes first, because more light also fixes a soft, noisy frame.
+
+| Threshold        | Face  | Document |
+| ---------------- | ----- | -------- |
+| `min-sharpness`  | `70`  | `230`    |
+| `min-brightness` | `80`  | `85`     |
+| `max-brightness` | `212` | `214`    |
+| `min-contrast`   | `22`  | `33`     |
+
+The defaults are calibrated by `src/logic/quality.calibration.test.ts`. It draws faces at the
+sizes the oval accepts in a 480-pixel detection frame, and a plain light document on a dark
+surface, and degrades them (`QUALITY_REPORT=1` prints the numbers):
+
+| Degradation                                                                            | Face                      | Document                  |
+| -------------------------------------------------------------------------------------- | ------------------------- | ------------------------- |
+| None, noise σ 4 and 10, dimmed ×0.6–0.75, brightened ×1.15–1.25 (documents up to ×1.6) | passes, sharpness ≥ 710.8 | passes, sharpness ≥ 304.2 |
+| Gaussian blur σ 1–4 px (also with noise σ 4)                                           | σ 3–4: sharpness ≤ 59.6   | sharpness ≤ 171.5         |
+| Darkened ×0.15–0.4                                                                     | brightness ≤ 65.0         | brightness ≤ 69.3         |
+| Passing brightness range                                                               | 96.2–203.4                | 103.9–207.4               |
+| Overexposed with clipping                                                              | ×1.6–3: ≥ 221.8           | ×2.2–3: ≥ 219.1           |
+| Hazed (30% of the frame over flat gray)                                                | contrast ≤ 15.5           | contrast ≤ 22.2           |
+
+The face sharpness default is set from real photos rather than the drawn faces, whose edges are
+far crisper: on 12 real faces of 51–109 px, usable faces scored 122–619, the same faces blurred by
+σ 1 scored 14–180, by σ 2 7–44 and by σ 3 6–17. `70` rejects a blur of σ 2 or more and passes
+every usable face. A σ 1 blur overlaps soft but usable faces and passes, and sensor noise reads
+as detail, so a blurred face with visible noise passes too. Check the defaults against your own
+cameras with `show-debug`, and adjust them with the attributes above.
+| Lowest passing contrast | 30.8 | 44.0 |
+
+Every case gets the expected verdict, and each threshold sits at least a fifth (sharpness) or 4–6
+gray levels (light, contrast) clear of both sides. Keep in mind:
+
+- Drawn faces have crisper edges than real ones. Check the defaults with footage from the cameras
+  you support, using `show-debug` (it prints the measurement and verdict), and adjust the
+  attributes where needed. `0` (or `255` for `max-brightness`) switches a check off.
+- Strong sensor noise (σ 10) on a blurred frame raises the Laplacian variance past the sharpness
+  threshold: noise reads as detail.
+- The document region includes some of the surface around the document, so its brightness rises
+  slowly with exposure. A plain white page clips well before the region reads as too bright.
 
 ## Captured data
 
@@ -495,6 +577,8 @@ The logic behind the elements is exported, and it has no DOM:
 - `createPointsTracker`: smoothing.
 - `createStabilityTracker`: hold-still detection.
 - `sharpness`: the sharpness score.
+- `assessRegion`, `checkQuality`, `qualityHint` and `documentRegion`: the quality gate, with
+  `FACE_QUALITY` and `DOCUMENT_QUALITY` as the calibrated defaults.
 - `createDocumentFlow` and `resolveAspect`: the document flow and its shape presets.
 - `coverTransform`, `toView` and `fromView`: frame-to-view mapping.
 
@@ -520,7 +604,8 @@ pnpm --filter @pixelvision/capture-ui test
 ```
 
 `src/logic`, `src/sources` and `src/camera` (except `frames.ts`) are held to 100% coverage. They
-contain every decision the elements make: guidance, smoothing, stability, sharpness, both flows,
+contain every decision the elements make: guidance, smoothing, stability, sharpness, the quality
+gate and its calibration, both flows,
 aspect presets, camera error classification, the worker protocol and labels.
 
 The browser glue (`src/elements`, `src/camera/frames.ts`, the worker entry) is not counted towards
@@ -528,7 +613,9 @@ the threshold. It needs a real camera, video frames, a 2D canvas, pointer captur
 scope. The elements have happy-dom tests for registration, panels, languages, labels and
 attributes, and for their lifecycle with a stand-in stream and canvas: start validation and
 timeouts, stopping and disconnecting during startup and while the detector loads, cleanup of
-canvases and Blob URLs, event boundaries and capture size.
+canvases and Blob URLs, event boundaries and capture size. `src/elements/qualityGate.test.ts`
+feeds both elements drawn frames: sharp ones are captured, blurred and dark ones never are and
+show the matching hint, and dark-then-good captures a good frame.
 
 ```sh
 pnpm --filter @pixelvision/capture-ui test:e2e
@@ -536,7 +623,8 @@ pnpm --filter @pixelvision/capture-ui test:e2e
 
 runs the built package in Chromium, Firefox and WebKit with a fake camera (`e2e/`): start, stop
 and disconnect, the real built-in worker and its termination, cleanup, event boundaries, and the
-`haar-worker` entry under a strict CSP without `blob:`.
+`haar-worker` entry under a strict CSP without `blob:`, and a dark fake camera that shows "Find a
+bit more light" and never captures.
 
 ## Limitations
 

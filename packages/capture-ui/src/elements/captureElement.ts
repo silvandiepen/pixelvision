@@ -22,6 +22,7 @@ import type { ViewTransform } from "../logic/geometry.model";
 import { HAPTICS, vibrate } from "../logic/haptics";
 import { resolveLabels } from "../logic/labels";
 import type { CaptureLabels, LabelKey } from "../logic/labels.model";
+import type { QualityThresholds } from "../logic/quality.model";
 import { createRunCounter } from "../logic/runToken";
 import type { RunToken } from "../logic/runToken.model";
 import type { CaptureErrorCode, ErrorDetail, ReadyDetail } from "./events.model";
@@ -133,6 +134,8 @@ export abstract class CaptureElement extends ElementBase {
   protected abstract readonly facingMode: "user" | "environment";
   /** Element-specific stylesheet. */
   protected abstract readonly styles: string;
+  /** The calibrated quality thresholds, before attributes change them. */
+  protected abstract readonly qualityDefaults: QualityThresholds;
   /** Element-specific markup inside the stage. */
   protected abstract stageMarkup(): string;
   /** Called once the shadow DOM exists. */
@@ -282,6 +285,59 @@ export abstract class CaptureElement extends ElementBase {
 
   set includeImageData(value: boolean) {
     this.setAttribute("include-image-data", value ? "on" : "off");
+  }
+
+  /**
+   * The quality gate in use: the element's calibrated defaults with the
+   * `min-sharpness`, `min-brightness`, `max-brightness` and `min-contrast`
+   * attributes applied. Brightness is kept within 0–255, contrast within
+   * 0–128 and sharpness at 0 or more; 0 (or 255 for `max-brightness`)
+   * switches a check off.
+   */
+  get qualityThresholds(): QualityThresholds {
+    const d = this.qualityDefaults;
+    return {
+      minSharpness: parseNumber(this.getAttribute("min-sharpness"), d.minSharpness, 0),
+      minBrightness: parseNumber(this.getAttribute("min-brightness"), d.minBrightness, 0, 255),
+      maxBrightness: parseNumber(this.getAttribute("max-brightness"), d.maxBrightness, 0, 255),
+      minContrast: parseNumber(this.getAttribute("min-contrast"), d.minContrast, 0, 128),
+    };
+  }
+
+  /** Lowest sharpness a frame needs to be kept (`min-sharpness`); see {@link qualityThresholds}. */
+  get minSharpness(): number {
+    return this.qualityThresholds.minSharpness;
+  }
+
+  set minSharpness(value: number) {
+    this.setAttribute("min-sharpness", String(value));
+  }
+
+  /** Lowest mean brightness, 0–255 (`min-brightness`); see {@link qualityThresholds}. */
+  get minBrightness(): number {
+    return this.qualityThresholds.minBrightness;
+  }
+
+  set minBrightness(value: number) {
+    this.setAttribute("min-brightness", String(value));
+  }
+
+  /** Highest mean brightness, 0–255 (`max-brightness`); see {@link qualityThresholds}. */
+  get maxBrightness(): number {
+    return this.qualityThresholds.maxBrightness;
+  }
+
+  set maxBrightness(value: number) {
+    this.setAttribute("max-brightness", String(value));
+  }
+
+  /** Lowest contrast, the standard deviation of the levels (`min-contrast`); see {@link qualityThresholds}. */
+  get minContrast(): number {
+    return this.qualityThresholds.minContrast;
+  }
+
+  set minContrast(value: number) {
+    this.setAttribute("min-contrast", String(value));
   }
 
   connectedCallback(): void {

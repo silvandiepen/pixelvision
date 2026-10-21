@@ -22,7 +22,8 @@ import type { Box, Guide } from "../logic/geometry.model";
 import type { LabelKey } from "../logic/labels.model";
 import { HAPTICS, vibrate } from "../logic/haptics";
 import { formatLabel } from "../logic/labels";
-import { sharpness } from "../logic/sharpness";
+import { FACE_QUALITY, assessRegion, checkQuality, describeQuality } from "../logic/quality";
+import type { QualityAssessment } from "../logic/quality.model";
 import { createBoxSmoother } from "../logic/boxSmoother";
 import type { RunToken } from "../logic/runToken.model";
 import { createEasedNumber, createPointsTracker } from "../logic/smoothing";
@@ -42,10 +43,11 @@ import { faceStyles } from "./styles";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
-/** The best frontal frame seen so far, at most `max-pixels` pixels. */
+/** The sharpest good frontal frame seen so far, at most `max-pixels` pixels. */
 interface BestFrame {
   canvas: HTMLCanvasElement;
-  score: number;
+  /** The face region's quality in the detection frame; it passed the gate. */
+  quality: QualityAssessment;
   /** Face box in the canvas's pixels. */
   box: Box;
   pose: HeadPose;
@@ -54,7 +56,9 @@ interface BestFrame {
 /**
  * `<pv-face-capture>`: a selfie flow with an oval face guide, a progress
  * ring, a smoothed face tracker and pixelvision's head-turn challenge.
- * Captures the sharpest frontal frame when done.
+ * Captures the sharpest frontal frame that passed the quality gate (sharp
+ * enough, not too dark, too bright or washed out) when done; until one
+ * has been seen it keeps running, with a hint, or times out.
  *
  * The head-turn challenge is a client-side capture aid, not liveness or
  * presentation-attack detection; see {@link FaceCaptureMetadata.challengePassed}.
@@ -84,6 +88,7 @@ export class FaceCaptureElement extends CaptureElement {
 
   protected readonly facingMode = "user" as const;
   protected readonly styles = faceStyles;
+  protected readonly qualityDefaults = FACE_QUALITY;
 
   private sourceValue: PoseSource | undefined;
   private cascadesValue: HeadPoseCascades | undefined;
@@ -108,6 +113,7 @@ export class FaceCaptureElement extends CaptureElement {
   private hintTimer: ReturnType<typeof setTimeout> | undefined;
   private lastYaw: number | undefined;
   private best: BestFrame | undefined;
+  private lastQuality: QualityAssessment | undefined;
   private lastPose: PoseDetail | undefined;
   private detections = 0;
   private sourceKind = "";
@@ -378,6 +384,7 @@ export class FaceCaptureElement extends CaptureElement {
     this.ringFill.snap(0);
     this.gaugeFill.snap(0);
     this.best = undefined;
+    this.lastQuality = undefined;
     this.detections = 0;
     this.lastYaw = undefined;
     this.shownMessage = undefined;
@@ -409,6 +416,7 @@ export class FaceCaptureElement extends CaptureElement {
   private dropFrames(): void {
     zeroCanvas(this.best?.canvas);
     this.best = undefined;
+    this.lastQuality = undefined;
     this.lastPose = undefined;
     this.lastLandmarks = [];
   }
@@ -505,8 +513,17 @@ export class FaceCaptureElement extends CaptureElement {
     const viewBox = smoothed.box;
     const pose = smoothed.outlier ? "none" : observation.pose;
     const guidance = assessFace(viewBox, this.guide);
+    // The quality gate: only a sharp, well-lit face region counts as a frame worth keeping.
+    const quality = observation.box && assessRegion(grayscale(frame.image), observation.box);
+    if (quality) this.lastQuality = quality;
+    const issue = quality ? checkQuality(quality, this.qualityThresholds).issue : null;
     const previous = this.flowState;
-    const state = this.flow.update({ pose, guidance });
+    const state = this.flow.update({
+      pose,
+      guidance,
+      quality: issue,
+      kept: this.best !== undefined,
+    });
     this.flowState = state;
 
     if (landmarks && !smoothed.outlier) this.lastLandmarks = landmarks.map((p) => toView(p, t));
@@ -521,8 +538,8 @@ export class FaceCaptureElement extends CaptureElement {
       this.tracker.setTarget(undefined);
     }
 
-    if (state.frontal && observation.box) {
-      this.considerFrame(frame, observation.box, observation.pose);
+    if (state.frontal && observation.box && quality) {
+      this.considerFrame(frame, observation.box, observation.pose, quality);
     }
 
     this.lastYaw = observation.yaw;
@@ -537,14 +554,15 @@ export class FaceCaptureElement extends CaptureElement {
     };
     this.emit<PoseDetail>("pv-pose", this.lastPose);
 
+    // The steps are over once the flow finishes, or waits for a good frame to finish with.
+    const over = (phase: FaceFlowState["phase"] | undefined) =>
+      phase === "finishing" || phase === "done";
     const stepChanged =
-      previous?.step !== state.step ||
-      previous?.stepsDone !== state.stepsDone ||
-      state.phase === "done";
-    if (state.totalSteps > 0 && (state.phase === "challenge" || state.phase === "done")) {
-      if (stepChanged && previous?.phase !== "done") {
+      previous?.step !== state.step || previous?.stepsDone !== state.stepsDone || over(state.phase);
+    if (state.totalSteps > 0 && (state.phase === "challenge" || over(state.phase))) {
+      if (stepChanged && !over(previous?.phase)) {
         this.emit<StepDetail>("pv-step", {
-          step: state.phase === "done" ? "done" : state.step!,
+          step: over(state.phase) ? "done" : state.step!,
           stepsDone: state.stepsDone,
           totalSteps: state.totalSteps,
           progress: state.totalSteps ? state.stepsDone / state.totalSteps : 1,
@@ -565,26 +583,31 @@ export class FaceCaptureElement extends CaptureElement {
   }
 
   /**
-   * Keeps the frame if it is the sharpest frontal frame so far.
+   * Keeps the frame if it is the sharpest good frontal frame so far.
    *
    * @param frame - The detection frame.
    * @param faceBox - The face box in detection-frame pixels.
    * @param pose - The pose.
+   * @param quality - The face region's quality; it passed the gate.
    */
-  private considerFrame(frame: GrabbedFrame, faceBox: Box, pose: HeadPose): void {
-    const score = sharpness(grayscale(frame.image), faceBox);
-    if (this.best && score <= this.best.score) return;
+  private considerFrame(
+    frame: GrabbedFrame,
+    faceBox: Box,
+    pose: HeadPose,
+    quality: QualityAssessment,
+  ): void {
+    if (this.best && quality.sharpness <= this.best.quality.sharpness) return;
     const fit = fitToPixels(this.video.videoWidth, this.video.videoHeight, this.maxPixels);
     const canvas = this.best?.canvas ?? createCanvas(fit.width, fit.height);
     canvas.width = fit.width;
     canvas.height = fit.height;
     context2d(canvas).drawImage(this.video, 0, 0, fit.width, fit.height);
-    this.best = { canvas, score, box: scaleBox(faceBox, frame.scale * fit.scale), pose };
+    this.best = { canvas, quality, box: scaleBox(faceBox, frame.scale * fit.scale), pose };
   }
 
   /**
-   * Captures now: the sharpest frontal frame when one was kept and the
-   * flow is done, otherwise the current frame, scaled to at most
+   * Captures now: the sharpest good frontal frame when one was kept and
+   * the flow is done, otherwise the current frame, scaled to at most
    * `max-pixels`. Fires `pv-capture` (on the element only) and
    * `pv-complete`, stops the camera and shows the still.
    *
@@ -615,7 +638,8 @@ export class FaceCaptureElement extends CaptureElement {
     const metadata: FaceCaptureMetadata = {
       width: canvas.width,
       height: canvas.height,
-      sharpness: best ? best.score : 0,
+      sharpness: best ? best.quality.sharpness : 0,
+      quality: best ? best.quality : this.lastQuality,
       box,
       pose: best ? best.pose : (this.lastPose?.pose ?? "none"),
       challengePassed: done && this.steps,
@@ -761,7 +785,9 @@ export class FaceCaptureElement extends CaptureElement {
   }
 
   private renderSteps(state: FaceFlowState): void {
-    const show = state.totalSteps > 0 && (state.phase === "challenge" || state.phase === "done");
+    const show =
+      state.totalSteps > 0 &&
+      (state.phase === "challenge" || state.phase === "finishing" || state.phase === "done");
     this.stepsEl.hidden = !show;
     if (!show) return;
     if (this.stepsEl.childElementCount !== state.totalSteps) {
@@ -828,7 +854,8 @@ export class FaceCaptureElement extends CaptureElement {
         `guidance  ${this.lastPose?.guidance ?? "-"}`,
         `hint      ${s?.hint ?? "-"}${s?.stalled ? " (stalled)" : ""}`,
         `yaw       ${this.lastYaw === undefined ? "-" : `${Math.round(this.lastYaw)}°`}`,
-        `sharpest  ${this.best ? Math.round(this.best.score) : "-"}`,
+        `quality   ${describeQuality(this.lastQuality, this.qualityThresholds)}`,
+        `sharpest  ${this.best ? Math.round(this.best.quality.sharpness) : "-"}`,
         `rate      ${(this.detections / Math.max(1, (now - this.startedAt) / 1000)).toFixed(1)}/s`,
       ].join("\n");
     }

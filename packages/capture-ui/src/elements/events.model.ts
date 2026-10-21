@@ -4,6 +4,7 @@ import type { StreamFailure } from "../camera/startup.model";
 import type { AspectPreset } from "../logic/documentFlow.model";
 import type { FacePhase } from "../logic/faceFlow.model";
 import type { Box, FaceGuidance } from "../logic/geometry.model";
+import type { QualityAssessment } from "../logic/quality.model";
 
 /**
  * Why a component stopped: a camera failure, the selfie timeout, a detector failure, or a
@@ -55,8 +56,17 @@ export interface PoseDetail {
 export interface FaceCaptureMetadata {
   width: number;
   height: number;
-  /** Laplacian-variance sharpness of the face region in the detection frame. */
+  /**
+   * Sharpness of the kept face region in the detection frame (see {@link QualityAssessment}),
+   * 0 when the capture isn't a kept frame (a capture before the flow is done).
+   */
   sharpness: number;
+  /**
+   * Sharpness, brightness and contrast of the face region: of the kept frame, which passed the
+   * quality gate, or of the latest detection frame for a capture before the flow is done.
+   * Undefined when no face was measured.
+   */
+  quality?: QualityAssessment;
   /** Face box in capture pixels, when known. */
   box?: Box;
   pose: HeadPose;
@@ -122,6 +132,12 @@ export interface DocumentCaptureDetail {
   aspectRatio?: number;
   /** Size of the source photo, at most `max-pixels` pixels. */
   source: { width: number; height: number };
+  /**
+   * Sharpness, brightness and contrast of the document region in the last detection frame
+   * before the capture. An automatic capture only happens once this passed the quality gate.
+   * Undefined when no document was found.
+   */
+  quality?: QualityAssessment;
 }
 
 /** `pv-detector`: the face detector was switched through "Use precise detection". */
