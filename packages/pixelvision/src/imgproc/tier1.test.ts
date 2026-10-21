@@ -44,6 +44,33 @@ describe("medianBlur", () => {
     expect(medianBlur(rgb, 5).channels).toBe(3);
   });
 
+  it("matches a sorted-window median for every size and border", () => {
+    let seed = 3;
+    const image = createMatrix(23, 17);
+    for (let i = 0; i < image.data.length; i++) {
+      seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+      image.data[i] = seed >>> 24;
+    }
+    for (const size of [3, 5, 7]) {
+      const r = size >> 1;
+      const result = medianBlur(image, size);
+      for (let y = 0; y < image.height; y++) {
+        for (let x = 0; x < image.width; x++) {
+          const window: number[] = [];
+          for (let dy = -r; dy <= r; dy++) {
+            for (let dx = -r; dx <= r; dx++) {
+              const yy = Math.min(image.height - 1, Math.max(0, y + dy));
+              const xx = Math.min(image.width - 1, Math.max(0, x + dx));
+              window.push(image.data[yy * image.width + xx]);
+            }
+          }
+          window.sort((a, b) => a - b);
+          expect(result.data[y * image.width + x]).toBe(window[window.length >> 1]);
+        }
+      }
+    }
+  });
+
   it("rejects even or tiny sizes", () => {
     expect(() => medianBlur(fromRows([[1]]), 4)).toThrow(RangeError);
     expect(() => medianBlur(fromRows([[1]]), 1)).toThrow(RangeError);
