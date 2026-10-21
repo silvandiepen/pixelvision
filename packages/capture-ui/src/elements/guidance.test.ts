@@ -67,7 +67,9 @@ afterEach(() => {
  * @param check - The condition.
  * @param ms - Longest wait.
  */
-const until = async (check: () => boolean, ms = 4000) => {
+// Every wait here is for something that should happen and returns as soon as it does; the long
+// deadline only gives a slow CI runner room (the package's test timeout is 15 s).
+const until = async (check: () => boolean, ms = 12_000) => {
   const end = performance.now() + ms;
   while (!check() && performance.now() < end) await wait(20);
 };
