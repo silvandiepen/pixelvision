@@ -32,6 +32,20 @@ export {
 export { median } from "./math/median";
 export type { Point } from "./math/transforms.model";
 export { affineTransform, perspectiveTransform, transformPoint } from "./math/transforms";
+export type { FastOptions } from "./features/fast.model";
+export { detectFast } from "./features/fast";
+export type { Keypoint } from "./features/keypoint.model";
+export type { DescriptorMatch, MatchOptions } from "./features/orb.model";
+export {
+  describeOrb,
+  hammingDistance,
+  keypointOrientation,
+  matchDescriptors,
+} from "./features/orb";
+export type { YapeOptions } from "./features/yape.model";
+export { detectYape } from "./features/yape";
+export type { Yape06Options } from "./features/yape06.model";
+export { detectYape06 } from "./features/yape06";
 export type { BoxBlurOptions, BoxSumOptions } from "./imgproc/boxBlur.model";
 export { boxBlur, boxSum } from "./imgproc/boxBlur";
 export type { CannyOptions } from "./imgproc/canny.model";
