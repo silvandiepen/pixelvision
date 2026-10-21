@@ -46,6 +46,8 @@ export type { YapeOptions } from "./features/yape.model";
 export { detectYape } from "./features/yape";
 export type { Yape06Options } from "./features/yape06.model";
 export { detectYape06 } from "./features/yape06";
+export type { Estimate, EstimateOptions, EstimationMethod } from "./motion/estimate.model";
+export { estimateAffine, estimateHomography } from "./motion/estimate";
 export type { FlowFrame, TrackedPoint, TrackPointsOptions } from "./tracking/opticalFlow.model";
 export { trackPoints } from "./tracking/opticalFlow";
 export { buildPyramid } from "./tracking/pyramid";
