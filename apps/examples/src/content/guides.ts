@@ -114,7 +114,8 @@ export const GUIDES: readonly Guide[] = [
     slug: "from-opencv",
     title: "Coming from OpenCV.js",
     section: "guides",
-    description: "The OpenCV.js calls you know, and their pixelvision equivalents.",
+    description:
+      "The OpenCV.js calls you know, their pixelvision equivalents, and the size difference.",
     markdown: fromOpencv,
   },
 ];
