@@ -2,7 +2,7 @@
 
 Optional neural face detection for [pixelvision](https://www.npmjs.com/package/pixelvision): faces
 with five landmarks (eyes, nose tip, mouth corners), the head's turn angle, and head poses for
-pixelvision's head-turn liveness check. Uses YuNet (OpenCV Zoo, MIT, 230 KB, bundled) on
+pixelvision's head-turn challenge. Uses YuNet (OpenCV Zoo, MIT, 230 KB, bundled) on
 onnxruntime, which you bring yourself so the package fits browsers, Node and React Native.
 
 ```sh

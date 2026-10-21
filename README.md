@@ -24,8 +24,9 @@ and in React Native (Hermes).
 - **Detection:** Viola-Jones (HAAR) and BBF cascades, with bundled frontal-face, profile-face, eye
   and upper-body cascades, plus skin detection.
 - **Document scanning:** find a document in a photo, straighten it, and track it across frames.
-- **Face and head-turn capture:** head-pose detection and a head-turn liveness challenge; optional
-  neural face detection with landmarks in `@pixelvision/face-neural`.
+- **Face and head-turn capture:** head-pose detection and a head-turn challenge (a client-side
+  signal, not liveness proof); optional neural face detection with landmarks in
+  `@pixelvision/face-neural`.
 - **Shape analysis:** contours, polygon approximation, convex hulls, moments, bounding and rotated
   rectangles, and connected components.
 - **Linear algebra:** LU, Cholesky, SVD, eigen-decomposition and least-squares solves.

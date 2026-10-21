@@ -52,7 +52,6 @@
     "yunet",
     "onnxruntime",
     "head-pose",
-    "liveness",
     "pixelvision"
   ],
   "repository": {
