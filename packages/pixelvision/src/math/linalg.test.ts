@@ -186,7 +186,7 @@ describe("svd", () => {
 
 describe("svdSolve and pseudoInverse", () => {
   it("fits an overdetermined system exactly when it's consistent", () => {
-    // jsfeat returned [-0.144, 1.050] here.
+    // A wrong stride for non-square matrices gives [-0.144, 1.050] here.
     const a = matrixFromRows([
       [1, 0],
       [0, 1],

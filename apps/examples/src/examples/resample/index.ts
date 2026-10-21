@@ -12,7 +12,7 @@ export const resampleExample = defineExample<ResampleDemoOptions>({
     "Resizes an image to any width and height, any type and number of channels: shrink a camera frame before processing it, or enlarge a result to look at.",
   howItWorks: [
     "Shrinking uses area averaging: each output pixel is the mean of the input area it covers, weighted by how much of each input pixel falls inside, so fine detail is averaged instead of skipped and no aliasing appears.",
-    "Enlarging (in either direction) uses bilinear interpolation with centre alignment. jsfeat silently did nothing when enlarging and mixed up channels in colour images; both are fixed.",
+    "Enlarging (in either direction) uses bilinear interpolation with centre alignment. Every channel is resized on its own, so colour images keep their colours whichever way they're scaled.",
   ],
   howToTest:
     "Shrinks the RGBA sample to half size and checks the output is 160 x 120 with 4 channels, with nearly the same average brightness.",

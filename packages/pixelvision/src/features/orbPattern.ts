@@ -1,4 +1,4 @@
-// ORB's learned test pattern (Rublee et al., ICCV 2011), as in OpenCV and jsfeat:
+// ORB's learned test pattern (Rublee et al., ICCV 2011), as in OpenCV:
 // 256 pairs of points (x0, y0, x1, y1) in a 31x31 patch, each pair one descriptor bit.
 export const ORB_PATTERN = new Int8Array([
   8, -3, 9, 5, 4, 2, 7, -12, -11, 9, -8, 2, 7, -12, 12, -13, 2, -13, 2, 12, 1, -7, 1, 6, -2, -10,

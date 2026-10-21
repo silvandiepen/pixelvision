@@ -12,7 +12,7 @@ export const gaussianBlurExample = defineExample<GaussianBlurDemoOptions>({
     "Smooths an image with a Gaussian kernel. Run it before edge or feature detection so noise doesn't show up as detail.",
   howItWorks: [
     "A 2D Gaussian is separable, so the image is filtered along rows with a 1D kernel (see `gaussianKernel`) and then along columns: `2k` multiplications per pixel instead of `k²`. Borders repeat the edge pixel.",
-    "8-bit images use integer weights that sum to 256 and shift the result back by 8 bits, as jsfeat and OpenCV do. Larger kernels or sigmas blur more; the kernel size must be odd so it's centred on the pixel.",
+    "8-bit images use integer weights that sum to 256 and shift the result back by 8 bits, as OpenCV does. Larger kernels or sigmas blur more; the kernel size must be odd so it's centred on the pixel.",
   ],
   howToTest:
     "Counts sharp steps (neighbouring pixels more than 60 apart) before and after blurring the shapes sample with a 5-pixel kernel, and checks that most disappear while the average brightness barely moves.",

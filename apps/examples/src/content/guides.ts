@@ -1,4 +1,3 @@
-import readme from "../../../../README.md?raw";
 import differences from "../../../../docs/jsfeat-differences.md?raw";
 import camera from "./guide/camera.md?raw";
 import concepts from "./guide/concepts.md?raw";
@@ -106,14 +105,10 @@ export const GUIDES: readonly Guide[] = [
   },
   {
     slug: "from-jsfeat",
-    title: "Coming from jsfeat",
+    title: "Migrating from jsfeat",
     section: "guides",
-    description: "What maps to what, and every place pixelvision behaves differently.",
-    markdown: [
-      fromJsfeat,
-      markdownSection(readme, "jsfeat parity").replace("## jsfeat parity", "## What maps to what"),
-      withoutTitle(differences),
-    ].join("\n\n"),
+    description: "Which pixelvision function to use for each jsfeat call, and how they differ.",
+    markdown: [fromJsfeat, withoutTitle(differences)].join("\n\n"),
   },
   {
     slug: "from-opencv",

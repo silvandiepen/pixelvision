@@ -11,8 +11,8 @@ export const svdExample = defineExample<SvdDemoOptions>({
   description:
     "Decomposes any matrix as `A = U · Σ · Vᵀ`: rotations `U` and `V` and the singular values in `Σ`. It's the robust tool behind least squares, pseudo-inverses and rank estimation.",
   howItWorks: [
-    "One-sided Jacobi: pairs of columns are rotated until every pair is orthogonal. The column lengths are then the singular values (sorted, largest first), the normalised columns form `U`, and the accumulated rotations form `V`. It iterates to double precision (jsfeat stopped at single-precision tolerances).",
-    "When there are fewer singular values than rows, `U` is completed to a full orthonormal basis; jsfeat's version could overflow there and repeat vectors.",
+    "One-sided Jacobi: pairs of columns are rotated until every pair is orthogonal. The column lengths are then the singular values (sorted, largest first), the normalised columns form `U`, and the accumulated rotations form `V`. It iterates to full double precision.",
+    "When there are fewer singular values than rows, `U` is completed to a full orthonormal basis, so `Uᵀ · U` is always the identity.",
   ],
   howToTest:
     "Decomposes `[[3, 2, 2], [2, 3, -2]]`, whose singular values are exactly 5 and 3, then checks `U · Σ · Vᵀ` rebuilds A within 1e-12 and `Uᵀ · U` is the identity.",

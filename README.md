@@ -11,14 +11,29 @@
 
 ---
 
-pixelvision does image processing, feature detection, tracking and object detection on plain
-typed arrays. It has no dependencies and no DOM requirement, so the same code runs in the browser,
-in a Web Worker, in Node and in React Native.
+pixelvision is computer vision for JavaScript on plain typed arrays. It has no dependencies, no
+WebAssembly and no DOM requirement, so the same code runs in the browser, in a Web Worker, in Node
+and in React Native (Hermes).
 
-It's a modern replacement for [jsfeat](https://github.com/inspirit/jsfeat): the same algorithms
-with a simpler API, full TypeScript types, and tests that prove its output matches jsfeat's.
+- **Image processing:** grayscale, blurs (box, Gaussian, median), resizing and pyramids, Sobel and
+  Scharr derivatives, Canny edges, Hough lines, thresholds, morphology, histogram equalisation and
+  perspective or affine warps.
+- **Features:** FAST, YAPE and YAPE06 keypoints, ORB descriptors and descriptor matching.
+- **Tracking and motion:** pyramidal Lucas-Kanade optical flow, and robust affine and homography
+  estimation with RANSAC or LMEDS.
+- **Detection:** Viola-Jones (HAAR) and BBF cascades, with bundled frontal-face, profile-face, eye
+  and upper-body cascades, plus skin detection.
+- **Document scanning:** find a document in a photo, straighten it, and track it across frames.
+- **Face and head-turn capture:** head-pose detection and a head-turn liveness challenge; optional
+  neural face detection with landmarks in `@pixelvision/face-neural`.
+- **Shape analysis:** contours, polygon approximation, convex hulls, moments, bounding and rotated
+  rectangles, and connected components.
+- **Linear algebra:** LU, Cholesky, SVD, eigen-decomposition and least-squares solves.
 
-> **Status:** early development. The parity table below tracks what has been ported.
+Every function is typed, documented and tested against reference implementations, with 100% test
+coverage.
+
+> **Status:** early development.
 
 ## Install
 
@@ -49,41 +64,13 @@ const onFrame = (frame: ImageData) => {
 };
 ```
 
-## jsfeat parity
-
-pixelvision covers what jsfeat does with its own, simpler API; it isn't a drop-in replacement.
-Each ported function is checked against jsfeat 0.0.8 on the same seeded images in
-[`packages/parity`](packages/parity): integer output must be identical. Where jsfeat is wrong,
-pixelvision fixes it and the difference is listed in
-[docs/jsfeat-differences.md](docs/jsfeat-differences.md).
-
-| jsfeat                           | pixelvision                                   | Parity                                                               |
-| -------------------------------- | --------------------------------------------- | -------------------------------------------------------------------- |
-| `matrix_t`, `data_t`, `cache`    | `createMatrix`, `cloneMatrix`, optional `out` | — (replaced)                                                         |
-| —                                | `fromImageData`, `toImageData`                | new                                                                  |
-| `math.get_gaussian_kernel`       | `gaussianKernel`                              | identical                                                            |
-| `imgproc.grayscale`              | `grayscale`                                   | identical                                                            |
-| `imgproc.resample`               | `resample`                                    | identical when shrinking 1 channel; fixed for colour, adds enlarging |
-| `imgproc.box_blur_gray`          | `boxBlur`, `boxSum`                           | identical; fixed for large radii; any channels                       |
-| `imgproc.gaussian_blur`          | `gaussianBlur`                                | identical; any channels                                              |
-| `imgproc.pyrdown`                | `pyrDown`                                     | identical; any channels                                              |
-| `imgproc.sobel_derivatives`      | `sobelDerivatives`                            | identical; fixed for 1-pixel-tall images                             |
-| `imgproc.scharr_derivatives`     | `scharrDerivatives`                           | identical; fixed for 1-pixel-tall images                             |
-| `imgproc.compute_integral_image` | `integralImage`                               | identical; no overflow                                               |
-| `imgproc.equalize_histogram`     | `equalizeHistogram`                           | identical                                                            |
-| `imgproc.canny`                  | `canny`                                       | identical except the bottom-row fix                                  |
-| `imgproc.warp_perspective`       | `warpPerspective`                             | identical inside the image; fixed edges; any channels                |
-| `imgproc.warp_affine`            | `warpAffine`                                  | identical inside the image; fixed edges; any channels                |
-| `imgproc.skindetector`           | `detectSkin`                                  | identical                                                            |
-| `imgproc.hough_transform`        | `houghLines`                                  | jsfeat's throws; tested on known lines                               |
-
 ## Repository
 
 | Path                   | What                                                                                           |
 | ---------------------- | ---------------------------------------------------------------------------------------------- |
 | `packages/pixelvision` | The library, published to npm as `pixelvision`                                                 |
 | `packages/face-neural` | Optional neural face detection (YuNet on onnxruntime), published as `@pixelvision/face-neural` |
-| `packages/parity`      | Parity tests against jsfeat and OpenCV.js (private)                                            |
+| `packages/parity`      | Tests against reference implementations (private)                                              |
 | `packages/compat`      | Runs the same pipeline in Node and Hermes (React Native) and compares the results (private)    |
 | `apps/examples`        | Documentation site: guides, API reference and a live, tested example for every function        |
 
@@ -93,6 +80,8 @@ pnpm check            # format, lint, typecheck, test, build
 pnpm test:e2e         # examples site in Chromium, Firefox and WebKit
 pnpm check:packages   # publint and type checks on the packed packages
 ```
+
+Coming from jsfeat? See [Migrating from jsfeat](docs/jsfeat-differences.md).
 
 ## License
 

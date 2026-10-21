@@ -65,7 +65,7 @@ const convolve = (
  * edge or feature detection. Every channel is blurred separately; borders
  * repeat the edge pixel.
  *
- * 8-bit images use fixed-point weights (as jsfeat and OpenCV do), so
+ * 8-bit images use fixed-point weights (as OpenCV does), so
  * results are integers rounded down. Matrices of type `i32`, `f32` and
  * `f64` are supported too.
  *

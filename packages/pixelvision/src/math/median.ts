@@ -2,7 +2,7 @@
  * Selects the lower median of `values[low..high]` in place by quickselect
  * (the middle value for odd counts, the lower of the two middle values for
  * even counts). Reorders the range. Used by robust estimators that need
- * jsfeat's exact selection.
+ * this exact selection rule.
  *
  * @param values - Array to partially reorder.
  * @param low - First index of the range.

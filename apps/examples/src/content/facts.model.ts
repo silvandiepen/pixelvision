@@ -4,7 +4,7 @@ export interface SiteFacts {
   /** Size of the package entry, gzipped, in kilobytes (1 decimal). */
   gzipKb: number;
   functionCount: number;
-  /** jsfeat functions in the README's parity table. */
+  /** Mapped functions in the migration guide's table. */
   jsfeatRows: number;
   /** Of those, how many give identical output. */
   jsfeatIdentical: number;

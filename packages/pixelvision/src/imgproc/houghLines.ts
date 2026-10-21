@@ -7,8 +7,7 @@ import type { HoughLine, HoughLinesOptions } from "./houghLines.model";
  * transform: every non-zero pixel votes for all lines through it, and
  * local maxima above the threshold are returned, strongest first.
  *
- * jsfeat's `hough_transform` can't be called (it assigns undeclared
- * variables in strict mode); this follows OpenCV's `HoughLines`.
+ * Follows OpenCV's `HoughLines`.
  *
  * @param edges - Single-channel matrix where non-zero pixels are edges, e.g. from {@link canny}.
  * @param options - Resolutions, vote threshold and line limit.

@@ -61,7 +61,7 @@ const circleOffsets = (step: number, r: number): { dirs: Int32Array; count: numb
  * Scores one pixel with YAPE's state machine: walks pairs of opposite
  * circle pixels and rejects the pixel (score 0) as soon as the pattern
  * can't be a corner-like blob; otherwise sums the circle and centre.
- * Transcribed from EPFL's implementation via jsfeat.
+ * Transcribed from EPFL's implementation.
  *
  * @param I - Image data.
  * @param x - Pixel index.
@@ -398,12 +398,10 @@ export const yapeScores = (image: Matrix<"u8">, radius: number, tau: number, bor
  * test, scored by a Laplacian-like circle sum and kept when they are local
  * maxima within `radius`. Stable under rotation and moderate scale change.
  *
- * Fixes over jsfeat: the local-maximum test uses the real row length (jsfeat
- * passed half the width, comparing the wrong pixels); every pixel is tested
- * (jsfeat skipped the pixel after any weak one, which is exactly where the
- * peak of a left-hand corner sits, so left corners were never found);
- * scores start clean on every call (jsfeat reused a buffer, so earlier
- * frames leaked in); and no `init` call or shared state is needed.
+ * Every pixel is tested, so corners are found on both sides of a shape;
+ * the local-maximum test compares each pixel with its true neighbours;
+ * scores start clean on every call, so earlier frames never leak in; and
+ * no `init` call or shared state is needed.
  *
  * @param image - Single-channel `u8` matrix (gray), ideally blurred.
  * @param options - Radius, tau and border.

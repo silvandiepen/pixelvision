@@ -1,6 +1,6 @@
 /**
- * Computes `sqrt(a² + b²)` without overflow or underflow, as the Jacobi
- * rotations in jsfeat and OpenCV do (and with the same rounding, which
+ * Computes `sqrt(a² + b²)` without overflow or underflow, as OpenCV's
+ * Jacobi rotations do (and with the same rounding, which
  * `Math.hypot` doesn't guarantee).
  *
  * @param a - First value.

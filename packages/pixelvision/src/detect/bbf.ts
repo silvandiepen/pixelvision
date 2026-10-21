@@ -178,9 +178,8 @@ export const bbfDetectRaw = (pyramid: BbfPyramid, cascade: BbfCascade): Detectio
  * cascade (`pixelvision/cascades/bbf-face`). Faster than HAAR, a little less
  * accurate; libccv has since deprecated BBF in favour of neural detectors.
  *
- * Unlike jsfeat, each call builds its own pyramid: jsfeat kept one shared
- * pyramid and, for frames of the same size, searched the previous frame's
- * full-size level.
+ * Each call builds its own pyramid and keeps no state between calls, so
+ * consecutive frames never affect each other's results.
  *
  * @param image - Single-channel `u8` matrix (gray).
  * @param cascade - The cascade.

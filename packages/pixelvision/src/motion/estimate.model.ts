@@ -17,8 +17,8 @@ export interface EstimateOptions {
   maxIterations?: number;
   /**
    * Refit the winning model to all its inliers by least squares, then
-   * recount the inliers (default `true`). jsfeat returned the model of the
-   * minimal random sample, which carries that sample's noise.
+   * recount the inliers (default `true`). The model of the minimal random
+   * sample alone carries that sample's noise; refining averages it out.
    */
   refine?: boolean;
   /** Random source in [0, 1); pass a seeded one for reproducible results (default `Math.random`). */

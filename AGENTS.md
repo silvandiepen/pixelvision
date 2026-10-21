@@ -14,8 +14,11 @@ pnpm workspaces + Turborepo monorepo.
 - Every public function has unit tests (coverage threshold is 100%) and, when jsfeat has an
   equivalent, a parity test. Prove a new parity test can fail by breaking the implementation once.
 - Integer output must be identical to jsfeat. Float output may differ within a documented tolerance.
-  Deliberate differences from jsfeat (bug fixes, wider input support) are documented in the
-  function's TSDoc and in the README parity table.
+  Deliberate differences from jsfeat (bug fixes, wider input support) are recorded in
+  `docs/jsfeat-differences.md` and the "Migrating from jsfeat" guide only.
+- pixelvision is its own product. User-facing text (READMEs, the docs site, TSDoc, which feeds
+  the API reference) describes what a function does and guarantees, without comparing it to
+  jsfeat. A short note that results match OpenCV is fine where that helps users.
 - Conventional Commits. No AI attribution anywhere.
 - `pnpm check` must pass before committing.
 

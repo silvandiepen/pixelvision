@@ -5,8 +5,8 @@ keypoints and descriptors, optical flow, motion estimation, face detection, docu
 everyday OpenCV filters. No dependencies, no WebAssembly, no DOM: the same code runs in browsers,
 Web Workers, Node and React Native (Hermes).
 
-It covers everything [jsfeat](https://github.com/inspirit/jsfeat) does, with a simpler API and fixes
-for its bugs, and is checked against jsfeat and OpenCV.js by more than 700 parity tests.
+Every function is typed, documented and tested against reference implementations, with 100% test
+coverage.
 
 ```sh
 npm install pixelvision

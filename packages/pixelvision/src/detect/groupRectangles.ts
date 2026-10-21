@@ -93,8 +93,8 @@ export function groupRectangles(rects: readonly Detection[], minNeighbors = 1): 
     g.height += r.height;
     g.confidence = Math.max(g.confidence, r.confidence);
   });
-  // Average each group, rounding to the nearest pixel as OpenCV does (jsfeat
-  // skipped the division's rounding and shifted results by up to half a pixel).
+  // Average each group, rounding to the nearest pixel as OpenCV does; truncating
+  // instead would shift results by up to half a pixel.
   const average = (sum: number, count: number) => Math.floor((sum * 2 + count) / (2 * count));
   const merged: Detection[] = groups
     .filter((g) => g.neighbors >= minNeighbors)

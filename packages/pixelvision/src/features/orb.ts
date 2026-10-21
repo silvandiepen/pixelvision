@@ -71,8 +71,8 @@ export function keypointOrientation(image: Matrix<"u8">, keypoint: Keypoint): nu
  * comparisons become 256 bits (32 bytes). Rotation-invariant and compared
  * by Hamming distance with {@link matchDescriptors}.
  *
- * Keypoints without an `angle` get one from {@link keypointOrientation}
- * (jsfeat used whatever was set, -1 radians by default). Patch pixels
+ * Keypoints without an `angle` get one from {@link keypointOrientation},
+ * so every descriptor is rotation-normalised. Patch pixels
  * outside the image read as 128.
  *
  * @param image - Single-channel `u8` matrix (gray), ideally blurred.
@@ -90,7 +90,7 @@ export function describeOrb(image: Matrix<"u8">, keypoints: readonly Keypoint[])
   assertChannels("describeOrb", image, 1);
   const descriptors = createMatrix(DESCRIPTOR_BYTES, keypoints.length);
   const patch = createMatrix(PATCH, PATCH);
-  // Single precision, as in jsfeat, so patches sample identically.
+  // Single precision, so patches sample identically to the parity reference.
   const transform = new Float32Array(9);
   keypoints.forEach((keypoint, i) => {
     const angle = keypoint.angle ?? keypointOrientation(image, keypoint);

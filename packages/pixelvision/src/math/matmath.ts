@@ -157,7 +157,7 @@ export function determinant3x3(m: NumericMatrix): number {
  *
  * @param m - 3x3 matrix.
  * @returns The inverse as an `f64` matrix.
- * @throws {RangeError} When the matrix isn't 3x3 or is singular (jsfeat returned infinities).
+ * @throws {RangeError} When the matrix isn't 3x3 or is singular.
  *
  * @example
  * const back = invert3x3(matrixFromRows([[2, 0, 0], [0, 2, 0], [0, 0, 1]]));

@@ -53,7 +53,7 @@ Filters such as `gaussianBlur`, `boxBlur`, `pyrDown`, `resample` and the warps w
 
 ## Rounding
 
-8-bit and `i32` results are rounded down, exactly as jsfeat does, so integer output matches jsfeat bit for bit. Where jsfeat uses fixed-point arithmetic (`grayscale`, `gaussianBlur` on 8-bit images, `resample` when shrinking 8-bit images), pixelvision uses the same weights. Float results are computed in double precision; linear algebra iterates to double precision too, where jsfeat stopped at single-precision tolerances. See [Coming from jsfeat](/guide/from-jsfeat) for every deliberate difference.
+8-bit and `i32` results are rounded down, so integer output is exact and repeatable on every platform. `grayscale`, `gaussianBlur` on 8-bit images and `resample` when shrinking 8-bit images use fixed-point weights, the standard fast path for 8-bit pixels. Float results are computed in double precision, and linear algebra iterates to double precision too.
 
 ## Errors
 

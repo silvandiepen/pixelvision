@@ -5,9 +5,9 @@ import type { Eigen, SVD } from "./linalg.model";
 import { hypot } from "./hypot";
 import type { NumericMatrix } from "./matmath.model";
 
-// Tolerances are double precision throughout. jsfeat used single-precision
-// ones (1.19e-7) even on double data, which stopped iterating early and
-// called small-valued matrices singular.
+// Tolerances are double precision throughout. Single-precision ones (1.19e-7)
+// on double data would stop iterating early and call small-valued matrices
+// singular.
 const EPSILON = Number.EPSILON;
 /** Smallest singular value treated as non-zero. */
 const MIN_SINGULAR = 1e-300;
@@ -111,7 +111,7 @@ export function choleskySolve(a: NumericMatrix, b: ArrayLike<number>): Float64Ar
       let value = ad[rs + col];
       for (let col2 = 0; col2 < col; col2++) value -= ad[col2 * size + col] * ad[rs + col2];
       if (row === col) {
-        // jsfeat only rejected exact zeros; anything not positive means A isn't positive-definite.
+        // Not only exact zeros: anything not positive means A isn't positive-definite.
         if (!(value > 0)) throw new RangeError("choleskySolve: the matrix isn't positive-definite");
         ad[rs + col] = value;
         inverseDiagonal = 1 / value;
@@ -224,7 +224,7 @@ const jacobiSvd = (at: Float64Array, w: Float64Array, vt: Float64Array, m: numbe
   }
   // Normalise the left vectors; complete zero ones (and rows n..m-1) with random
   // vectors orthogonalised against the previous ones. A 32-bit LCG keeps this
-  // finite: jsfeat's grew in doubles, overflowed and could loop forever.
+  // finite: one computed in doubles would grow, overflow and could loop forever.
   let seed = 0x1234;
   for (let i = 0; i < m; i++) {
     let sd = i < n ? w[i] : 0;
@@ -244,8 +244,8 @@ const jacobiSvd = (at: Float64Array, w: Float64Array, vt: Float64Array, m: numbe
             at[i * m + k] = t;
             sum += Math.abs(t);
           }
-          // OpenCV discards rounding residue here; jsfeat scaled it back up into a
-          // copy of an earlier vector, leaving U not orthonormal.
+          // Discard rounding residue, as OpenCV does; scaling it back up would
+          // produce a copy of an earlier vector and leave U not orthonormal.
           const scale = sum > eps * 100 ? 1 / sum : 0;
           for (let k = 0; k < m; k++) at[i * m + k] *= scale;
         }
@@ -334,8 +334,7 @@ export function pseudoInverse(a: NumericMatrix): Matrix<"f64"> {
 /**
  * Solves `A · x = b` in the least-squares sense via SVD: exact for square
  * non-singular systems, best fit for overdetermined ones, minimum-norm
- * for underdetermined ones. (jsfeat's `svd_solve` gave wrong answers for
- * non-square systems.)
+ * for underdetermined ones. Works for square and non-square systems alike.
  *
  * @param a - `rows x columns` coefficient matrix.
  * @param b - Right-hand side with `rows` values.

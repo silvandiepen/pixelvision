@@ -109,11 +109,11 @@ export const haarSingleScale = (
 /**
  * Finds objects with a Viola-Jones (HAAR) cascade at every scale from
  * `minScale` up, then merges overlapping hits. Ships with cascades for
- * frontal and profile faces, eyes, mouths, upper bodies and hands (see the
+ * frontal and profile faces, eyes and upper bodies (see the
  * `pixelvision/cascades/*` entry points).
  *
  * The integral images (and the Canny edge map used to skip flat windows)
- * are built for you; jsfeat left that to the caller.
+ * are built for you.
  *
  * @param image - Single-channel `u8` matrix (gray); equalising its histogram first often helps.
  * @param cascade - The cascade to run.

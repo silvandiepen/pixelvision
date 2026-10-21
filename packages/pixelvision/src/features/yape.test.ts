@@ -17,7 +17,7 @@ describe("detectYape", () => {
     const points = detectYape(image);
 
     expect(points.length).toBeGreaterThan(0);
-    // All four corners of the big square, left ones included (jsfeat missed those).
+    // All four corners of the big square, left ones included.
     for (const [cx, cy] of [
       [20, 20],
       [49, 20],

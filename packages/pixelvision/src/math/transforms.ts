@@ -22,7 +22,7 @@ const assertPoints = (fn: string, from: readonly Point[], to: readonly Point[], 
 
 /**
  * Computes the homography mapping the unit square onto four points
- * (Heckbert's closed form, as in jsfeat).
+ * (Heckbert's closed form).
  *
  * @param p - Four points.
  * @returns The first 8 coefficients (the 9th is 1).
@@ -129,7 +129,7 @@ export function perspectiveTransform(from: readonly Point[], to: readonly Point[
   if (!matrix.every(Number.isFinite) || matrix[8] === 0) {
     throw new RangeError("perspectiveTransform: three or more points lie on one line");
   }
-  // Scale so the bottom-right entry is 1, as OpenCV does (jsfeat left it unscaled).
+  // Scale so the bottom-right entry is 1, as OpenCV does.
   const scale = 1 / matrix[8];
   for (let i = 0; i < 9; i++) matrix[i] *= scale;
   matrix[8] = 1;
@@ -140,8 +140,7 @@ export function perspectiveTransform(from: readonly Point[], to: readonly Point[
  * Computes the affine transform (rotation, scale, shear and translation)
  * that maps three points onto three others: `to[i] = A · from[i]`.
  *
- * jsfeat declares `affine_3point_transform` but leaves it empty; this is a
- * direct solve of the 6 unknowns.
+ * A direct solve of the 6 unknowns.
  *
  * @param from - Three source points, not on one line.
  * @param to - Three target points.

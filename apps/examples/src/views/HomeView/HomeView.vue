@@ -71,7 +71,7 @@
         </li>
         <li :class="bemm('reason')">
           <strong :class="bemm('reason-title')">Tested.</strong>
-          {{ facts.jsfeatRows }} jsfeat functions checked for identical output, and every function's
+          Checked against reference implementations with 100% test coverage, and every function's
           page here runs as a test in Chromium, Firefox and WebKit.
         </li>
         <li :class="bemm('reason')">
@@ -110,7 +110,7 @@
     </section>
 
     <section :class="bemm('section')" aria-labelledby="compare">
-      <h2 id="compare" :class="bemm('heading')">Compared with jsfeat and OpenCV.js</h2>
+      <h2 id="compare" :class="bemm('heading')">Compared with OpenCV.js</h2>
       <!-- eslint-disable-next-line vue/no-v-html -- rendered from this repository's own Markdown -->
       <div :class="bemm('compare')" v-html="comparison"></div>
     </section>
@@ -153,7 +153,7 @@ const numbers = [
   { value: `${facts.gzipKb} KB`, label: "gzipped, all functions" },
   { value: `${facts.functionCount}`, label: "functions, each with a live page" },
   { value: "0", label: "dependencies" },
-  { value: `${facts.jsfeatRows}`, label: "jsfeat functions checked for parity" },
+  { value: "100%", label: "test coverage" },
 ];
 
 const FEATURES: FeatureArea[] = [

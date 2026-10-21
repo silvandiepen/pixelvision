@@ -11,7 +11,7 @@ export const affineTransformExample = defineExample<AffineTransformDemoOptions>(
   description:
     "Computes the affine transform (rotation, scale, shear and translation) that maps three points onto three others. Pass it to `warpAffine`.",
   howItWorks: [
-    "An affine transform has six unknowns: `u = a·x + b·y + c` and `v = d·x + e·y + f`. Each point pair gives two equations, so three pairs fix it; the solve is direct (jsfeat declared this function but left it empty).",
+    "An affine transform has six unknowns: `u = a·x + b·y + c` and `v = d·x + e·y + f`. Each point pair gives two equations, so three pairs fix it, and the six equations are solved directly.",
     "Unlike a perspective transform, parallel lines stay parallel: the mapped grid is made of parallelograms. The result is 3 x 3 with last row `[0, 0, 1]`, so it combines with perspective transforms. Collinear source points throw a `RangeError`.",
   ],
   howToTest:

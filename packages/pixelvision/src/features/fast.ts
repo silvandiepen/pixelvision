@@ -44,9 +44,9 @@ const cornerScore = (d: Int32Array, threshold: number): number => {
  * all brighter, or all darker, than it by more than `threshold`. Corners
  * are then thinned to strict 3x3 maxima of their score.
  *
- * Very fast; good for tracking and as input to {@link describeOrb}. Unlike
- * jsfeat, the last corner of each row is kept (jsfeat's candidate list was
- * off by one) and the bottom row next to the border is searched.
+ * Very fast; good for tracking and as input to {@link describeOrb}. Every
+ * pixel inside the border is searched, including the last one of each row
+ * and the bottom row next to the border.
  *
  * @param image - Single-channel `u8` matrix (gray).
  * @param options - Threshold and border.

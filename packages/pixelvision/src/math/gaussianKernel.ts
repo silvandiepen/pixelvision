@@ -32,8 +32,8 @@ export function gaussianKernel(
 ): Float32Array | Int32Array {
   assertInteger("gaussianKernel", "size", size, 1);
   const sigma = options.sigma ?? 0;
-  // Weights are held in single precision before normalising, as in jsfeat,
-  // so 8-bit blurs round exactly the same way.
+  // Weights are held in single precision before normalising, so 8-bit blurs
+  // round exactly the same way as the parity reference.
   const weights = new Float32Array(size);
   let sum = 0;
   const fixed = sigma <= 0 ? binomial[size] : undefined;

@@ -12,7 +12,7 @@ export const perspectiveTransformExample = defineExample<PerspectiveTransformDem
     "Computes the perspective transform (homography) that maps four points onto four others: the maths behind straightening a photographed document.",
   howItWorks: [
     "A homography is a 3 x 3 matrix `H` with 8 degrees of freedom (the last entry is fixed to 1). Each point pair `(x, y) → (u, v)` gives two linear equations, `u = (h0·x + h1·y + h2) / (h6·x + h7·y + 1)` and the same for `v`, so four pairs give exactly the 8 equations to solve.",
-    "Straight lines stay straight, but parallel lines may meet: the grid on the right converges like a floor in a photo. Three collinear points make the system degenerate, and it throws a `RangeError` (jsfeat returned `NaN`s).",
+    "Straight lines stay straight, but parallel lines may meet: the grid on the right converges like a floor in a photo. Three collinear points make the system degenerate, and it throws a `RangeError` instead of returning `NaN`s.",
   ],
   howToTest:
     "Computes the transform for the default square and quadrilateral, maps the four source points through it with `transformPoint`, and checks that each lands on its target within 1e-6 pixels, with the last matrix entry normalised to 1.",

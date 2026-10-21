@@ -12,7 +12,7 @@ export const svdSolveExample = defineExample<SvdSolveDemoOptions>({
     "Solves `A · x = b` in the least-squares sense: exactly for square systems, as the best fit when there are more equations than unknowns (like fitting a line through noisy points), and with the smallest `x` when there are fewer.",
   howItWorks: [
     "With `A = U · Σ · Vᵀ`, the solution is `x = V · Σ⁺ · Uᵀ · b`, where `Σ⁺` inverts the singular values that aren't negligibly small. That minimises `|A · x − b|` and copes with rank-deficient systems.",
-    "Here each point gives one equation `c0 + c1 · x = y`; five points, two unknowns. jsfeat's `svd_solve` used the wrong stride for non-square matrices and gave wrong answers for exactly this case.",
+    "Here each point gives one equation `c0 + c1 · x = y`; five points, two unknowns. Non-square systems like this one are solved as exactly as square ones.",
   ],
   howToTest:
     "Fits the five default points and checks the coefficients against the closed-form least-squares answer worked out by hand: slope = Σ(x − x̄)(y − ȳ) / Σ(x − x̄)² = 19.7 / 10 = 1.97, intercept = ȳ − slope · x̄ = 5 − 1.97 · 2 = 1.06.",

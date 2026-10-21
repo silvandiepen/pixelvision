@@ -18,7 +18,7 @@ export interface HaarStage {
   simpleClassifiers: readonly HaarTree[];
 }
 
-/** A Viola-Jones cascade (jsfeat / js-objectdetect format). */
+/** A Viola-Jones cascade (js-objectdetect format). */
 export interface HaarCascade {
   /** Training window `[width, height]`. */
   size: readonly [number, number];
@@ -49,7 +49,7 @@ export interface HaarOptions {
   minNeighbors?: number;
   /**
    * Skip windows with too few Canny edges: the fraction of edge pixels a
-   * window needs (default 0.07, as jsfeat), or `false` to disable. It pays
+   * window needs (default 0.07), or `false` to disable. It pays
    * off on large images with big flat areas; on camera frames of ~320 px
    * the edge map costs more than it saves, and smooth, evenly lit faces
    * can be skipped, so prefer `false` there.

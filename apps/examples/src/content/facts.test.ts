@@ -6,7 +6,7 @@ describe("parityCounts", () => {
     const readme = [
       "# x",
       "",
-      "## jsfeat parity",
+      "## What maps to what",
       "",
       "| jsfeat | pixelvision | Parity |",
       "| --- | --- | --- |",

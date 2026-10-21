@@ -30,8 +30,8 @@ const iterationsFor = (
 };
 
 /**
- * Draws `size` distinct random points the kernel accepts, the way jsfeat
- * does (one `random()` per draw, redrawing duplicates and rejected points).
+ * Draws `size` distinct random points the kernel accepts (one `random()`
+ * per draw, redrawing duplicates and rejected points).
  *
  * @param kernel - Model family.
  * @param from - Source points.
@@ -181,7 +181,7 @@ export const estimate = (
     return refine ? refined(kernel, from, to, found, threshold, errors) : found;
   }
 
-  // LMEDS assumes at most ~45% outliers (jsfeat overwrote the caller's eps with this).
+  // LMEDS assumes at most ~45% outliers; the caller's options are left untouched.
   const limit = iterationsFor(confidence, 0.45, kernel.size, maxIterations);
   let minMedian = 1e9;
   for (let iteration = 0; iteration < limit; iteration++) {

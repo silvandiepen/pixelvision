@@ -9,7 +9,7 @@ import type { Yape06Options } from "./yape06.model";
  * large enough to rule out edges. Scale-tolerant and fast.
  *
  * The border is at least 5 pixels so the 5-pixel Laplacian never reads
- * outside the image (jsfeat read 5 rows outside for borders under 5).
+ * outside the image.
  *
  * @param image - Single-channel `u8` matrix (gray).
  * @param options - Thresholds and border.

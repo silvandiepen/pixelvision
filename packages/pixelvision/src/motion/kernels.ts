@@ -114,7 +114,7 @@ export const affineKernel: MotionKernel = {
     try {
       x = luSolve(ata, atb);
     } catch {
-      // Collinear points: no unique affine map. jsfeat carried on with stale data.
+      // Collinear points: no unique affine map.
       return null;
     }
     const normalised = Float64Array.of(x[0], x[1], x[2], x[3], x[4], x[5], 0, 0, 1);

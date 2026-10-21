@@ -74,10 +74,9 @@ const bilinear = <T extends PixelType>(image: Matrix<T>, out: Matrix<T>): void =
  * (growing, or growing one way and shrinking the other) it uses bilinear
  * interpolation.
  *
- * 8-bit images shrunk by a factor under 256 use fixed-point weights, as
- * jsfeat does; integer results are rounded down. Unlike jsfeat,
- * multi-channel images are handled correctly and growing works (jsfeat
- * mixed up rows with more than one channel and ignored growing).
+ * 8-bit images shrunk by a factor under 256 use fixed-point weights;
+ * integer results are rounded down. Handles any number of channels and
+ * enlarging as well as shrinking.
  *
  * @param image - Matrix to resize, any type and number of channels.
  * @param options - Output width and height, and an optional output matrix.

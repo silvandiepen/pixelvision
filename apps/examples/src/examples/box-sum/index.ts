@@ -11,7 +11,7 @@ export const boxSumExample = defineExample<BoxSumDemoOptions>({
   description:
     "Adds up every pixel's neighbourhood in a square window, without averaging: `boxBlur` before the division. Use it for local counts (e.g. on a mask) and means you scale yourself.",
   howItWorks: [
-    "The same sliding running sum as `boxBlur`, along rows and then columns, so any radius costs the same. The result is an `i32` matrix, so sums of up to millions of bright pixels don't wrap around (jsfeat wrapped them into 8 bits).",
+    "The same sliding running sum as `boxBlur`, along rows and then columns, so any radius costs the same. The result is an `i32` matrix, so sums of up to millions of bright pixels don't wrap around.",
   ],
   howToTest:
     "Sums 3 x 3 windows of the gray shapes sample and checks that a window inside the flat red rectangle (gray 76) sums to exactly 9 x 76 = 684, as an `i32`.",

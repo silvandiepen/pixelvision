@@ -1,7 +1,7 @@
 {
   "name": "pixelvision",
   "version": "0.0.0",
-  "description": "Typed, tested computer vision for JavaScript: image processing, features, tracking and detection. A modern replacement for jsfeat.",
+  "description": "Typed, tested computer vision for JavaScript: image processing, features, tracking and detection.",
   "license": "MIT",
   "author": "Sil van Diepen",
   "type": "module",

@@ -37,4 +37,4 @@ Camera input for people who can't use a touch screen or keyboard easily.
 Classic computer vision, one readable step at a time.
 
 - Every function has a [live page](/examples) with an explanation of the algorithm, sliders for its parameters, and the exact code that runs.
-- The source is short, typed TypeScript, checked against jsfeat and against known results, so it's safe to read and modify.
+- The source is short, typed TypeScript, checked against reference implementations and known results, so it's safe to read and modify.

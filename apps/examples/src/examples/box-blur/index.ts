@@ -12,7 +12,7 @@ export const boxBlurExample = defineExample<BoxBlurDemoOptions>({
     "Blurs by averaging every pixel with its neighbours in a square window. It's fast at any size, at the cost of a blockier look than a Gaussian.",
   howItWorks: [
     "A running sum slides along each row: add the pixel entering the window, subtract the one leaving it. The same is done down the columns, so the cost per pixel stays constant whatever the radius. The sum is divided by the window area and rounded down.",
-    "Borders repeat the edge pixel, for any radius (jsfeat read past the row when the window was wider than the image).",
+    "Borders repeat the edge pixel, for any radius, even when the window is wider than the image.",
   ],
   howToTest:
     "Blurs the shapes sample with radius 4 and checks that most sharp steps (neighbouring pixels more than 60 apart) disappear, the average brightness barely moves, and a pixel in the middle of the flat red rectangle keeps its value of 76.",

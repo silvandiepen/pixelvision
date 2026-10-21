@@ -20,7 +20,7 @@ export interface BbfStage {
   alpha: readonly number[];
 }
 
-/** A Brightness Binary Feature cascade (libccv / jsfeat format). */
+/** A Brightness Binary Feature cascade (libccv's format, as a plain object). */
 export interface BbfCascade {
   count: number;
   width: number;

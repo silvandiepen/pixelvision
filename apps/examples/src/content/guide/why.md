@@ -15,7 +15,7 @@ pixelvision is written in TypeScript. Every public function has TSDoc with its p
 ## Tested three ways
 
 - **Unit tests** cover every function, with a 100% coverage threshold.
-- **Parity tests** run {{jsfeatRows}} jsfeat functions and their pixelvision ports on the same seeded images; integer output must be identical. Where jsfeat is wrong, the fix is documented in [Coming from jsfeat](/guide/from-jsfeat).
+- **Reference tests** run pixelvision and established reference implementations on the same seeded images; integer output must be identical, so results are predictable down to the last pixel.
 - **This site is a test suite.** Every function's example page runs in Chromium, Firefox and WebKit on every change, and checks its result against known values.
 
 ## Runs where JavaScript runs
@@ -28,13 +28,13 @@ pixelvision covers the classic toolkit: filters, edges, lines, warps, features, 
 
 ## Compared
 
-|              | pixelvision                                                                     | jsfeat                                             | OpenCV.js                                |
-| ------------ | ------------------------------------------------------------------------------- | -------------------------------------------------- | ---------------------------------------- |
-| Dependencies | None                                                                            | None                                               | None, one large WebAssembly build        |
-| Download     | {{gzipKb}} KB gzipped                                                           | Small                                              | `@techstark/opencv-js`: 14.7 MB unpacked |
-| Types        | Written in TypeScript                                                           | None                                               | Depends on the package                   |
-| Memory       | Garbage collected; optional `out` reuse                                         | A shared pool of 30 buffers that can run out       | `Mat` objects freed with `delete()`      |
-| API          | Named options; results are returned                                             | Positional arguments; writes into outputs you pass | OpenCV's C++ API                         |
-| Coverage     | Image processing, features, tracking, Haar detection, documents, linear algebra | Much the same set                                  | Most of OpenCV                           |
-| Status       | In development, not yet on npm                                                  | Last release 0.0.8, October 2015                   | Actively maintained                      |
-| Runs in      | Browsers, workers, Node, React Native                                           | Browsers, workers, Node                            | Browsers, workers, Node                  |
+|              | pixelvision                                                                     | OpenCV.js                                |
+| ------------ | ------------------------------------------------------------------------------- | ---------------------------------------- |
+| Dependencies | None                                                                            | None, one large WebAssembly build        |
+| Download     | {{gzipKb}} KB gzipped                                                           | `@techstark/opencv-js`: 14.7 MB unpacked |
+| Types        | Written in TypeScript                                                           | Depends on the package                   |
+| Memory       | Garbage collected; optional `out` reuse                                         | `Mat` objects freed with `delete()`      |
+| API          | Named options; results are returned                                             | OpenCV's C++ API                         |
+| Coverage     | Image processing, features, tracking, Haar detection, documents, linear algebra | Most of OpenCV                           |
+| Status       | In development, not yet on npm                                                  | Actively maintained                      |
+| Runs in      | Browsers, workers, Node, React Native                                           | Browsers, workers, Node                  |

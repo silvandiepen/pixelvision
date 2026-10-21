@@ -89,7 +89,7 @@ const output = <T extends PixelType>(fn: string, image: Matrix<T>, options: Warp
  * coordinates, so pass the inverse of the mapping you want to apply.
  * Each channel is warped separately; 8-bit and integer output is rounded
  * down. Pixels mapping anywhere inside the input, edges included, are
- * sampled (jsfeat filled the first and last row and column).
+ * sampled, so the output has no filled border rows or columns.
  *
  * @param image - Matrix to warp, any type and number of channels.
  * @param transform - 3x3 matrix, row by row, mapping output to input pixels.
@@ -132,8 +132,8 @@ export function warpPerspective<T extends PixelType>(
  * Warps an image through an affine transform (rotation, scale, shear,
  * translation) with bilinear sampling. The transform maps *output*
  * coordinates to *input* coordinates; only the first two rows are used.
- * Pixels mapping outside the input get `fill` (jsfeat extrapolated up to
- * one pixel past the top and left edges).
+ * Pixels mapping outside the input get `fill`; nothing is extrapolated
+ * past any edge.
  *
  * @param image - Matrix to warp, any type and number of channels.
  * @param transform - 2x3 or 3x3 matrix, row by row, mapping output to input pixels.

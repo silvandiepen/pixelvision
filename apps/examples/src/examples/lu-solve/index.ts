@@ -11,7 +11,7 @@ export const luSolveExample = defineExample<LuSolveDemoOptions>({
   description: "Solves a square linear system `A · x = b` for `x`.",
   howItWorks: [
     "Gaussian elimination with partial pivoting: for each column it swaps up the row with the largest entry (for numerical stability), eliminates the entries below it, then solves the triangular system that remains from the bottom up.",
-    "The inputs are left untouched and `x` is returned (jsfeat overwrote both and returned 0 on failure). A matrix that is singular relative to its own scale throws a `RangeError`.",
+    "The inputs are left untouched and `x` is returned. A matrix that is singular relative to its own scale throws a `RangeError`.",
   ],
   howToTest:
     "Solves the textbook system with solution (2, 3, -1) and checks the answer to 9 decimals and that `A · x` reproduces `b` within 1e-12.",

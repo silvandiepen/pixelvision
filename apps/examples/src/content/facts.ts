@@ -1,17 +1,17 @@
 import facts from "virtual:package-facts";
-import readme from "../../../../README.md?raw";
+import migration from "./guide/from-jsfeat.md?raw";
 import { markdownSection } from "./guides";
 import type { SiteFacts } from "./facts.model";
 
 /**
- * Counts the rows of the README's jsfeat parity table, and how many of them
- * say the output is identical.
+ * Counts the rows of the migration guide's mapping table, and how many of
+ * them say the output is identical.
  *
- * @param markdown - The README.
+ * @param markdown - The migration guide.
  * @returns Rows that map a jsfeat function, and the identical ones.
  */
 export function parityCounts(markdown: string): { rows: number; identical: number } {
-  const rows = markdownSection(markdown, "jsfeat parity")
+  const rows = markdownSection(markdown, "What maps to what")
     .split("\n")
     .filter((line) => line.startsWith("|") && !/^\|\s*-/.test(line))
     .slice(1)
@@ -23,7 +23,7 @@ export function parityCounts(markdown: string): { rows: number; identical: numbe
   };
 }
 
-const parity = parityCounts(readme);
+const parity = parityCounts(migration);
 
 /** The numbers the marketing pages quote. */
 export const SITE_FACTS: SiteFacts = {

@@ -12,7 +12,7 @@ export const choleskySolveExample = defineExample<CholeskySolveDemoOptions>({
     "Solves `A · x = b` when `A` is symmetric and positive-definite, such as the `Aᵀ·A` of a least-squares fit. About twice as fast as LU.",
   howItWorks: [
     "It factors `A = L · Lᵀ` with `L` lower-triangular (each diagonal entry is a square root, which only exists when `A` is positive-definite), then solves `L · y = b` forwards and `Lᵀ · x = y` backwards.",
-    "A matrix that isn't positive-definite throws a `RangeError` (jsfeat only caught an exact zero on the diagonal and returned garbage otherwise).",
+    "A matrix that isn't positive-definite throws a `RangeError`, so a bad input never produces a silently wrong answer.",
   ],
   howToTest:
     "Solves the classic positive-definite system `[[4, 12, -16], [12, 37, -43], [-16, -43, 98]]` with `b` chosen so that x = (1, 2, 3), and checks the answer and the residual.",
