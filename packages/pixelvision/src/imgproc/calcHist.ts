@@ -4,6 +4,37 @@ import type { Matrix } from "../core/matrix.model";
 import type { CalcHistOptions } from "./calcHist.model";
 
 /**
+ * The bin of every byte value for uniform bins over `range`, as OpenCV
+ * computes it: `floor(v · bins / (high − low) − low · bins / (high − low))`,
+ * with the range in single precision; -1 for values outside `[low, high)`.
+ *
+ * @param fn - Name of the calling function, for the error message.
+ * @param bins - Number of bins.
+ * @param range - `[low, high)`.
+ * @returns 256 bin indices.
+ * @throws {RangeError} When the range is empty or not finite.
+ */
+export const binTable = (
+  fn: string,
+  bins: number,
+  range: readonly [number, number],
+): Int32Array => {
+  const low = Math.fround(range[0]);
+  const high = Math.fround(range[1]);
+  if (!(Number.isFinite(low) && Number.isFinite(high) && low < high)) {
+    throw new RangeError(`${fn}: range must be finite with low < high, got [${range.join(", ")}]`);
+  }
+  const scale = bins / (high - low);
+  const offset = -scale * low;
+  const binOf = new Int32Array(256);
+  for (let v = 0; v < 256; v++) {
+    binOf[v] =
+      v >= low && v < high ? Math.min(Math.max(Math.floor(v * scale + offset), 0), bins - 1) : -1;
+  }
+  return binOf;
+};
+
+/**
  * Counts how many pixels fall into each brightness bin, per channel, as
  * OpenCV's `calcHist` with uniform bins: one histogram per channel, each
  * over `bins` equal slices of `range`. Use it to compare images, find the
@@ -26,14 +57,6 @@ export function calcHist(image: Matrix<"u8">, options: CalcHistOptions = {}): Ma
   assertType("calcHist", image, "u8");
   const { bins = 256, range = [0, 256], mask } = options;
   assertInteger("calcHist", "bins", bins, 1);
-  // OpenCV stores the range in single precision.
-  const low = Math.fround(range[0]);
-  const high = Math.fround(range[1]);
-  if (!(Number.isFinite(low) && Number.isFinite(high) && low < high)) {
-    throw new RangeError(
-      `calcHist: range must be finite with low < high, got [${range.join(", ")}]`,
-    );
-  }
   const { width, height, channels, data } = image;
   if (mask) {
     assertType("calcHist", mask, "u8");
@@ -44,14 +67,7 @@ export function calcHist(image: Matrix<"u8">, options: CalcHistOptions = {}): Ma
       );
     }
   }
-  // The bin of every byte value, or -1 when it's outside the range.
-  const scale = bins / (high - low);
-  const offset = -scale * low;
-  const binOf = new Int32Array(256);
-  for (let v = 0; v < 256; v++) {
-    binOf[v] =
-      v >= low && v < high ? Math.min(Math.max(Math.floor(v * scale + offset), 0), bins - 1) : -1;
-  }
+  const binOf = binTable("calcHist", bins, range);
   const out = prepareOutput(options.out, "i32", bins, channels, 1);
   out.data.fill(0, 0, bins * channels);
   const pixels = width * height;

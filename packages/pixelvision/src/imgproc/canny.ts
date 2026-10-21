@@ -32,8 +32,30 @@ export function canny(image: Matrix<"u8">, options: CannyOptions): Matrix<"u8"> 
   const low = Math.min(options.low, options.high);
   const high = Math.max(options.low, options.high);
   const out = prepareOutput(options.out, "u8", w, h, 1);
-  const dxdy = sobelDerivatives(image).data;
+  cannyFromGradients(sobelDerivatives(image).data, w, h, low, high, out);
+  return out;
+}
 
+/**
+ * The Canny steps after the gradients: thinning along the gradient
+ * direction, then hysteresis. Shared with detectors that compute their own
+ * gradients.
+ *
+ * @param dxdy - Interleaved `[gx, gy]` per pixel, row by row.
+ * @param w - Width.
+ * @param h - Height.
+ * @param low - Lower hysteresis threshold (on `|gx| + |gy|`).
+ * @param high - Upper hysteresis threshold, at least `low`.
+ * @param out - `u8` matrix of `w x h` that receives 255 on edges, 0 elsewhere.
+ */
+export const cannyFromGradients = (
+  dxdy: ArrayLike<number>,
+  w: number,
+  h: number,
+  low: number,
+  high: number,
+  out: Matrix<"u8">,
+): void => {
   const mapWidth = w + 2;
   // Edge state per pixel, with a one-pixel frame: 0 none, 1 candidate, 2 edge.
   const map = new Int32Array((h + 2) * mapWidth);
@@ -125,5 +147,4 @@ export function canny(image: Matrix<"u8">, options: CannyOptions): Matrix<"u8"> 
   for (let i = 0, d = 0, m = mapWidth + 1; i < h; i++, m += mapWidth) {
     for (let j = 0; j < w; j++) out.data[d++] = map[m + j] === 2 ? 255 : 0;
   }
-  return out;
-}
+};

@@ -14,15 +14,21 @@ Algorithms ported from OpenCV, https://github.com/opencv/opencv (version 4.12.0)
 2.0. The full licence text is reproduced at the end of this file.
 
 Ported, from C++ to TypeScript, following OpenCV's arithmetic so results match it:
-`adaptiveThreshold`, `bilateralFilter`, `calcHist`, `clahe`, `connectedComponents`,
-`distanceTransform`, `filter2D`, `floodFill`, `hlsToRgb`, `hsvToRgb`, `inRange`, `labToRgb`,
-`laplacian`, `matchTemplate`, `medianBlur`, `minMaxLoc`, `morphology`, `rgbToHls`, `rgbToHsv`,
-`rgbToLab`, `rgbToYCrCb` and `yCrCbToRgb`.
+`adaptiveThreshold`, `bilateralFilter`, `calcBackProject`, `calcHist`, `camShift`, `clahe`,
+`connectedComponents`, `distanceTransform`, `filter2D`, `floodFill`, `hlsToRgb`, `houghCircles`,
+`houghLinesP`, `hsvToRgb`, `inRange`, `labToRgb`, `laplacian`, `matchTemplate`, `meanShift`,
+`medianBlur`, `minMaxLoc`, `morphology`, `projectPoints`, `rgbToHls`, `rgbToHsv`, `rgbToLab`,
+`rgbToYCrCb`, `rodrigues`, `solvePnP` and `yCrCbToRgb`, and the random number generator
+`houghLinesP` draws from.
 
 Changes from OpenCV: rewritten in TypeScript for pixelvision's matrices and options; `filter2D`
 and `bilateralFilter` repeat the edge pixel at the border; `filter2D` always sums directly where
 OpenCV switches to a Fourier transform for large kernels; `matchTemplate` sums the correlation
-exactly and keeps it in double precision.
+exactly and keeps it in double precision; `houghLinesP` takes a seed; `houghCircles` counts every
+distance bin when it scores a radius and reports the middle of the scored window; `solvePnP`
+estimates its starting pose its own way, refines it to double precision and supports radial
+distortion (`k1`, `k2`) only; `rodrigues` takes the angle from `atan2`, keeping rotations under
+1e-5 radians; `camShift` reports the centroid as the box centre.
 
 ```
 Copyright (C) 2000-2022, Intel Corporation, all rights reserved.

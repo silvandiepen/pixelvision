@@ -103,10 +103,26 @@ export { detectYape06 } from "./features/yape06";
 export type { Estimate, EstimateOptions, EstimationMethod } from "./motion/estimate.model";
 export { estimateAffine, estimateHomography } from "./motion/estimate";
 
+// Camera pose
+export type {
+  CameraMatrix,
+  Point3,
+  ProjectPointsOptions,
+  RadialDistortion,
+} from "./imgproc/projectPoints.model";
+export { projectPoints } from "./imgproc/projectPoints";
+export type { Vec3 } from "./imgproc/rodrigues.model";
+export { rodrigues } from "./imgproc/rodrigues";
+export type { PnPResult, Pose, SolvePnPOptions } from "./imgproc/solvePnP.model";
+export { solvePnP } from "./imgproc/solvePnP";
+
 // Tracking
 export type { FlowFrame, TrackedPoint, TrackPointsOptions } from "./tracking/opticalFlow.model";
 export { trackPoints } from "./tracking/opticalFlow";
 export { buildPyramid } from "./tracking/pyramid";
+export type { CamShiftResult, MeanShiftOptions, MeanShiftResult } from "./imgproc/meanShift.model";
+export { meanShift } from "./imgproc/meanShift";
+export { camShift } from "./imgproc/camShift";
 
 // Image processing
 export type { BoxBlurOptions, BoxSumOptions } from "./imgproc/boxBlur.model";
@@ -125,6 +141,10 @@ export type { ChannelOrder, GrayscaleOptions } from "./imgproc/grayscale.model";
 export { grayscale } from "./imgproc/grayscale";
 export type { HoughLine, HoughLinesOptions } from "./imgproc/houghLines.model";
 export { houghLines } from "./imgproc/houghLines";
+export type { HoughLinesPOptions, LineSegment } from "./imgproc/houghLinesP.model";
+export { houghLinesP } from "./imgproc/houghLinesP";
+export type { Circle, HoughCirclesOptions } from "./imgproc/houghCircles.model";
+export { houghCircles } from "./imgproc/houghCircles";
 export type { IntegralImage, IntegralImageOptions } from "./imgproc/integralImage.model";
 export { integralImage } from "./imgproc/integralImage";
 export type { PyrDownOptions } from "./imgproc/pyrDown.model";
@@ -145,6 +165,8 @@ export type { BilateralFilterOptions } from "./imgproc/bilateralFilter.model";
 export { bilateralFilter } from "./imgproc/bilateralFilter";
 export type { CalcHistOptions } from "./imgproc/calcHist.model";
 export { calcHist } from "./imgproc/calcHist";
+export type { CalcBackProjectOptions } from "./imgproc/calcBackProject.model";
+export { calcBackProject } from "./imgproc/calcBackProject";
 export type { ClaheOptions, TileGridSize } from "./imgproc/clahe.model";
 export { clahe } from "./imgproc/clahe";
 export type { DistanceMetric, DistanceTransformOptions } from "./imgproc/distanceTransform.model";
