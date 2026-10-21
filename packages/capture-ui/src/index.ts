@@ -106,17 +106,21 @@ export type { SettledValue, SettledValueOptions } from "./logic/settle.model";
 export { createSettledValue } from "./logic/settle";
 export type { StabilityOptions, StabilityState, StabilityTracker } from "./logic/stability.model";
 export { createStabilityTracker } from "./logic/stability";
-export { sharpness } from "./logic/sharpness";
+export type { RobustSharpnessOptions } from "./logic/sharpness.model";
+export { robustSharpness, sharpness } from "./logic/sharpness";
 export type {
   QualityAssessment,
   QualityCheck,
   QualityIssue,
+  QualityMeasure,
   QualitySubject,
   QualityThresholds,
 } from "./logic/quality.model";
 export {
+  DOCUMENT_MEASURE,
   DOCUMENT_QUALITY,
   DOCUMENT_QUALITY_SIZE,
+  FACE_MEASURE,
   FACE_QUALITY,
   QUALITY_SIZE,
   REFERENCE_CONTRAST,

@@ -3,15 +3,20 @@ import type { Matrix } from "pixelvision";
 import { describe, expect, it } from "vitest";
 import type { Box } from "./geometry.model";
 import {
+  DOCUMENT_MEASURE,
   DOCUMENT_QUALITY,
-  DOCUMENT_QUALITY_SIZE,
+  FACE_MEASURE,
   FACE_QUALITY,
-  QUALITY_SIZE,
   assessRegion,
   checkQuality,
   documentRegion,
 } from "./quality";
-import type { QualityAssessment, QualityIssue, QualityThresholds } from "./quality.model";
+import type {
+  QualityAssessment,
+  QualityIssue,
+  QualityMeasure,
+  QualityThresholds,
+} from "./quality.model";
 import { blurred, documentScene, exposed, faceScene, hazed, noisy } from "./testScenes";
 
 // The calibration behind the default thresholds; the numbers it measures are recorded next to
@@ -115,14 +120,14 @@ const cropAround = (image: Matrix<"u8">, region: Box, margin: number) => {
  * @param subjects - The scenes.
  * @param cases - Degradations of a scene's frame.
  * @param thresholds - The defaults under test.
- * @param size - Measuring size.
+ * @param measure - How to measure.
  * @returns The measurements by expected verdict, for the margin checks.
  */
 const calibrate = (
   subjects: Subject[],
   cases: (image: Matrix<"u8">) => Case[],
   thresholds: QualityThresholds,
-  size: number,
+  measure: QualityMeasure,
 ) => {
   const measured = new Map<QualityIssue | "good", QualityAssessment[]>();
   const verdicts: string[] = [];
@@ -130,7 +135,7 @@ const calibrate = (
     // Degrade only the region and a margin wider than the largest blur kernel's reach.
     const { image, region } = cropAround(subject.image, subject.region, 16);
     for (const c of cases(image)) {
-      const assessment = assessRegion(c.image, region, size);
+      const assessment = assessRegion(c.image, region, measure);
       const { issue } = checkQuality(assessment, thresholds);
       if (issue !== c.expected) verdicts.push(`${subject.name} ${c.name}: ${issue}`);
       const key = c.expected ?? "good";
@@ -159,19 +164,23 @@ const calibrate = (
 
 describe("default thresholds", () => {
   // One test per subject size, so each gets the per-test time limit on slow CI runners.
-  it.each([0.8, 1.2, 1.6])(
-    "separate sharp, blurred, dark, overexposed and hazed faces at x%s",
-    (scale) => {
+  it.each([
+    // A blur of sigma 2 frame pixels on the largest face (x1.6, 179 px wide) is about sigma 0.9
+    // once the face is shrunk to the measuring size: as crisp as a sharp real face there, so
+    // it can't be rejected without rejecting usable faces (see FACE_QUALITY).
+    { scale: 0.8, blurs: [2, 3, 4] },
+    { scale: 1.2, blurs: [2, 3, 4] },
+    { scale: 1.6, blurs: [3, 4] },
+  ])(
+    "separate sharp, blurred (also with noise), dark, overexposed and hazed faces at x$scale",
+    ({ scale, blurs }) => {
       const { image, box } = faceScene(480, 360, scale);
       const subjects = [{ name: `face x${scale}`, image, region: box }];
       const { verdicts, of } = calibrate(
         subjects,
-        // The face default comes from real faces (see FACE_QUALITY): it rejects a clean blur from
-        // sigma 3 on these drawn faces, but sensor noise reads as detail, so a blurred frame with
-        // noise isn't caught on faces.
-        (image) => degrade(image, [1.6, 2.2, 3], [1.15, 1.25], [3, 4], false),
+        (image) => degrade(image, [1.6, 2.2, 3], [1.15, 1.25], blurs, true),
         FACE_QUALITY,
-        QUALITY_SIZE,
+        FACE_MEASURE,
       );
       expect(verdicts).toEqual([]);
 
@@ -180,8 +189,7 @@ describe("default thresholds", () => {
       const contrast = (q: QualityAssessment) => q.contrast;
       // Sharpness: a fifth clear of both sides.
       expect(Math.min(...of("good", sharpness))).toBeGreaterThan(FACE_QUALITY.minSharpness * 1.2);
-      // Blurred drawn faces only need to stay below it: the default is set from real faces.
-      expect(Math.max(...of("blurry", sharpness))).toBeLessThan(FACE_QUALITY.minSharpness);
+      expect(Math.max(...of("blurry", sharpness))).toBeLessThan(FACE_QUALITY.minSharpness / 1.2);
       // Light and contrast: at least 6 gray levels clear of both sides.
       expect(Math.min(...of("good", brightness))).toBeGreaterThan(FACE_QUALITY.minBrightness + 6);
       expect(Math.max(...of("dark", brightness))).toBeLessThan(FACE_QUALITY.minBrightness - 6);
@@ -201,7 +209,7 @@ describe("default thresholds", () => {
         subjects,
         (image) => degrade(image, [2.2, 3], [1.15, 1.25, 1.6], [1, 1.5, 2, 3, 4], true),
         DOCUMENT_QUALITY,
-        DOCUMENT_QUALITY_SIZE,
+        DOCUMENT_MEASURE,
       );
       expect(verdicts).toEqual([]);
 

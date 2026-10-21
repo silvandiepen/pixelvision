@@ -250,7 +250,7 @@ than one person is in view (see [One person at a time](#one-person-at-a-time)). 
 | `first-turn`          | `left`  | The side asked for first, with a directional source                                                                                                             |
 | `show-landmarks`      | off     | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                                                   |
 | `show-debug`          | off     | Show detector, phase, step, pose, guidance, face count, quality, sharpness and detection rate                                                                   |
-| `min-sharpness`       | `70`    | Lowest sharpness of the face region for a frame to be kept. See [Quality gates](#quality-gates)                                                                 |
+| `min-sharpness`       | `120`   | Lowest sharpness of the face region for a frame to be kept. See [Quality gates](#quality-gates)                                                                 |
 | `min-brightness`      | `80`    | Lowest mean brightness of the face region, 0–255                                                                                                                |
 | `max-brightness`      | `212`   | Highest mean brightness of the face region, 0–255                                                                                                               |
 | `min-contrast`        | `22`    | Lowest contrast (standard deviation of the levels) of the face region                                                                                           |
@@ -396,7 +396,7 @@ Run it with `CALM_REPORT=1` to print the numbers.
 | `show-debug`         | off     | Show finder, phase, area, hold progress and quality                                          |
 | `hint-delay`         | `700`   | Milliseconds a quality hint must persist before it replaces the instruction                  |
 | `hint-hold`          | `1500`  | Minimum milliseconds a quality hint stays                                                    |
-| `min-sharpness`      | `230`   | Lowest sharpness of the document region. See [Quality gates](#quality-gates)                 |
+| `min-sharpness`      | `210`   | Lowest sharpness of the document region. See [Quality gates](#quality-gates)                 |
 | `min-brightness`     | `85`    | Lowest mean brightness of the document region, 0–255                                         |
 | `max-brightness`     | `214`   | Highest mean brightness of the document region, 0–255                                        |
 | `min-contrast`       | `33`    | Lowest contrast (standard deviation of the levels) of the document region                    |
@@ -447,13 +447,19 @@ each corner is a button that moves with the arrow keys (Shift moves faster). "Us
 Both elements only capture automatically from a frame that is sharp enough and well lit. The face
 or document region of each detection frame is measured with `assessRegion`:
 
-1. The region is cut out and resampled to a fixed size: 96 pixels on its long side for a face,
-   160 for a document, whose detail is finer. Area averaging when shrinking, bilinear when
-   enlarging. The numbers don't depend on `detect-size` or on how close the subject is.
+1. The region is cut out and, when it is larger, shrunk by area averaging to a fixed size: 96
+   pixels on its long side for a face, 160 for a document, whose detail is finer. A smaller
+   region is measured as it is, since enlarging it would only soften it. The numbers don't depend
+   on `detect-size` or on how close the subject is.
 2. `brightness` is the mean gray level (0–255) and `contrast` the standard deviation.
-3. `sharpness` is the variance of the 4-neighbour Laplacian, scaled to a contrast of 50
-   (multiplied by `(50 / contrast)²`). Without that scaling, the same face in dimmer light would
-   score as blurred; with it, light and blur are judged separately.
+3. `sharpness` is the variance of the 4-neighbour Laplacian less its noise-like part
+   (`robustSharpness`), scaled to a contrast of 50 (multiplied by `(50 / contrast)²`). Sensor
+   noise spreads the Laplacian into a bell shape, whose width the median absolute deviation
+   measures; edges add a few values far outside it. Removing the bell leaves the edges, so a
+   blurred frame with sensor noise scores as low as a clean blurred one. Faces get a 3 × 3 median
+   first and the whole bell removed; documents get no median, which would also remove fine print,
+   and three quarters of it removed. The contrast scaling keeps the same face in dimmer light
+   from scoring as blurred: light and blur are judged separately.
 
 `checkQuality` then compares the measurement with the thresholds, in this order: `dark` (below
 `min-brightness`), `bright` (above `max-brightness`), `flat` (below `min-contrast`) and `blurry`
@@ -461,7 +467,7 @@ or document region of each detection frame is measured with `assessRegion`:
 
 | Threshold        | Face  | Document |
 | ---------------- | ----- | -------- |
-| `min-sharpness`  | `70`  | `230`    |
+| `min-sharpness`  | `120` | `210`    |
 | `min-brightness` | `80`  | `85`     |
 | `max-brightness` | `212` | `214`    |
 | `min-contrast`   | `22`  | `33`     |
@@ -470,31 +476,50 @@ The defaults are calibrated by `src/logic/quality.calibration.test.ts`. It draws
 sizes the oval accepts in a 480-pixel detection frame, and a plain light document on a dark
 surface, and degrades them (`QUALITY_REPORT=1` prints the numbers):
 
-| Degradation                                                                            | Face                      | Document                  |
-| -------------------------------------------------------------------------------------- | ------------------------- | ------------------------- |
-| None, noise σ 4 and 10, dimmed ×0.6–0.75, brightened ×1.15–1.25 (documents up to ×1.6) | passes, sharpness ≥ 710.8 | passes, sharpness ≥ 304.2 |
-| Gaussian blur σ 1–4 px (also with noise σ 4)                                           | σ 3–4: sharpness ≤ 59.6   | sharpness ≤ 171.5         |
-| Darkened ×0.15–0.4                                                                     | brightness ≤ 65.0         | brightness ≤ 69.3         |
-| Passing brightness range                                                               | 96.2–203.4                | 103.9–207.4               |
-| Overexposed with clipping                                                              | ×1.6–3: ≥ 221.8           | ×2.2–3: ≥ 219.1           |
-| Hazed (30% of the frame over flat gray)                                                | contrast ≤ 15.5           | contrast ≤ 22.2           |
-
-The face sharpness default is set from real photos rather than the drawn faces, whose edges are
-far crisper: on 12 real faces of 51–109 px, usable faces scored 122–619, the same faces blurred by
-σ 1 scored 14–180, by σ 2 7–44 and by σ 3 6–17. `70` rejects a blur of σ 2 or more and passes
-every usable face. A σ 1 blur overlaps soft but usable faces and passes, and sensor noise reads
-as detail, so a blurred face with visible noise passes too. Check the defaults against your own
-cameras with `show-debug`, and adjust them with the attributes above.
-| Lowest passing contrast | 30.8 | 44.0 |
+| Degradation                                                                            | Face                                         | Document                  |
+| -------------------------------------------------------------------------------------- | -------------------------------------------- | ------------------------- |
+| None, noise σ 4 and 10, dimmed ×0.6–0.75, brightened ×1.15–1.25 (documents up to ×1.6) | passes, sharpness ≥ 594.8                    | passes, sharpness ≥ 286.6 |
+| Gaussian blur, with and without noise σ 4                                              | σ 2–4 (largest face σ 3–4): sharpness ≤ 82.0 | σ 1–4: sharpness ≤ 157.3  |
+| Darkened ×0.15–0.4                                                                     | brightness ≤ 65.0                            | brightness ≤ 69.3         |
+| Passing brightness range                                                               | 96.2–203.4                                   | 103.9–207.4               |
+| Overexposed with clipping                                                              | ×1.6–3: ≥ 221.8                              | ×2.2–3: ≥ 219.1           |
+| Hazed (30% of the frame over flat gray)                                                | contrast ≤ 15.5                              | contrast ≤ 22.2           |
+| Lowest passing contrast                                                                | 30.8                                         | 44.0                      |
 
 Every case gets the expected verdict, and each threshold sits at least a fifth (sharpness) or 4–6
-gray levels (light, contrast) clear of both sides. Keep in mind:
+gray levels (light, contrast) clear of both sides. A σ 2 blur on the largest drawn face is about
+σ 0.9 once it is shrunk to 96 pixels, as crisp as a sharp real face, so it isn't expected to fail.
 
+The face sharpness default is set from real photos rather than the drawn faces, whose edges are
+far crisper: 12 faces of 51–109 px in a group photo, measured at their native size, of which 11
+are usable and one is out of focus. On the 11 usable faces:
+
+| Face frame           | Sharpness | Laplacian variance, as measured before |
+| -------------------- | --------- | -------------------------------------- |
+| Sharp                | 221–1144  | 122–619                                |
+| Noise σ 4            | 229–1094  | 177–733                                |
+| Noise σ 10           | 213–913   | 453–1324                               |
+| Blur σ 1             | 75–212    | 22–180                                 |
+| Blur σ 2             | 9–34      | 7–44                                   |
+| Blur σ 3             | 0–10      | 6–17                                   |
+| Blur σ 4             | 0–5       | 5–10                                   |
+| Blur σ 2 + noise σ 4 | 4–66      | 78–198                                 |
+| Blur σ 3 + noise σ 4 | 0–39      | 74–227                                 |
+| Blur σ 4 + noise σ 4 | 0–54      | 70–256                                 |
+
+`120` passes every usable face, with or without noise (the softest is 1.8× above it), and rejects
+a blur of σ 2 or more, with or without noise σ 4, on every face (the highest is 1.8× below it).
+The Laplacian variance counted the noise as detail: with its default of `70`, every blurred face
+with noise σ 4 passed. The out-of-focus face scores 67, 90 with noise σ 4 and 135 with noise σ 10.
+
+Keep in mind:
+
+- A σ 1 blur still overlaps soft but usable faces, and passes on 6 of the 11.
+- Strong sensor noise (σ 10) on a σ 2 blur reaches 124 on two of the real faces: much less than
+  before (up to 1057), but past the face default. On documents it stays below 70.
 - Drawn faces have crisper edges than real ones. Check the defaults with footage from the cameras
   you support, using `show-debug` (it prints the measurement and verdict), and adjust the
   attributes where needed. `0` (or `255` for `max-brightness`) switches a check off.
-- Strong sensor noise (σ 10) on a blurred frame raises the Laplacian variance past the sharpness
-  threshold: noise reads as detail.
 - The document region includes some of the surface around the document, so its brightness rises
   slowly with exposure. A plain white page clips well before the region reads as too bright.
 
@@ -608,9 +633,10 @@ The logic behind the elements is exported, and it has no DOM:
   are in view.
 - `createPointsTracker`: smoothing.
 - `createStabilityTracker`: hold-still detection.
-- `sharpness`: the sharpness score.
+- `sharpness` and `robustSharpness`: the sharpness scores, plain and with sensor noise removed.
 - `assessRegion`, `checkQuality`, `qualityHint` and `documentRegion`: the quality gate, with
-  `FACE_QUALITY` and `DOCUMENT_QUALITY` as the calibrated defaults.
+  `FACE_MEASURE` and `DOCUMENT_MEASURE` as how regions are measured and `FACE_QUALITY` and
+  `DOCUMENT_QUALITY` as the calibrated defaults.
 - `createDocumentFlow` and `resolveAspect`: the document flow and its shape presets.
 - `coverTransform`, `toView` and `fromView`: frame-to-view mapping.
 

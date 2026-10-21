@@ -27,7 +27,7 @@ import { HAPTICS, vibrate } from "../logic/haptics";
 import type { LabelKey } from "../logic/labels.model";
 import {
   DOCUMENT_QUALITY,
-  DOCUMENT_QUALITY_SIZE,
+  DOCUMENT_MEASURE,
   assessRegion,
   checkQuality,
   describeQuality,
@@ -411,7 +411,7 @@ export class DocumentScannerElement extends CaptureElement {
       assessRegion(
         grayscale(frame.image),
         documentRegion(scaleQuad(corners, 1 / frame.scale)),
-        DOCUMENT_QUALITY_SIZE,
+        DOCUMENT_MEASURE,
       );
     this.lastQuality = quality;
     const issue = quality ? checkQuality(quality, this.qualityThresholds).issue : null;

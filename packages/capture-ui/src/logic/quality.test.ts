@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  DOCUMENT_MEASURE,
   DOCUMENT_QUALITY,
+  FACE_MEASURE,
   FACE_QUALITY,
   assessRegion,
   checkQuality,
@@ -8,7 +10,7 @@ import {
   documentRegion,
   qualityHint,
 } from "./quality";
-import { documentScene, exposed, faceScene, hazed } from "./testScenes";
+import { blurred, documentScene, exposed, faceScene, hazed, noisy } from "./testScenes";
 
 const image = (width: number, height: number, fn: (x: number, y: number) => number) => {
   const data = new Uint8Array(width * height);
@@ -63,6 +65,22 @@ describe("assessRegion", () => {
     const dim = assessRegion(exposed(small.image, 0.6), small.box);
     expect(dim.sharpness / a.sharpness).toBeCloseTo(1, 1);
   });
+
+  it("measures a region smaller than the measuring size as it is", () => {
+    const { image: frame, box } = faceScene(480, 360, 0.6);
+    // The box is about 67 x 80 pixels, under the 96 the face measure shrinks larger regions to.
+    const measured = assessRegion(frame, box, FACE_MEASURE);
+    expect(assessRegion(frame, box, { ...FACE_MEASURE, size: 200 })).toEqual(measured);
+    expect(assessRegion(frame, box, { ...FACE_MEASURE, size: 40 })).not.toEqual(measured);
+  });
+
+  it("doesn't count sensor noise on a blurred face as detail", () => {
+    const { image: frame, box } = faceScene(480, 360, 1);
+    const sharp = assessRegion(frame, box).sharpness;
+    const soft = assessRegion(noisy(blurred(frame, 3), 4), box).sharpness;
+    expect(soft).toBeLessThan(sharp / 10);
+    expect(soft).toBeLessThan(FACE_QUALITY.minSharpness);
+  });
 });
 
 describe("checkQuality", () => {
@@ -91,10 +109,13 @@ describe("checkQuality", () => {
   it("rejects a hazed document and passes a clear one", () => {
     const { image: frame, corners } = documentScene();
     const region = documentRegion(corners!);
-    expect(checkQuality(assessRegion(frame, region, 160), DOCUMENT_QUALITY).ok).toBe(true);
-    expect(checkQuality(assessRegion(hazed(frame, 0.3), region, 160), DOCUMENT_QUALITY).issue).toBe(
-      "flat",
+    expect(checkQuality(assessRegion(frame, region, DOCUMENT_MEASURE), DOCUMENT_QUALITY).ok).toBe(
+      true,
     );
+    expect(
+      checkQuality(assessRegion(hazed(frame, 0.3), region, DOCUMENT_MEASURE), DOCUMENT_QUALITY)
+        .issue,
+    ).toBe("flat");
   });
 });
 
