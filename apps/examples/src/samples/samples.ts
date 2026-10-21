@@ -8,6 +8,7 @@ import {
   fillPolygon,
   fillRect,
   fillShape,
+  insidePolygon,
   quadPoint,
 } from "./raster";
 import type { Color, Vec } from "./raster.model";
@@ -516,6 +517,109 @@ function markers(): RGBAImage {
   return image;
 }
 
+/** The badge of the logo sample: a ring, with a disc in its middle. */
+export const LOGO_BADGE = { x: 80, y: 88, outer: 56, inner: 44, disc: 20 };
+
+/** The square of the logo sample: `[left, top, width, height]`, on whole pixels. */
+export const LOGO_SQUARE: readonly [number, number, number, number] = [40, 168, 48, 48];
+
+/** Shapes in the logo sample, and holes among them (ring 1, O 1, A 1, B 2). */
+export const LOGO_COUNTS = { shapes: 8, holes: 5 };
+
+/**
+ * Whether a point is inside an axis-aligned ellipse.
+ *
+ * @param x - Point x.
+ * @param y - Point y.
+ * @param cx - Centre x.
+ * @param cy - Centre y.
+ * @param rx - Horizontal radius.
+ * @param ry - Vertical radius.
+ * @returns `true` inside.
+ */
+function inEllipse(x: number, y: number, cx: number, cy: number, rx: number, ry: number): boolean {
+  return ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 < 1;
+}
+
+/** Outline of the A in the wordmark, in glyph units (scaled by 0.8 and moved when drawn). */
+const LETTER_A: readonly Vec[] = [
+  [70, 85],
+  [95, 15],
+  [115, 15],
+  [140, 85],
+  [124, 85],
+  [118, 67],
+  [92, 67],
+  [86, 85],
+].map(([x, y]) => ({ x, y }));
+
+/** The counter of the A, in glyph units. */
+const COUNTER_A: readonly Vec[] = [
+  [96, 55],
+  [105, 28],
+  [114, 55],
+].map(([x, y]) => ({ x, y }));
+
+/**
+ * Whether a point is inside the wordmark "OAB", in glyph units: an O with
+ * one counter, an A with one and a B with two.
+ *
+ * @param x - Point x.
+ * @param y - Point y.
+ * @returns `true` on a letter.
+ */
+function inWordmark(x: number, y: number): boolean {
+  if (inEllipse(x, y, 35, 50, 22, 32) && !inEllipse(x, y, 35, 50, 11, 20)) return true;
+  if (insidePolygon(LETTER_A, x, y) && !insidePolygon(COUNTER_A, x, y)) return true;
+  const b =
+    x >= 150 &&
+    (inEllipse(x, y, 162, 32.5, 20, 17.5) ||
+      inEllipse(x, y, 162, 66.5, 23, 18.5) ||
+      (x <= 162 && y >= 15 && y <= 85));
+  const counters =
+    x > 162 && (inEllipse(x, y, 162, 32.5, 10, 8) || inEllipse(x, y, 162, 66.5, 12, 9));
+  return b && !counters;
+}
+
+/**
+ * Draws a flat logo sheet on paper: a navy ring badge with an orange disc
+ * inside, the wordmark "OAB", and a row of simple shapes: a teal square, a
+ * navy triangle and an orange pill.
+ *
+ * @returns The image.
+ */
+function logo(): RGBAImage {
+  const navy: Color = [30, 41, 82];
+  const orange: Color = [234, 88, 12];
+  const image = createImage(SAMPLE_WIDTH, SAMPLE_HEIGHT, [247, 245, 240]);
+  addNoise(image, 3, seededRandom(29));
+  const { x, y, outer, inner, disc } = LOGO_BADGE;
+  fillShape(image, [x - outer, y - outer, x + outer, y + outer], navy, (px, py) => {
+    const d = Math.hypot(px - x, py - y);
+    return d <= outer && d >= inner;
+  });
+  fillCircle(image, { x, y }, disc, orange);
+  // The wordmark, 0.8 of its glyph size, from (160, 30).
+  fillShape(image, [160, 30, 310, 100], navy, (px, py) =>
+    inWordmark((px - 160) / 0.8, (py - 30) / 0.8),
+  );
+  fillRect(image, LOGO_SQUARE, [13, 148, 136]);
+  fillPolygon(
+    image,
+    [
+      { x: 120, y: 216 },
+      { x: 150, y: 166 },
+      { x: 180, y: 216 },
+    ],
+    navy,
+  );
+  fillShape(image, [200, 176, 296, 208], orange, (px, py) => {
+    const cx = Math.min(Math.max(px, 216), 280);
+    return Math.hypot(px - cx, py - 192) <= 16;
+  });
+  return image;
+}
+
 /** Every bundled sample. */
 export const SAMPLES: readonly Sample[] = [
   {
@@ -574,6 +678,13 @@ export const SAMPLES: readonly Sample[] = [
     label: "Pebbles",
     description: "Seventeen dark pebbles of different sizes on a light table, none touching.",
     generate: pebbles,
+  },
+  {
+    id: "logo",
+    label: "Logo sheet",
+    description:
+      "A flat logo on paper: a ring badge with a disc inside, the letters O, A and B with their counters, a square, a triangle and a pill.",
+    generate: logo,
   },
 ];
 

@@ -10,7 +10,8 @@ export type SampleId =
   | "page"
   | "pebbles"
   | "qr-code"
-  | "markers";
+  | "markers"
+  | "logo";
 
 /** A square drawn turned about its centre. */
 export interface TurnedSquare {

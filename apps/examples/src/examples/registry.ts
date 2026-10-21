@@ -110,6 +110,7 @@ import { toImageDataExample } from "./to-image-data";
 import { trackPointsExample } from "./track-points";
 import { transformPointExample } from "./transform-point";
 import { transposeExample } from "./transpose";
+import { vectorizeExample } from "./vectorize";
 import { warpAffineExample } from "./warp-affine";
 import { warpPerspectiveExample } from "./warp-perspective";
 import { yCrCbToRgbExample } from "./ycrcb-to-rgb";
@@ -204,6 +205,7 @@ export const EXAMPLES: readonly Example[] = [
   momentsExample,
   huMomentsExample,
   connectedComponentsExample,
+  vectorizeExample,
   distanceTransformExample,
   gaussianKernelExample,
   perspectiveTransformExample,

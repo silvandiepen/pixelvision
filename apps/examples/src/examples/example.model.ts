@@ -128,9 +128,20 @@ export interface DemoChart {
 /** A key number of the result, shown on the page and checked by the tests. */
 export type DemoValue = number | string | boolean;
 
+/** A vector drawing output, shown as rendered and offered as a file. */
+export interface DemoSvg {
+  label: string;
+  /** A standalone SVG document. */
+  markup: string;
+  /** Suggested name when it's downloaded. */
+  fileName: string;
+}
+
 /** Everything a demo produces. */
 export interface DemoOutput {
   images?: DemoImage[];
+  /** Drawings shown next to the images. */
+  svgs?: DemoSvg[];
   tables?: DemoTable[];
   charts?: DemoChart[];
   /** Key results, exposed to the tests as `window.__pixelvisionResults[slug]`. */

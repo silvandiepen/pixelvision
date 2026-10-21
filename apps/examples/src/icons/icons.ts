@@ -378,6 +378,10 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "approx-polygon": icon(
     `<path d="M4 17C5 13 5 10 7 7S11 5 13 6S17 6 19 9S20 14 18 17S10 19 4 17Z" ${SOFT}/><path d="M4 17L7 7L19 9L18 17Z"/>${dot(4, 17)}${dot(7, 7)}${dot(19, 9)}${dot(18, 17)}`,
   ),
+  // A pixel staircase traced as one smooth curve, with its two handles.
+  vectorize: icon(
+    `<path d="M4 20V16H7V12H10V9H14V6H20" ${SOFT}/><path d="M4 20C5 9 9 4 20 4"/><path d="M4 20L4.8 12M20 4L13 4.4" ${SOFT}/>${dot(4, 20)}${dot(20, 4)}`,
+  ),
   "is-convex": icon(
     `<path d="M4 18L6 6L12 11L18 5L20 18Z" ${SOFT}/><path d="M6 6L18 5" stroke-dasharray="2 2"/><path d="M4 18L6 6M18 5L20 18L4 18"/>`,
   ),

@@ -67,6 +67,12 @@
           :overlay="image.overlay"
           data-demo-output
         />
+        <SvgView
+          v-for="(svg, index) in output?.svgs ?? []"
+          :key="`svg-${index}`"
+          :svg="svg"
+          data-demo-output
+        />
       </div>
 
       <BarChart
@@ -109,6 +115,7 @@ import BarChart from "../BarChart";
 import ControlField from "../ControlField";
 import DataTable from "../DataTable";
 import ImageView from "../ImageView";
+import SvgView from "../SvgView";
 import { defaultValues } from "../../examples/define";
 import type { ControlValues, DemoOutput } from "../../examples/example.model";
 import { publishResult } from "../../results";
