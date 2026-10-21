@@ -99,6 +99,14 @@ import { rgbToHlsExample } from "./rgb-to-hls";
 import { rgbToLabExample } from "./rgb-to-lab";
 import { rgbToYCrCbExample } from "./rgb-to-ycrcb";
 import { yCrCbToRgbExample } from "./ycrcb-to-rgb";
+import { calcBackProjectExample } from "./calc-back-project";
+import { camShiftExample } from "./cam-shift";
+import { houghCirclesExample } from "./hough-circles";
+import { houghLinesPExample } from "./hough-lines-p";
+import { meanShiftExample } from "./mean-shift";
+import { projectPointsExample } from "./project-points";
+import { rodriguesExample } from "./rodrigues";
+import { solvePnPExample } from "./solve-pnp";
 import { shapeAnalysisExample } from "./shape-analysis";
 import { sharpnessExample } from "./sharpness";
 
@@ -124,8 +132,11 @@ export const EXAMPLES: readonly Example[] = [
   equalizeHistogramExample,
   claheExample,
   calcHistExample,
+  calcBackProjectExample,
   cannyExample,
   houghLinesExample,
+  houghLinesPExample,
+  houghCirclesExample,
   warpPerspectiveExample,
   warpAffineExample,
   thresholdExample,
@@ -167,8 +178,13 @@ export const EXAMPLES: readonly Example[] = [
   matchDescriptorsExample,
   buildPyramidExample,
   trackPointsExample,
+  meanShiftExample,
+  camShiftExample,
   estimateAffineExample,
   estimateHomographyExample,
+  solvePnPExample,
+  projectPointsExample,
+  rodriguesExample,
   findContoursExample,
   contourAreaExample,
   arcLengthExample,

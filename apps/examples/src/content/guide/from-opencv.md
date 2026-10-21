@@ -1,49 +1,53 @@
-pixelvision covers the parts of OpenCV.js that web and React Native apps use most: colour conversion, filtering, thresholds, morphology, contours and shapes, geometry, features, tracking and face detection. Each function listed below is tested against OpenCV.js 4.12 on the same images, and gives the same result unless the table says otherwise.
+pixelvision covers the parts of OpenCV.js that web and React Native apps use most: colour conversion, filtering, thresholds, morphology, contours and shapes, geometry, camera pose, features, tracking and face detection. Each function listed below is tested against OpenCV.js 4.12 on the same images, and gives the same result unless the table says otherwise.
 
 ## Size
 
 | What you load                                        | Raw     | Gzipped |
 | ---------------------------------------------------- | ------- | ------- |
 | OpenCV.js 4.12 (`@techstark/opencv-js`)              | 10.9 MB | 3.5 MB  |
-| pixelvision, everything                              | 167 KB  | 43 KB   |
+| pixelvision, everything                              | 92 KB   | 38 KB   |
 | pixelvision, `findDocument` + `extractDocument` only | 18 KB   | 7.9 KB  |
 
-pixelvision is plain JavaScript with no WebAssembly, so there is nothing to wait for before the first call, and bundlers drop the functions you don't import. Measured on the minified builds of pixelvision and OpenCV.js 4.12.0.
+pixelvision is plain JavaScript with no WebAssembly, so there is nothing to wait for before the first call, and bundlers drop the functions you don't import. Sizes are bundled and minified, as an app ships them: pixelvision with esbuild, OpenCV.js 4.12.0 as published (already minified).
 
 ## Calls
 
-| OpenCV.js                                                     | pixelvision                                                                                           |
-| ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `cv.matFromImageData`, `cv.imshow`                            | `fromImageData`, `toImageData`                                                                        |
-| `cv.cvtColor` to gray                                         | `grayscale`                                                                                           |
-| `cv.cvtColor` to / from HSV, HLS, Lab, YCrCb                  | `rgbToHsv`, `rgbToHls`, `rgbToLab`, `rgbToYCrCb` and `hsvToRgb`, `hlsToRgb`, `labToRgb`, `yCrCbToRgb` |
-| `cv.inRange`                                                  | `inRange`                                                                                             |
-| `cv.GaussianBlur`, `cv.blur`, `cv.medianBlur`                 | `gaussianBlur`, `boxBlur`, `medianBlur`                                                               |
-| `cv.bilateralFilter`, `cv.filter2D`                           | `bilateralFilter`, `filter2D`                                                                         |
-| `cv.Sobel`, `cv.Scharr`, `cv.Laplacian`                       | `sobelDerivatives`, `scharrDerivatives`, `laplacian`                                                  |
-| `cv.Canny`                                                    | `canny`                                                                                               |
-| `cv.equalizeHist`, `cv.CLAHE`, `cv.calcHist`                  | `equalizeHistogram`, `clahe`, `calcHist`                                                              |
-| `cv.integral`                                                 | `integralImage`                                                                                       |
-| `cv.threshold` (binary, Otsu), `cv.adaptiveThreshold`         | `threshold`, `otsuLevel`, `adaptiveThreshold`                                                         |
-| `cv.erode`, `cv.dilate`, `cv.morphologyEx`                    | `erode`, `dilate`, `morphology`                                                                       |
-| `cv.distanceTransform`, `cv.floodFill`                        | `distanceTransform`, `floodFill`                                                                      |
-| `cv.connectedComponentsWithStats`                             | `connectedComponents`                                                                                 |
-| `cv.findContours`                                             | `findContours`                                                                                        |
-| `cv.approxPolyDP`, `cv.arcLength`, `cv.contourArea`           | `approxPolygon`, `arcLength`, `contourArea`                                                           |
-| `cv.isContourConvex`, `cv.convexHull`                         | `isConvex`, `convexHull`                                                                              |
-| `cv.boundingRect`, `cv.minAreaRect`                           | `boundingRect`, `minAreaRect`                                                                         |
-| `cv.moments`, `cv.HuMoments`                                  | `moments`, `huMoments`                                                                                |
-| `cv.matchTemplate`, `cv.minMaxLoc`                            | `matchTemplate`, `minMaxLoc`                                                                          |
-| `cv.pyrDown`, `cv.resize`, `cv.flip`                          | `pyrDown`, `resample`, `flip`                                                                         |
-| `cv.getPerspectiveTransform`, `cv.getAffineTransform`         | `perspectiveTransform`, `affineTransform`                                                             |
-| `cv.warpPerspective`, `cv.warpAffine`                         | `warpPerspective`, `warpAffine`                                                                       |
-| `cv.findHomography`, `cv.estimateAffine2D`                    | `estimateHomography`, `estimateAffine`                                                                |
-| `cv.HoughLines`                                               | `houghLines`                                                                                          |
-| `cv.calcOpticalFlowPyrLK`                                     | `trackPoints` (with `buildPyramid`)                                                                   |
-| `cv.FastFeatureDetector`                                      | `detectFast`                                                                                          |
-| `cv.ORB` (describe), `cv.BFMatcher` (Hamming)                 | `describeOrb`, `matchDescriptors`                                                                     |
-| `cv.CascadeClassifier.detectMultiScale`, `cv.groupRectangles` | `detectHaar`, `groupRectangles`                                                                       |
-| `cv.solve`, `cv.SVDecomp`, `cv.eigen`                         | `luSolve`, `svd`, `eigenSymmetric`                                                                    |
+| OpenCV.js                                                                | pixelvision                                                                                           |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| `cv.matFromImageData`, `cv.imshow`                                       | `fromImageData`, `toImageData`                                                                        |
+| `cv.cvtColor` to gray                                                    | `grayscale`                                                                                           |
+| `cv.cvtColor` to / from HSV, HLS, Lab, YCrCb                             | `rgbToHsv`, `rgbToHls`, `rgbToLab`, `rgbToYCrCb` and `hsvToRgb`, `hlsToRgb`, `labToRgb`, `yCrCbToRgb` |
+| `cv.inRange`                                                             | `inRange`                                                                                             |
+| `cv.GaussianBlur`, `cv.blur`, `cv.medianBlur`                            | `gaussianBlur`, `boxBlur`, `medianBlur`                                                               |
+| `cv.bilateralFilter`, `cv.filter2D`                                      | `bilateralFilter`, `filter2D`                                                                         |
+| `cv.Sobel`, `cv.Scharr`, `cv.Laplacian`                                  | `sobelDerivatives`, `scharrDerivatives`, `laplacian`                                                  |
+| `cv.Canny`                                                               | `canny`                                                                                               |
+| `cv.equalizeHist`, `cv.CLAHE`, `cv.calcHist`                             | `equalizeHistogram`, `clahe`, `calcHist`                                                              |
+| `cv.calcBackProject`                                                     | `calcBackProject`                                                                                     |
+| `cv.integral`                                                            | `integralImage`                                                                                       |
+| `cv.threshold` (binary, Otsu), `cv.adaptiveThreshold`                    | `threshold`, `otsuLevel`, `adaptiveThreshold`                                                         |
+| `cv.erode`, `cv.dilate`, `cv.morphologyEx`                               | `erode`, `dilate`, `morphology`                                                                       |
+| `cv.distanceTransform`, `cv.floodFill`                                   | `distanceTransform`, `floodFill`                                                                      |
+| `cv.connectedComponentsWithStats`                                        | `connectedComponents`                                                                                 |
+| `cv.findContours`                                                        | `findContours`                                                                                        |
+| `cv.approxPolyDP`, `cv.arcLength`, `cv.contourArea`                      | `approxPolygon`, `arcLength`, `contourArea`                                                           |
+| `cv.isContourConvex`, `cv.convexHull`                                    | `isConvex`, `convexHull`                                                                              |
+| `cv.boundingRect`, `cv.minAreaRect`                                      | `boundingRect`, `minAreaRect`                                                                         |
+| `cv.moments`, `cv.HuMoments`                                             | `moments`, `huMoments`                                                                                |
+| `cv.matchTemplate`, `cv.minMaxLoc`                                       | `matchTemplate`, `minMaxLoc`                                                                          |
+| `cv.pyrDown`, `cv.resize`, `cv.flip`                                     | `pyrDown`, `resample`, `flip`                                                                         |
+| `cv.getPerspectiveTransform`, `cv.getAffineTransform`                    | `perspectiveTransform`, `affineTransform`                                                             |
+| `cv.warpPerspective`, `cv.warpAffine`                                    | `warpPerspective`, `warpAffine`                                                                       |
+| `cv.findHomography`, `cv.estimateAffine2D`                               | `estimateHomography`, `estimateAffine`                                                                |
+| `cv.HoughLines`, `cv.HoughLinesP`                                        | `houghLines`, `houghLinesP`                                                                           |
+| `cv.HoughCircles` (`HOUGH_GRADIENT`)                                     | `houghCircles` (`param1` is `cannyThreshold`, `param2` is `accumulatorThreshold`)                     |
+| `cv.calcOpticalFlowPyrLK`                                                | `trackPoints` (with `buildPyramid`)                                                                   |
+| `cv.meanShift`, `cv.CamShift`                                            | `meanShift`, `camShift` (`TermCriteria` is `maxIterations`, `epsilon`)                                |
+| `cv.solvePnP` (`SOLVEPNP_ITERATIVE`), `cv.projectPoints`, `cv.Rodrigues` | `solvePnP`, `projectPoints`, `rodrigues`                                                              |
+| `cv.FastFeatureDetector`                                                 | `detectFast`                                                                                          |
+| `cv.ORB` (describe), `cv.BFMatcher` (Hamming)                            | `describeOrb`, `matchDescriptors`                                                                     |
+| `cv.CascadeClassifier.detectMultiScale`, `cv.groupRectangles`            | `detectHaar`, `groupRectangles`                                                                       |
+| `cv.solve`, `cv.SVDecomp`, `cv.eigen`                                    | `luSolve`, `svd`, `eigenSymmetric`                                                                    |
 
 Where results aren't identical:
 
@@ -52,6 +56,11 @@ Where results aren't identical:
 - **`adaptiveThreshold`** with the Gaussian method uses an exact mean, so under 1% of pixels can fall on the other side.
 - **`matchTemplate`** sums in double precision. OpenCV correlates in single precision, so its squared-difference score for an exact match isn't 0; pixelvision's is.
 - **`filter2D`** with kernels of 50 weights or more: OpenCV switches to a Fourier transform there, which can move results by one level.
+- **`houghLinesP`** gives OpenCV's segments with the default `seed`. Another seed visits the edge pixels in another order, which can end or split a slanted segment differently.
+- **`houghCircles`** finds the same candidate centres. Radii can differ by a pixel or so: OpenCV leaves out one distance bin per radius it scores and reports radii half a bin low, and pixelvision fixes both, which makes radii slightly more accurate. A circle at the edge of `accumulatorThreshold` can be kept by one and not the other.
+- **`solvePnP`** refines until the steps reach double-precision rounding; OpenCV stops at single-precision steps. Poses agree within 1e-7, and pixelvision's reprojection error on exact data is far below a millionth of a pixel. Lens distortion is radial only: `k1` and `k2`.
+- **`rodrigues`** and **`projectPoints`** agree within rounding, except that `rodrigues` keeps rotations under 1e-5 radians, which OpenCV returns as zero.
+- **`camShift`** returns OpenCV's window exactly and its box to single precision, but the box's centre is the centroid. OpenCV reports the centre of its whole-pixel window, up to a pixel away, and further when the window touches the left or top edge.
 - **Borders** repeat the edge pixel (`BORDER_REPLICATE`) wherever a function takes a neighbourhood.
 
 ## Working differently
@@ -63,4 +72,4 @@ Where results aren't identical:
 
 ## Not covered
 
-DNN, machine learning, camera calibration and `solvePnP`, stitching, video I/O, `HoughLinesP`, `HoughCircles`, mean-shift tracking, QR codes and ArUco markers. If you need those, OpenCV.js is the better tool; you can use both in one app.
+DNN, machine learning, camera calibration, `solvePnP` methods other than the iterative one, lens distortion beyond `k1` and `k2`, stitching, video I/O, QR codes and ArUco markers. If you need those, OpenCV.js is the better tool; you can use both in one app.

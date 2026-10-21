@@ -75,7 +75,7 @@ test.describe("layout", () => {
     await expect(sidebar).toBeHidden();
     await page.getByRole("button", { name: "Menu" }).click();
     await expect(sidebar).toBeVisible();
-    await sidebar.getByRole("link", { name: "houghLines" }).click();
+    await sidebar.getByRole("link", { name: "houghLines", exact: true }).click();
     await expect(page).toHaveURL(/\/hough-lines$/);
     await expect(sidebar).toBeHidden();
   });

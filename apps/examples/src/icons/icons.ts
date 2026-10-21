@@ -173,6 +173,14 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "hough-lines": icon(
     `<path d="M3 19L21 5"/>${dot(6, 16.67)}${dot(9.5, 13.94)}${dot(13, 11.22)}${dot(16.5, 8.5)}${dot(6, 7, 1, SOFT)}${dot(16, 18, 1, SOFT)}${dot(19.5, 13, 1, SOFT)}`,
   ),
+  // A segment with its two end points, among stray edge pixels.
+  "hough-lines-p": icon(
+    `<path d="M4.5 17.5L19.5 6.5"/>${dot(4.5, 17.5, 1.6)}${dot(19.5, 6.5, 1.6)}${dot(6, 7, 1, SOFT)}${dot(16, 18, 1, SOFT)}${dot(19.5, 13.5, 1, SOFT)}`,
+  ),
+  // A circle, its centre and a radius.
+  "hough-circles": icon(
+    `<circle cx="12" cy="12" r="8"/>${dot(12, 12, 1.4)}<path d="M12 12L17.66 6.34" ${SOFT}/>`,
+  ),
   "warp-perspective": icon(
     `<path d="M2.5 8L9 5.5L10 18.5L3.5 16Z"/>${arrow(11.5, 12, 14.5, 12)}<rect x="15.5" y="6" width="6" height="12" rx="1"/>`,
   ),
@@ -244,6 +252,10 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "calc-hist": icon(
     `<path d="M3 20H21"/><path d="M5 20V11M11 20V5.5M17 20V13"/><path d="M7.5 20V8M13.5 20V14.5M19.5 20V9" ${SOFT}/>`,
   ),
+  // Histogram bars mapped back onto an image, where one region lights up.
+  "calc-back-project": icon(
+    `<path d="M2.5 19H10"/><path d="M4.5 19V13M7.5 19V9" ${SOFT}/>${arrow(10.5, 11, 13.5, 11)}<rect x="14" y="5" width="7.5" height="14" rx="1.5"/><circle cx="17.75" cy="10" r="2" fill="currentColor" stroke="none"/>`,
+  ),
   "flood-fill": icon(
     `<path d="M4 11.5L10.5 5L17.5 12L11 18.5Z"/><path d="M4 11.5H17.5" ${SOFT}/><path d="M10.5 5L8.5 3" ${SOFT}/><path d="M19.5 14C19.5 14 21.5 16.6 21.5 18A2 2 0 0 1 17.5 18C17.5 16.6 19.5 14 19.5 14Z" fill="currentColor" stroke="none"/>`,
   ),
@@ -308,6 +320,14 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "track-points": icon(
     `${dot(4, 16, 1.2, SOFT)}${dot(9, 7, 1.2, SOFT)}${dot(13, 18, 1.2, SOFT)}${arrow(4, 16, 9, 13.5)}${arrow(9, 7, 14.5, 5.5)}${arrow(13, 18, 19, 16)}${dot(10, 13)}${dot(15.5, 5.25)}${dot(20, 15.7)}`,
   ),
+  // A window moving onto the dense spot.
+  "mean-shift": icon(
+    `<rect x="3" y="10" width="10" height="10" rx="1.5" stroke-dasharray="2 2" ${SOFT}/>${arrow(8, 15, 12.5, 10.5)}<rect x="11" y="4" width="10" height="10" rx="1.5"/>${dot(16, 9, 1.5)}`,
+  ),
+  // A rotated box fitted around a tilted blob.
+  "cam-shift": icon(
+    `<ellipse cx="12" cy="12" rx="7.5" ry="3.5" transform="rotate(-35 12 12)" fill="currentColor" stroke="none" opacity="0.3"/><rect x="3.5" y="7.5" width="17" height="9" rx="1" transform="rotate(-35 12 12)"/>${dot(12, 12, 1.2)}`,
+  ),
 
   // Motion
   "estimate-affine": icon(
@@ -315,6 +335,18 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   ),
   "estimate-homography": icon(
     `<path d="M4 7L18 4.5L20.5 19L6 17Z"/>${dot(4, 7)}${dot(18, 4.5)}${dot(20.5, 19)}${dot(6, 17)}${dot(12, 11.5)}<path d="M2 20L4.5 22.5M4.5 20L2 22.5" ${SOFT}/>`,
+  ),
+  // A marker seen at an angle, with the pose's axes rising from it.
+  "solve-pnp": icon(
+    `<path d="M3.5 16L10.5 19.5L20.5 15L13.5 11.5Z"/>${arrow(12, 15.5, 12, 4.5)}<path d="M12 15.5L18.5 12.5M12 15.5L6.5 12.5" ${SOFT}/>`,
+  ),
+  // A cube's corners projected to points on a flat image.
+  "project-points": icon(
+    `<path d="M4 9H13V18H4Z"/><path d="M8 5H17V14H8Z" ${SOFT}/><path d="M4 9L8 5M13 9L17 5M13 18L17 14M4 18L8 14" ${SOFT}/>${dot(4, 9)}${dot(13, 9)}${dot(13, 18)}${dot(4, 18)}`,
+  ),
+  // An axis and the turn about it.
+  rodrigues: icon(
+    `<path d="M12 2.5V21.5" ${SOFT}/><path d="M18.5 9.5A7.5 3.5 0 1 1 15 6.9"/><path d="M15.6 5.2L15 6.9L16.8 7.6"/>`,
   ),
 
   // Shapes
