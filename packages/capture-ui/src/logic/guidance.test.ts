@@ -66,11 +66,21 @@ const settle = (name: GuidanceCase, times = 12, options: FaceFlowOptions = {}) =
   run(Array<GuidanceCase>(times).fill(name), options).at(-1)!;
 
 describe("face guidance on drawn faces", () => {
-  it("finds what each fixture shows", () => {
+  // One fixture per test: each runs the cascades over several scales, which is slow on CI.
+  it("finds no face where there is none", () => {
     expect(observe("none")).toEqual({ pose: "none" });
+  });
+
+  it("finds the one frontal face", () => {
     expect(observe("frontal").faces).toHaveLength(1);
-    // The tiny face is found; only its size keeps it from counting as a second person.
+  });
+
+  it("finds the tiny face too", () => {
+    // Only its size keeps it from counting as a second person.
     expect(observe("tiny").faces).toHaveLength(2);
+  });
+
+  it("finds both faces of two people", () => {
     expect(observe("two").faces).toHaveLength(2);
   });
 
