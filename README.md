@@ -79,14 +79,19 @@ pixelvision fixes it and the difference is listed in
 
 ## Repository
 
-| Path                   | What                                  |
-| ---------------------- | ------------------------------------- |
-| `packages/pixelvision` | The library, published to npm         |
-| `packages/parity`      | Parity tests against jsfeat (private) |
+| Path                   | What                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------- |
+| `packages/pixelvision` | The library, published to npm as `pixelvision`                                                 |
+| `packages/face-neural` | Optional neural face detection (YuNet on onnxruntime), published as `@pixelvision/face-neural` |
+| `packages/parity`      | Parity tests against jsfeat and OpenCV.js (private)                                            |
+| `packages/compat`      | Runs the same pipeline in Node and Hermes (React Native) and compares the results (private)    |
+| `apps/examples`        | Documentation site: guides, API reference and a live, tested example for every function        |
 
 ```sh
 pnpm install
-pnpm check   # format, lint, typecheck, test, build
+pnpm check            # format, lint, typecheck, test, build
+pnpm test:e2e         # examples site in Chromium, Firefox and WebKit
+pnpm check:packages   # publint and type checks on the packed packages
 ```
 
 ## License
