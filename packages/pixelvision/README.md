@@ -1,8 +1,8 @@
 # pixelvision
 
 Typed, tested computer vision for JavaScript and TypeScript: image processing, edges and lines,
-keypoints and descriptors, optical flow, motion estimation, face detection, document scanning and the
-everyday OpenCV filters. No dependencies, no WebAssembly, no DOM: the same code runs in browsers,
+keypoints and descriptors, optical flow, motion estimation, face detection, QR codes and ArUco
+markers, document scanning and the everyday OpenCV filters. No dependencies, no WebAssembly, no DOM: the same code runs in browsers,
 Web Workers, Node and React Native (Hermes).
 
 Every function is typed, documented and tested against reference implementations, with 100% test
@@ -45,5 +45,5 @@ Documentation, live examples and the API reference: https://github.com/silvandie
 
 ## License
 
-MIT. Ports algorithms from jsfeat (MIT); bundled cascades keep their original licences, listed in
-`THIRD_PARTY_NOTICES.md`.
+MIT. Ports algorithms from jsfeat (MIT) and OpenCV (Apache-2.0); bundled cascades and ArUco
+dictionaries keep their original licences, listed in `THIRD_PARTY_NOTICES.md`.

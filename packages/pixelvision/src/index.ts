@@ -81,7 +81,17 @@ export type { BbfCascade, BbfFeature, BbfOptions, BbfStage } from "./detect/bbf.
 export { detectBbf } from "./detect/bbf";
 export type { Detection, HaarCascade, HaarOptions, HaarStage, HaarTree } from "./detect/haar.model";
 export { detectHaar } from "./detect/haar";
+export { loadOpenCvCascade } from "./detect/opencvCascade";
 export { groupRectangles } from "./detect/groupRectangles";
+export type {
+  ArucoDictionaryName,
+  ArucoMarker,
+  DetectArucoMarkersOptions,
+  GenerateArucoMarkerOptions,
+} from "./codes/aruco.model";
+export { detectArucoMarkers, generateArucoMarker } from "./codes/aruco";
+export type { QrCode, QrErrorCorrectionLevel } from "./codes/qrCode.model";
+export { readQrCode } from "./codes/qrCode";
 
 // Features
 export type { FastOptions } from "./features/fast.model";

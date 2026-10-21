@@ -1,5 +1,6 @@
 import {
   adaptiveThreshold,
+  approxPolygon,
   connectedComponents,
   inRange,
   laplacian,
@@ -304,6 +305,46 @@ describe("blur and warp agree with OpenCV within rounding", () => {
         };
         within(warpPerspective(image, t).data, values(dst), bound);
       });
+    });
+  }
+});
+
+describe("approxPolygon matches cv.approxPolyDP (closed)", () => {
+  // Every contour OpenCV finds in the fixtures (outer borders and holes, at
+  // several thresholds) is simplified by both at several tolerances; the
+  // vertices must be identical.
+  for (const fixture of fixtures) {
+    it(fixture.name, () => {
+      const image = gaussianBlur(gray(fixture), { kernelSize: 3 });
+      let compared = 0;
+      for (const blockSize of [3, 13, 23]) {
+        const binary = adaptiveThreshold(image, { blockSize, offset: 7, invert: true });
+        const src = toMat(cv, binary);
+        const contours = new cv.MatVector();
+        const hierarchy = new cv.Mat();
+        withMats([src, contours, hierarchy], () => {
+          cv.findContours(src, contours, hierarchy, cv.RETR_LIST, cv.CHAIN_APPROX_NONE);
+          for (let i = 0; i < contours.size(); i++) {
+            const contour = contours.get(i);
+            const values = contour.data32S as Int32Array;
+            const points = Array.from({ length: values.length / 2 }, (_, k) => ({
+              x: values[k * 2],
+              y: values[k * 2 + 1],
+            }));
+            for (const rate of [0.01, 0.03, 0.1]) {
+              const epsilon = points.length * rate;
+              const approx = new cv.Mat();
+              cv.approxPolyDP(contour, approx, epsilon, true);
+              const reference = Array.from(approx.data32S as Int32Array);
+              approx.delete();
+              expect(approxPolygon(points, epsilon).flatMap((p) => [p.x, p.y])).toEqual(reference);
+              compared++;
+            }
+            contour.delete();
+          }
+        });
+      }
+      expect(compared).toBeGreaterThan(0);
     });
   }
 });

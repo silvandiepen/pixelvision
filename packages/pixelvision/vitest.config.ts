@@ -12,6 +12,7 @@ export default defineConfig({
         "src/index.ts",
         "src/test-utils.ts",
         "src/test-images.ts",
+        "src/test-qr.ts",
       ],
       thresholds: {
         lines: 100,

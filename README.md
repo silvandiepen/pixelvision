@@ -22,7 +22,8 @@ and in React Native (Hermes).
 - **Tracking and motion:** pyramidal Lucas-Kanade optical flow, and robust affine and homography
   estimation with RANSAC or LMEDS.
 - **Detection:** Viola-Jones (HAAR) and BBF cascades, with bundled frontal-face, profile-face, eye
-  and upper-body cascades, plus skin detection.
+  and upper-body cascades, and OpenCV's own `haarcascade_*.xml` files; QR codes, ArUco markers and
+  skin detection.
 - **Document scanning:** find a document in a photo, straighten it, and track it across frames.
 - **Face and head-turn capture:** head-pose detection and a head-turn challenge (a client-side
   signal, not liveness proof); optional neural face detection with landmarks in

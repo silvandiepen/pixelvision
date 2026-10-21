@@ -83,3 +83,102 @@ describe("haarSingleScale", () => {
     expect(() => haarSingleScale({ sum, squares }, 30, 30, 1, frontalFace, 0)).not.toThrow();
   });
 });
+
+describe("detectHaar with trees of several splits", () => {
+  const stump = firstStages(frontalFace, 1).complexClassifiers[0].simpleClassifiers[0];
+  const other = firstStages(frontalFace, 1).complexClassifiers[0].simpleClassifiers[1];
+  const run = (tree: HaarCascade["complexClassifiers"][0]["simpleClassifiers"][0]) =>
+    detectHaar(
+      texture,
+      {
+        size: frontalFace.size,
+        complexClassifiers: [{ threshold: 0.5, simpleClassifiers: [tree] }],
+      },
+      { minNeighbors: 0, edgeDensity: false },
+    );
+
+  it("continues at the left or right split instead of scoring", () => {
+    const expected = run(stump);
+    expect(expected.length).toBeGreaterThan(0);
+
+    // Always below the threshold: the tree goes left, to the stump.
+    expect(run({ ...other, threshold: Infinity, left: stump })).toEqual(expected);
+    // Never below: it goes right.
+    expect(run({ ...other, threshold: -Infinity, right: stump })).toEqual(expected);
+  });
+});
+
+describe("detectHaar with OpenCV scoring", () => {
+  /** One split over the window's left and right halves. */
+  const halves = (threshold: number, opencvScoring: boolean): HaarCascade => ({
+    size: [8, 8],
+    opencvScoring,
+    complexClassifiers: [
+      {
+        threshold: 0,
+        simpleClassifiers: [
+          {
+            features: [
+              [0, 0, 4, 8, 1],
+              [4, 0, 4, 8, -1],
+            ],
+            threshold,
+            left_val: -1,
+            right_val: 1,
+          },
+        ],
+      },
+    ],
+  });
+  // 9 x 9: exactly one 8 x 8 window, at (0, 0) and scale 1.
+  const image = createMatrix(9, 9);
+  for (let y = 0; y < 9; y++)
+    for (let x = 0; x < 9; x++) image.data[y * 9 + x] = x < 4 ? 200 : 40 + 3 * y;
+  const found = (threshold: number, opencvScoring: boolean) =>
+    detectHaar(image, halves(threshold, opencvScoring), { minNeighbors: 0, edgeDensity: false })
+      .length;
+
+  it("normalises over the window inside a one-pixel border", () => {
+    // Inside the border: columns 1-6, rows 1-6.
+    let total = 0;
+    let squares = 0;
+    for (let y = 1; y < 7; y++) {
+      for (let x = 1; x < 7; x++) {
+        total += image.data[y * 9 + x];
+        squares += image.data[y * 9 + x] ** 2;
+      }
+    }
+    let left = 0;
+    let right = 0;
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        if (x < 4) left += image.data[y * 9 + x];
+        else right += image.data[y * 9 + x];
+      }
+    }
+    const value = (left - right) / Math.sqrt(36 * squares - total * total);
+
+    expect(found(value - 1e-9, true)).toBe(1);
+    expect(found(value + 1e-9, true)).toBe(0);
+    // Scored over the whole window, the value is smaller.
+    expect(found(value - 1e-3, false)).toBe(0);
+  });
+
+  it("scores a flat window as zero at every size, and skips rectangles rounded away", () => {
+    const flat = createMatrix(40, 40);
+    flat.data.fill(90);
+    const cascade = halves(-0.5, true);
+
+    // Zero-sum features read 0 on a flat window: above -0.5 everywhere.
+    expect(
+      detectHaar(flat, cascade, { minNeighbors: 0, edgeDensity: false }).length,
+    ).toBeGreaterThan(0);
+    expect(detectHaar(flat, halves(0.5, true), { minNeighbors: 0, edgeDensity: false })).toEqual(
+      [],
+    );
+    // At a tenth of the size the rectangles round to nothing and weigh 0.
+    expect(
+      detectHaar(flat, cascade, { minScale: 0.1, minNeighbors: 0, edgeDensity: false }).length,
+    ).toBeGreaterThan(0);
+  });
+});

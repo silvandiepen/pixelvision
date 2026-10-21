@@ -61,6 +61,9 @@ export function integralImage(image: Matrix, options: IntegralImageOptions = {})
         t[p] += t[p - stride] + t[p - stride + 1];
       }
     }
+    // Column 0 (left of the image) still covers the pixels of the diagonal
+    // running down-right from it: the cell up-right of it holds exactly those.
+    for (let y = 1, p = stride; y <= height; y++, p += stride) t[p] = t[p - stride + 1];
     result.tilted = table;
   }
   return result;

@@ -130,7 +130,17 @@ describe("integralImage matches jsfeat.imgproc.compute_integral_image", () => {
 
       expectIdentical(result.sum!.data, sum, cells);
       expectIdentical(result.squares!.data, squares, cells);
-      expectIdentical(result.tilted!.data, tilted, cells);
+      // jsfeat leaves the tilted table's column 0 at zero; pixelvision fills
+      // it as OpenCV does (each cell takes the one up-right of it). Every
+      // other cell is identical.
+      const stride = input.width + 1;
+      const ours = result.tilted!.data;
+      for (let y = 0; y <= input.height; y++) {
+        expect(ours[y * stride]).toBe(y === 0 ? 0 : ours[(y - 1) * stride + 1]);
+        expect(tilted[y * stride]).toBe(0);
+        ours[y * stride] = 0;
+      }
+      expectIdentical(ours, tilted, cells);
     });
   }
 });

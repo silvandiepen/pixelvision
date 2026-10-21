@@ -49,6 +49,31 @@ describe("integralImage", () => {
     expect(toRows(tilted!)[0]).toEqual([0, 0, 0]);
   });
 
+  it("sums each rotated triangle, left edge included", () => {
+    const random = fromRows([
+      [3, 1, 4, 1, 5],
+      [9, 2, 6, 5, 3],
+      [5, 8, 9, 7, 9],
+      [3, 2, 3, 8, 4],
+    ]);
+    const { tilted } = integralImage(random, { sum: false, tilted: true });
+
+    // Brute force: T(X, Y) sums the pixels with y < Y and |x - X + 1| <= Y - y - 1.
+    const expected = Array.from({ length: 5 }, (_, Y) =>
+      Array.from({ length: 6 }, (_, X) => {
+        let total = 0;
+        for (let y = 0; y < Y; y++) {
+          for (let x = 0; x < 5; x++) {
+            if (Math.abs(x - X + 1) <= Y - y - 1) total += random.data[y * 5 + x];
+          }
+        }
+        return total;
+      }),
+    );
+    expect(toRows(tilted!)).toEqual(expected);
+    expect(toRows(tilted!)[2][0]).toBe(3);
+  });
+
   it("does not overflow on large sums", () => {
     const bright = createMatrix(300, 300, { data: new Uint8Array(90000).fill(255) });
 

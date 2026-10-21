@@ -39,53 +39,15 @@ export function arcLength(polygon: readonly Point[], closed = true): number {
 }
 
 /**
- * Distance from a point to the segment `a`–`b`.
- *
- * @param p - The point.
- * @param a - Segment start.
- * @param b - Segment end.
- * @returns The distance.
- */
-const segmentDistance = (p: Point, a: Point, b: Point): number => {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
-  const lengthSquared = dx * dx + dy * dy;
-  if (lengthSquared === 0) return Math.hypot(p.x - a.x, p.y - a.y);
-  const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / lengthSquared));
-  return Math.hypot(p.x - (a.x + t * dx), p.y - (a.y + t * dy));
-};
-
-/**
- * Douglas–Peucker on an open chain.
- *
- * @param points - Chain.
- * @param epsilon - Tolerance.
- * @returns Kept points (first and last included).
- */
-const simplifyChain = (points: readonly Point[], epsilon: number): Point[] => {
-  if (points.length <= 2) return [...points];
-  const first = points[0];
-  const last = points[points.length - 1];
-  let index = 0;
-  let max = -1;
-  for (let i = 1; i < points.length - 1; i++) {
-    const d = segmentDistance(points[i], first, last);
-    if (d > max) {
-      max = d;
-      index = i;
-    }
-  }
-  if (max <= epsilon) return [first, last];
-  const left = simplifyChain(points.slice(0, index + 1), epsilon);
-  const right = simplifyChain(points.slice(index), epsilon);
-  return [...left.slice(0, -1), ...right];
-};
-
-/**
  * Simplifies a closed outline to a polygon whose edges stay within
- * `epsilon` pixels of it (Douglas–Peucker, as OpenCV's `approxPolyDP`).
- * Use `epsilon` around 2% of {@link arcLength} to turn the contour of a
- * sheet of paper into its 4 corners.
+ * `epsilon` pixels of it: Douglas–Peucker as OpenCV's `approxPolyDP`
+ * computes it, with identical vertices for the same outline. The loop is
+ * first split between two far-apart points (found by hopping three times to
+ * the point farthest away, from the first), each part is split at the point
+ * farthest from its chord until every point is within `epsilon`, and
+ * vertices on nearly straight runs are dropped at the end. Use `epsilon`
+ * around 2% of {@link arcLength} to turn the contour of a sheet of paper
+ * into its 4 corners.
  *
  * @param contour - Closed outline, e.g. from {@link findContours}.
  * @param epsilon - Maximum distance between the outline and the polygon.
@@ -95,20 +57,104 @@ const simplifyChain = (points: readonly Point[], epsilon: number): Point[] => {
  * const corners = approxPolygon(contour, 0.02 * arcLength(contour));
  */
 export function approxPolygon(contour: readonly Point[], epsilon: number): Point[] {
-  if (contour.length <= 2) return [...contour];
-  // Split the loop at the point farthest from the first, then simplify both halves.
-  let far = 0;
-  let max = -1;
-  for (let i = 1; i < contour.length; i++) {
-    const d = Math.hypot(contour[i].x - contour[0].x, contour[i].y - contour[0].y);
-    if (d > max) {
-      max = d;
-      far = i;
+  const count = contour.length;
+  if (count === 0) return [];
+  const eps = epsilon * epsilon;
+  const out: Point[] = [];
+  const stack: [number, number][] = [];
+
+  // 1. Two approximately farthest points: hop three times to the point
+  // farthest from the current one, starting at the first.
+  let start = 0;
+  let farthest = 0;
+  let closeTogether = false;
+  for (let iteration = 0; iteration < 3; iteration++) {
+    start = (start + farthest) % count;
+    const origin = contour[start];
+    let maxDistance = 0;
+    farthest = 0;
+    for (let j = 1; j < count; j++) {
+      const p = contour[(start + j) % count];
+      const distance = (p.x - origin.x) ** 2 + (p.y - origin.y) ** 2;
+      if (distance > maxDistance) {
+        maxDistance = distance;
+        farthest = j;
+      }
     }
+    closeTogether = maxDistance <= eps;
   }
-  const first = simplifyChain(contour.slice(0, far + 1), epsilon);
-  const second = simplifyChain([...contour.slice(far), contour[0]], epsilon);
-  return [...first.slice(0, -1), ...second.slice(0, -1)];
+  if (closeTogether) {
+    out.push(contour[start]);
+  } else {
+    const end = (start + farthest) % count;
+    stack.push([end, start], [start, end]);
+  }
+
+  // 2. Split each part at the point farthest from its chord.
+  while (stack.length) {
+    const [from, to] = stack.pop()!;
+    const a = contour[from];
+    const b = contour[to];
+    let pos = (from + 1) % count;
+    let withinEps = true;
+    let split = from;
+    if (pos !== to) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      let maxDistance = 0;
+      for (; pos !== to; pos = (pos + 1) % count) {
+        const p = contour[pos];
+        // Distance to the chord's line, times its length. A chord never has
+        // length 0: its ends are far apart or split off it, off its line.
+        const distance = Math.abs((p.y - a.y) * dx - (p.x - a.x) * dy);
+        if (distance > maxDistance) {
+          maxDistance = distance;
+          split = pos;
+        }
+      }
+      withinEps = maxDistance * maxDistance <= eps * (dx * dx + dy * dy);
+    }
+    if (withinEps) out.push(a);
+    else stack.push([split, to], [from, split]);
+  }
+
+  // 3. Drop vertices on nearly straight runs (not along an axis). Like
+  // OpenCV this reads and rewrites the vertex list in place, wrapping round.
+  const n = out.length;
+  let kept = n;
+  let pos = n - 1;
+  const next = () => {
+    const vertex = out[pos];
+    pos = pos + 1 >= n ? 0 : pos + 1;
+    return vertex;
+  };
+  let a = next();
+  let write = pos;
+  let p = next();
+  for (let i = 0; i < n && kept > 2; i++) {
+    const b = next();
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const distance = Math.abs((p.x - a.x) * dy - (p.y - a.y) * dx);
+    const forward = (p.x - a.x) * (b.x - p.x) + (p.y - a.y) * (b.y - p.y);
+    if (
+      distance * distance <= 0.5 * eps * (dx * dx + dy * dy) &&
+      dx !== 0 &&
+      dy !== 0 &&
+      forward >= 0
+    ) {
+      kept--;
+      out[write] = a = b;
+      write = write + 1 >= n ? 0 : write + 1;
+      p = next();
+      i++;
+      continue;
+    }
+    out[write] = a = p;
+    write = write + 1 >= n ? 0 : write + 1;
+    p = b;
+  }
+  return out.slice(0, kept);
 }
 
 /**
