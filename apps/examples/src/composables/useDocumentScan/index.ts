@@ -1,0 +1,1 @@
+export { useDocumentScan } from "./useDocumentScan";

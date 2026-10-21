@@ -50,12 +50,16 @@
         <p :class="bemm('instruction')" aria-live="polite" data-challenge-instruction>
           {{ instruction }}
         </p>
+        <p v-if="hint" :class="bemm('hint')" data-challenge-hint>{{ hint }}</p>
         <ol :class="bemm('steps')" aria-label="Progress">
           <li
             v-for="(label, index) in STEP_LABELS"
             :key="label"
             :class="bemm('step', ['', stepState(index)])"
             :aria-current="stepState(index) === 'current' ? 'step' : undefined"
+            :style="
+              stepState(index) === 'current' ? { '--hold': challengeState.holdProgress } : undefined
+            "
           >
             <span :class="bemm('step-number')">{{ index + 1 }}</span>
             {{ label }}
@@ -94,29 +98,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, shallowRef, useId } from "vue";
+import { computed, onMounted, useId, watch } from "vue";
 import { useBemm } from "bemm";
-import { createHeadTurnChallenge, detectHeadPose, grayscale } from "pixelvision";
-import type { HeadPose, HeadTurnChallenge, HeadTurnState, Point } from "pixelvision";
 import AppButton from "../AppButton";
 import DataTable from "../DataTable";
-import type { RGBAImage } from "pixelvision";
-import { useCamera } from "../../composables/useCamera";
+import { useHeadTurn } from "../../composables/useHeadTurn";
+import type { FaceBackend } from "../../composables/useHeadTurn/useHeadTurn.model";
 import { defaultValues } from "../../examples/define";
 import type { HeadPoseResources } from "../../examples/detect-head-pose/demo.model";
-import { loadNeuralBackend } from "../../examples/head-turn/neural";
-import type { NeuralBackend } from "../../examples/head-turn/neural.model";
-import { scriptedPoses } from "../../examples/head-turn/script";
 import { publishResult } from "../../results";
-import type { FaceBackend, HeadTurnCheckProps, PoseSource } from "./HeadTurnCheck.model";
+import type { HeadTurnCheckProps } from "./HeadTurnCheck.model";
 
 const props = defineProps<HeadTurnCheckProps>();
 const bemm = useBemm("head-turn-check", { includeBaseClass: true });
-const camera = useCamera();
-const { video } = camera;
 
-const FRAME_INTERVAL = 125; // about 8 detections a second
-const SCRIPT_INTERVAL = 150;
 const STEP_LABELS = [
   "Face the camera",
   "Turn one way",
@@ -136,26 +131,45 @@ const scripted = props.example.run(
   options,
 );
 
-const status = ref<"loading" | "ready" | "error">("loading");
-const source = ref<PoseSource>("idle");
-const message = ref<string | null>(null);
-const pose = ref<HeadPose | "—">("—");
-const face = shallowRef<{ x: number; y: number; width: number; height: number } | null>(null);
-const landmarks = shallowRef<Point[]>([]);
-const yaw = ref<number | null>(null);
-const backend = ref<FaceBackend>("haar");
-const neural = shallowRef<NeuralBackend | null>(null);
-const neuralState = ref<"idle" | "loading" | "ready" | "error">("idle");
-const frameSize = ref<{ width: number; height: number } | null>(null);
-const detectionTime = ref<number | null>(null);
-const cascades = shallowRef<HeadPoseResources | null>(null);
-let challenge: HeadTurnChallenge = createHeadTurnChallenge({ holdFrames: options.holdFrames });
-const challengeState = shallowRef<HeadTurnState>(challenge.state);
-let timer = 0;
+const check = useHeadTurn({
+  holdFrames: options.holdFrames,
+  loadCascades: () =>
+    (props.example.loadResources?.() ??
+      Promise.reject(new Error("No cascades"))) as Promise<HeadPoseResources>,
+  onUpdate: (next, from) =>
+    publishResult(props.example.slug, {
+      status: "ready",
+      error: null,
+      defaults: false,
+      values: {
+        step: next.step,
+        progress: next.progress,
+        firstSide: next.firstSide ?? "",
+        source: from,
+      },
+    }),
+});
+const {
+  camera,
+  source,
+  state: challengeState,
+  backend,
+  neuralState,
+  ready,
+  finished,
+  pose,
+  face,
+  yaw,
+  frameSize,
+  detectionTime,
+  message,
+  hint,
+  chooseBackend,
+  stop,
+} = check;
+const { video } = camera;
+const status = check.cascadesState;
 
-const ready = computed(() =>
-  backend.value === "haar" ? status.value === "ready" : neuralState.value === "ready",
-);
 const backendStatus = computed(() => {
   if (backend.value === "haar") {
     return "Built in, nothing to download. The profile cascade only fires on a nearly full profile, so turn far.";
@@ -164,7 +178,6 @@ const backendStatus = computed(() => {
   if (neuralState.value === "error") return "The neural detector couldn't load.";
   return "YuNet loaded. Turns of about 20° count, and it knows left from right.";
 });
-const finished = computed(() => ["done", "failed"].includes(challengeState.value.step));
 const instruction = computed(() => {
   if (source.value === "idle") return "Start the check, then follow the instructions here.";
   if (challengeState.value.step === "done") return "Done. You turned your head both ways.";
@@ -185,130 +198,14 @@ function stepState(index: number): string {
   return index === challengeState.value.progress && !finished.value ? "current" : "";
 }
 
-/**
- * Feeds one pose to the challenge and publishes the state.
- *
- * @param next - The pose seen in this frame.
- */
-function advance(next: HeadPose): void {
-  pose.value = next;
-  challengeState.value = challenge.update(next);
-  publishResult(props.example.slug, {
-    status: "ready",
-    error: null,
-    defaults: false,
-    values: {
-      step: challengeState.value.step,
-      progress: challengeState.value.progress,
-      firstSide: challengeState.value.firstSide ?? "",
-      source: source.value,
-    },
-  });
-}
-
-/** Starts a new challenge. */
-function restart(): void {
-  window.clearTimeout(timer);
-  challenge = createHeadTurnChallenge({ holdFrames: options.holdFrames });
-  challengeState.value = challenge.state;
-  face.value = null;
-  landmarks.value = [];
-  yaw.value = null;
-  pose.value = "—";
-  message.value = null;
-}
-
-/**
- * Finds the pose in a frame with the chosen detector.
- *
- * @param frame - The camera frame as taken (not mirrored).
- * @returns The pose.
- */
-async function detectPose(frame: RGBAImage): Promise<HeadPose> {
-  if (backend.value === "neural" && neural.value) {
-    const [best] = await neural.value.detector.detect(frame);
-    face.value = best ?? null;
-    landmarks.value = best ? Object.values(best.landmarks) : [];
-    yaw.value = best ? neural.value.estimateHeadYaw(best) : null;
-    return neural.value.headPoseFromFace(best, { mirrored: false });
-  }
-  if (!cascades.value) return "none";
-  const result = detectHeadPose(grayscale(frame), cascades.value);
-  face.value = result.face ?? null;
-  landmarks.value = [];
-  yaw.value = null;
-  return result.pose;
-}
-
-/** Detects the pose in the current camera frame and advances the challenge. */
-async function tick(): Promise<void> {
-  const frame = camera.frame({ width: 640, height: 480 });
-  if (frame) {
-    frameSize.value = { width: frame.width, height: frame.height };
-    const started = performance.now();
-    // The preview is mirrored with CSS; the detector gets the frame as the camera took it.
-    const next = await detectPose(frame);
-    detectionTime.value = performance.now() - started;
-    if (source.value !== "camera") return;
-    advance(next);
-  }
-  if (finished.value) {
-    camera.stop();
-    return;
-  }
-  timer = window.setTimeout(() => void tick(), FRAME_INTERVAL);
-}
-
-/**
- * Switches the face detector, loading the neural one the first time.
- *
- * @param choice - The detector.
- */
-async function chooseBackend(choice: FaceBackend): Promise<void> {
-  if (source.value === "camera") stop();
-  backend.value = choice;
-  if (choice !== "neural" || neural.value) return;
-  neuralState.value = "loading";
-  try {
-    neural.value = await loadNeuralBackend();
-    neuralState.value = "ready";
-  } catch (caught) {
-    neuralState.value = "error";
-    message.value = `The neural detector couldn't load: ${caught instanceof Error ? caught.message : String(caught)}`;
-  }
-}
-
 /** Starts the selfie camera and the check. */
-async function startCamera(): Promise<void> {
-  restart();
-  source.value = "camera";
-  if (!(await camera.start("user"))) {
-    source.value = "idle";
-    message.value = camera.error.value;
-    return;
-  }
-  void tick();
-}
-
-/** Stops the camera and the check. */
-function stop(): void {
-  window.clearTimeout(timer);
-  camera.stop();
-  source.value = "idle";
-  restart();
+function startCamera(): void {
+  void check.start();
 }
 
 /** Plays the scripted sequence of poses through the same challenge and screen. */
 function playScripted(): void {
-  camera.stop();
-  restart();
-  source.value = "scripted";
-  const poses = scriptedPoses(options.holdFrames);
-  const step = (index: number) => {
-    advance(poses[index]);
-    if (index + 1 < poses.length) timer = window.setTimeout(() => step(index + 1), SCRIPT_INTERVAL);
-  };
-  step(0);
+  check.playScripted();
 }
 
 onMounted(() => {
@@ -318,19 +215,18 @@ onMounted(() => {
     defaults: true,
     values: scripted.values,
   });
-  props.example
-    .loadResources?.()
-    .then((loaded) => {
-      cascades.value = loaded as HeadPoseResources;
-      status.value = "ready";
-      if (new URLSearchParams(window.location.search).get("demo") === "scripted") playScripted();
-    })
-    .catch((caught: unknown) => {
-      status.value = "error";
-      message.value = `The face cascades didn't load: ${caught instanceof Error ? caught.message : String(caught)}`;
-    });
+  if (new URLSearchParams(window.location.search).get("demo") === "scripted") {
+    const stopWatching = watch(
+      status,
+      (loaded) => {
+        if (loaded !== "ready") return;
+        playScripted();
+        queueMicrotask(() => stopWatching());
+      },
+      { immediate: true },
+    );
+  }
 });
-onBeforeUnmount(() => window.clearTimeout(timer));
 </script>
 
 <style lang="scss">
@@ -435,6 +331,10 @@ onBeforeUnmount(() => window.clearTimeout(timer));
     line-height: 1.2;
   }
 
+  &__hint {
+    color: var(--auno-secondary);
+  }
+
   &__steps {
     display: flex;
     flex-direction: column;
@@ -454,7 +354,11 @@ onBeforeUnmount(() => window.clearTimeout(timer));
     font-size: var(--auno-text-small);
 
     &--current {
-      background: var(--auno-pressed);
+      background: linear-gradient(
+        to right,
+        var(--auno-pressed) calc(var(--hold, 0) * 100%),
+        var(--auno-surface) calc(var(--hold, 0) * 100%)
+      );
       font-weight: 600;
     }
 

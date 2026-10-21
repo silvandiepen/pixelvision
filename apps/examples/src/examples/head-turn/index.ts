@@ -14,7 +14,7 @@ export const headTurnExample = defineExample<HeadTurnDemoOptions, HeadPoseResour
     "Asks the person in front of the camera to look at it, turn their head one way, then the other, and look back. A printed photo or a still screen can't do that.",
   howItWorks: [
     "About 8 times a second, the camera frame goes to `detectHeadPose`, which reports `frontal`, `profile`, `mirrored-profile` or `none`. The preview is mirrored so it feels like a mirror, but the detector gets the frame as the camera took it.",
-    "`createHeadTurnChallenge` turns those poses into four steps: face the camera, turn to one side, turn to the other side, face the camera again. A pose only counts once it has held for `holdFrames` frames in a row, so one lucky detection doesn't move it on. After 30 seconds without finishing, the check fails and you can try again.",
+    "`createHeadTurnChallenge` turns those poses into four steps: face the camera, turn to one side, turn to the other side, face the camera again. A step completes once `holdFrames` of the last `2 × holdFrames` frames with a face match it, so one lucky detection doesn't move it on and one missed detection doesn't reset it; frames without a face count neither way. `holdProgress` (0–1) says how far the current step is, and fills the bar of the current step here. The instruction only changes when the step does, and a hint like \"Move a little closer\" only shows once it has held for 800 ms, so the screen stays calm. After 30 seconds without finishing, the check fails and you can try again.",
     "There are two face detectors to choose from. Built-in (HAAR) needs no download: `detectHeadPose` runs the frontal and profile cascades. The profile cascade only fires on a nearly full profile, so the person has to turn far, and which of `profile` and `mirrored-profile` is their left hasn't been checked on real faces; the challenge only needs both sides. Neural (YuNet) is the optional `@pixelvision/face-neural` package: a 230 KB model on onnxruntime-web, downloaded only when you pick it. It finds the eyes, nose and mouth, so `estimateHeadYaw` measures the turn in degrees and `headPoseFromFace` reports `turned-left` or `turned-right` from about 18°, from the person's point of view. That makes the instructions directional.",
     "This is an active liveness signal, not certified liveness. It stops printed photos and still screens, but a video replay or a deepfake could follow the steps. For identity checks (KYC), send the capture to a certified liveness service; we use ID R&D on the server.",
   ],
@@ -28,7 +28,7 @@ export const headTurnExample = defineExample<HeadTurnDemoOptions, HeadPoseResour
       type: "range",
       key: "holdFrames",
       label: "Frames to hold",
-      description: "How many frames in a row a pose must be seen before it counts.",
+      description: "How many matching frames, out of the recent ones with a face, a step needs.",
       min: 1,
       max: 8,
       step: 1,

@@ -32,6 +32,10 @@
       </div>
     </section>
 
+    <ScanDocumentSection />
+
+    <LivenessSection />
+
     <section :class="bemm('section')" aria-labelledby="what">
       <h2 id="what" :class="bemm('heading')">What it does</h2>
       <div :class="bemm('features')">
@@ -133,6 +137,8 @@ import { useBemm } from "bemm";
 import logo from "../../../../../assets/logo-current-color.svg?raw";
 import CodeBlock from "../../components/CodeBlock";
 import HeroDemo from "../../components/HeroDemo";
+import LivenessSection from "../../components/LivenessSection";
+import ScanDocumentSection from "../../components/ScanDocumentSection";
 import { SITE_FACTS, fillFacts } from "../../content/facts";
 import { findGuide, markdownSection } from "../../content/guides";
 import { findExample } from "../../examples/registry";

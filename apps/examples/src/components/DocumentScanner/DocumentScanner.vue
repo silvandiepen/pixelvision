@@ -81,50 +81,49 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, shallowRef } from "vue";
+import { computed, reactive, ref, shallowRef } from "vue";
 import { useBemm } from "bemm";
 import { extractDocument, findDocument } from "pixelvision";
 import type { Matrix, Point, RGBAImage } from "pixelvision";
 import AppButton from "../AppButton";
 import ControlField from "../ControlField";
 import ImageView from "../ImageView";
-import { useCamera } from "../../composables/useCamera";
+import { useDocumentScan } from "../../composables/useDocumentScan";
 import { defaultValues } from "../../examples/define";
 import type { SelectControl } from "../../examples/example.model";
 import { ASPECT_RATIOS } from "../../examples/scan-document/demo";
-import type { CornerHistoryEntry, DocumentAspect } from "../../examples/scan-document/demo.model";
-import { isStable } from "../../examples/scan-document/stability";
+import type { DocumentAspect } from "../../examples/scan-document/demo.model";
 import { publishResult } from "../../results";
 import { getSample } from "../../samples/samples";
 import { round } from "../../utils/format";
-import { toDisplayPixels } from "../../utils/display";
+import { encodeImage, saveBlob } from "../../utils/export";
 import { readImageFile } from "../../utils/input";
 import type { DocumentScannerProps, ScannerState } from "./DocumentScanner.model";
 
 const props = defineProps<DocumentScannerProps>();
 const bemm = useBemm("document-scanner", { includeBaseClass: true });
-const camera = useCamera();
+const scan = useDocumentScan({
+  onCapture: (capture) => {
+    fromSample.value = false;
+    usePhoto(capture.photo, capture.corners);
+  },
+});
+const { camera, liveCorners, frameSize } = scan;
 const { video } = camera;
-
-const FRAME_INTERVAL = 100; // about 10 detections a second
-const FRAME_BOX = { width: 640, height: 480 };
-const STABLE_FRAMES = 8;
 
 const aspectControl = props.example.controls.find((c) => c.key === "aspect") as SelectControl;
 const values = reactive(defaultValues(props.example.controls) as { aspect: DocumentAspect });
 
-const state = ref<ScannerState>("photo");
 const status = ref<"running" | "ready" | "error">("running");
 const message = ref<string | null>(null);
 const photo = shallowRef<RGBAImage | null>(null);
 const corners = ref<Point[] | null>(null);
 const fromSample = ref(true);
 const cameraUsed = ref(false);
-const liveCorners = ref<readonly Point[] | null>(null);
-const frameSize = ref<{ width: number; height: number } | null>(null);
-const history: CornerHistoryEntry[] = [];
-let timer = 0;
 
+const state = computed<ScannerState>(() =>
+  scan.state.value === "idle" ? "photo" : scan.state.value,
+);
 const straightened = computed<Matrix<"u8"> | null>(() =>
   photo.value && corners.value
     ? extractDocument(photo.value, corners.value as [Point, Point, Point, Point], {
@@ -137,8 +136,7 @@ const usingDefaults = computed(
 );
 const statusText = computed(() => {
   if (state.value === "holding") {
-    const held = Math.min(history.filter(Boolean).length, STABLE_FRAMES);
-    return `Hold still (${held} of ${STABLE_FRAMES})`;
+    return `Hold still (${scan.held.value} of ${scan.stableFrames})`;
   }
   return "Looking for a document. Fit the whole page in view, against a background it stands out from.";
 });
@@ -190,47 +188,20 @@ function adjustCorners(points: Point[]): void {
   publish();
 }
 
-/** Looks for the document in the current camera frame and captures when it's stable. */
-function tick(): void {
-  const frame = camera.frame(FRAME_BOX);
-  if (frame) {
-    frameSize.value = { width: frame.width, height: frame.height };
-    const found = findDocument(frame);
-    liveCorners.value = found?.corners ?? null;
-    history.push(found?.corners ?? null);
-    if (history.length > STABLE_FRAMES) history.shift();
-    state.value = found ? "holding" : "looking";
-    if (found && isStable(history, { frames: STABLE_FRAMES, tolerance: 6 })) {
-      state.value = "captured";
-      camera.stop();
-      usePhoto(frame, found.corners);
-      return;
-    }
-  }
-  timer = window.setTimeout(tick, FRAME_INTERVAL);
-}
-
 /** Starts the back camera and the detection loop. */
 async function startCamera(): Promise<void> {
-  window.clearTimeout(timer);
-  history.length = 0;
-  liveCorners.value = null;
   message.value = null;
-  if (!(await camera.start("environment"))) {
+  if (!(await scan.start())) {
     message.value = camera.error.value;
     return;
   }
   fromSample.value = false;
   cameraUsed.value = true;
-  state.value = "looking";
-  tick();
 }
 
 /** Stops the camera, keeping the last result. */
 function stopCamera(): void {
-  window.clearTimeout(timer);
-  camera.stop();
-  state.value = photo.value ? "photo" : "looking";
+  scan.stop();
 }
 
 /**
@@ -245,7 +216,7 @@ async function upload(event: Event): Promise<void> {
   try {
     const image = await readImageFile(file);
     fromSample.value = false;
-    state.value = "photo";
+    scan.state.value = "idle";
     usePhoto(image);
   } catch {
     message.value = `"${file.name}" couldn't be read as an image.`;
@@ -253,25 +224,12 @@ async function upload(event: Event): Promise<void> {
 }
 
 /** Saves the straightened document as a PNG. */
-function download(): void {
+async function download(): Promise<void> {
   if (!straightened.value) return;
-  const { width, height, data } = toDisplayPixels(straightened.value);
-  const canvas = window.document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-  canvas.getContext("2d")?.putImageData(new ImageData(data, width, height), 0, 0);
-  canvas.toBlob((blob) => {
-    if (!blob) return;
-    const link = window.document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "document.png";
-    link.click();
-    URL.revokeObjectURL(link.href);
-  }, "image/png");
+  saveBlob(await encodeImage(straightened.value, "image/png"), "document.png");
 }
 
 usePhoto(getSample(props.example.sample ?? "desk").generate());
-onBeforeUnmount(() => window.clearTimeout(timer));
 </script>
 
 <style lang="scss">
