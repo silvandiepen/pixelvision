@@ -60,14 +60,6 @@ const values = (mat: OpenCv): number[] => {
   return Array.from(view as ArrayLike<number>);
 };
 
-/** Values inside a margin, so border policies don't matter. */
-const interior = (data: ArrayLike<number>, width: number, height: number, margin: number) => {
-  const out: number[] = [];
-  for (let y = margin; y < height - margin; y++)
-    for (let x = margin; x < width - margin; x++) out.push(data[y * width + x]);
-  return out;
-};
-
 describe("threshold and otsuLevel match cv.threshold(THRESH_OTSU)", () => {
   for (const fixture of fixtures) {
     it(fixture.name, () => {
@@ -231,19 +223,32 @@ describe("perspectiveTransform matches cv.getPerspectiveTransform", () => {
 });
 
 describe("blur and warp agree with OpenCV within rounding", () => {
-  /** Asserts every difference (pixelvision − OpenCV) lies in [low, high]. */
+  /**
+   * Asserts every difference (pixelvision − OpenCV) lies in the `[low, high]`
+   * range `bound` gives for its index; a `null` bound skips the value.
+   *
+   * @param a - pixelvision values.
+   * @param b - OpenCV values.
+   * @param bound - Allowed difference range per index, or null to skip it.
+   */
   const within = (
     a: ArrayLike<number>,
     b: ArrayLike<number>,
-    low: number,
-    high: number,
-    keep = (_: number) => true,
+    bound: (index: number) => readonly [number, number] | null,
   ) => {
+    expect(a.length).toBe(b.length);
+    let checked = 0;
     for (let i = 0; i < a.length; i++) {
-      if (!keep(i)) continue;
+      const range = bound(i);
+      if (!range) continue;
+      checked++;
       const d = a[i] - b[i];
-      if (d < low || d > high) expect.fail(`value ${i}: pixelvision ${a[i]}, OpenCV ${b[i]}`);
+      if (d < range[0] || d > range[1]) {
+        expect.fail(`value ${i}: pixelvision ${a[i]}, OpenCV ${b[i]}`);
+      }
     }
+    // Most values must count, or a bound that skips everything would pass.
+    expect(checked).toBeGreaterThan(a.length / 2);
   };
 
   for (const fixture of fixtures) {
@@ -256,7 +261,7 @@ describe("blur and warp agree with OpenCV within rounding", () => {
       const dst = new cv.Mat();
       withMats([src, dst], () => {
         cv.GaussianBlur(src, dst, new cv.Size(5, 5), 0, 0, cv.BORDER_REPLICATE);
-        within(gaussianBlur(image, { kernelSize: 5 }).data, values(dst), () => [-2, 0]);
+        within(gaussianBlur(image, { kernelSize: 5 }).data, values(dst), () => [-2, 0] as const);
       });
     });
 
