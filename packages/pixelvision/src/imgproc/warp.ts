@@ -42,7 +42,19 @@ const sample = (
   ys: number,
   fill: number,
 ): number => {
-  if (!(xs >= 0 && ys >= 0 && xs <= width - 1 && ys <= height - 1)) return fill;
+  // Points within rounding error of the border count as on it: a transform
+  // built to map corner to corner can land at -5e-15 instead of 0.
+  const tolerance = 1e-9;
+  if (!(
+    xs >= -tolerance &&
+    ys >= -tolerance &&
+    xs <= width - 1 + tolerance &&
+    ys <= height - 1 + tolerance
+  )) {
+    return fill;
+  }
+  xs = Math.min(Math.max(xs, 0), width - 1);
+  ys = Math.min(Math.max(ys, 0), height - 1);
   const x0 = Math.floor(xs);
   const y0 = Math.floor(ys);
   const a = xs - x0;

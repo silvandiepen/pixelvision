@@ -34,6 +34,13 @@ describe("warpPerspective", () => {
     ]);
   });
 
+  it("samples points within rounding error of the border", () => {
+    // Maps output x = 0 to input x = -5e-15: still the first column.
+    const nearlyZero = warpAffine(image, [1, 0, -5e-15, 0, 1, 0], { fill: 255 });
+
+    expect(toRows(nearlyZero)[0][0]).toBe(10);
+  });
+
   it("divides by the projective term", () => {
     // w = 2 everywhere: output (x, y) reads input (x/2, y/2) scaled twice: (2x/2, 2y/2).
     const scaled = warpPerspective(image, [2, 0, 0, 0, 2, 0, 0, 0, 2]);
