@@ -1,4 +1,4 @@
-import { onBeforeUnmount, ref, shallowRef } from "vue";
+import { nextTick, onBeforeUnmount, ref, shallowRef } from "vue";
 import { readPixels } from "../../utils/input";
 import type { FacingMode, UseCamera } from "./useCamera.model";
 
@@ -66,8 +66,12 @@ export function useCamera(): UseCamera {
       });
       if (!video.value) throw new Error("No video element");
       video.value.srcObject = stream;
-      await video.value.play();
+      // Show the video before playing it: Safari and other WebKit browsers
+      // don't start a muted video that isn't visible, and the view only shows
+      // it while the camera is active. Frames are read once it has a size.
       active.value = true;
+      await nextTick();
+      await video.value.play();
       return true;
     } catch (caught) {
       stop();
