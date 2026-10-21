@@ -1,0 +1,22 @@
+{
+  "name": "@pixelvision/examples-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Browser tests for the framework examples: each one's production build, in Chromium, Firefox and WebKit.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@pixelvision/example-react": "workspace:*",
+    "@pixelvision/example-svelte": "workspace:*",
+    "@pixelvision/example-vanilla": "workspace:*",
+    "@pixelvision/example-vue": "workspace:*",
+    "@pixelvision/example-worker": "workspace:*",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3"
+  }
+}

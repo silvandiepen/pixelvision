@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>pixelvision · Web Worker</title>
+  </head>
+  <body>
+    <main>
+      <h1>pixelvision · Web Worker</h1>
+      <p>
+        Upload a photo of a document, or take one with the camera. The work runs in a Web Worker.
+      </p>
+      <div class="controls">
+        <input type="file" accept="image/*" aria-label="Photo" data-upload />
+        <button type="button" data-camera>Use camera</button>
+      </div>
+      <p role="status" data-status>Choose a photo or use the camera.</p>
+      <canvas data-result></canvas>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

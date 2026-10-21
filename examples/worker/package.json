@@ -1,0 +1,21 @@
+{
+  "name": "@pixelvision/example-worker",
+  "version": "0.0.0",
+  "private": true,
+  "description": "pixelvision in a Web Worker, so finding a document never blocks the page.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixelvision": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "6.0.3",
+    "vite": "8.3.4"
+  }
+}

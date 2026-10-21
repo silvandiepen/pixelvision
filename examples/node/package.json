@@ -1,0 +1,22 @@
+{
+  "name": "@pixelvision/example-node",
+  "version": "0.0.0",
+  "private": true,
+  "description": "pixelvision in Node: find a document in an image file and write it straightened, from ESM and CommonJS.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/cli.mjs fixtures/scene.pgm out/document.pgm",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixelvision": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

@@ -74,11 +74,12 @@ const onFrame = (frame: ImageData) => {
 | `packages/parity`      | Tests against reference implementations (private)                                              |
 | `packages/compat`      | Runs the same pipeline in Node and Hermes (React Native) and compares the results (private)    |
 | `apps/examples`        | Documentation site: guides, API reference and a live, tested example for every function        |
+| `examples/*`           | Small starter apps (Vanilla, Vue, React, Svelte, Web Worker, Node) that use the built package  |
 
 ```sh
 pnpm install
 pnpm check            # format, lint, typecheck, test, build
-pnpm test:e2e         # examples site in Chromium, Firefox and WebKit
+pnpm test:e2e         # docs site and starter apps in Chromium, Firefox and WebKit
 pnpm check:packages   # publint and type checks on the packed packages
 ```
 

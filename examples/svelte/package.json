@@ -1,0 +1,23 @@
+{
+  "name": "@pixelvision/example-svelte",
+  "version": "0.0.0",
+  "private": true,
+  "description": "pixelvision in a Vite + Svelte app: find a document in a photo.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "pixelvision": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "7.3.1",
+    "svelte": "5.57.1",
+    "typescript": "6.0.3",
+    "vite": "8.3.4"
+  }
+}
