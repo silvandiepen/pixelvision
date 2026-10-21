@@ -4,7 +4,7 @@ import { profileFace } from "../cascades/profile-face";
 import { createMatrix } from "../core/matrix";
 import type { HaarCascade } from "../detect/haar.model";
 import { gaussianBlur } from "../imgproc/gaussianBlur";
-import { noiseImage } from "../test-images";
+import { drawFace, noiseImage } from "../test-images";
 import { detectHeadPose } from "./headPose";
 
 /** A one-stage cascade, which fires on ordinary texture. */
@@ -13,12 +13,48 @@ const loose = (cascade: HaarCascade): HaarCascade => ({
   complexClassifiers: cascade.complexClassifiers.slice(0, 1),
 });
 const texture = gaussianBlur(noiseImage(400, 300, 4), { kernelSize: 3 });
+const cascades = { frontal: frontalFace, profile: profileFace };
+
+/**
+ * A mid-gray wall with drawn faces.
+ *
+ * @param width - Width.
+ * @param height - Height.
+ * @param faces - `[cx, cy, scale]` each.
+ * @returns The image.
+ */
+const withFaces = (width: number, height: number, faces: Array<[number, number, number]>) => {
+  const image = createMatrix(width, height);
+  image.data.fill(135);
+  for (const [cx, cy, s] of faces) drawFace(image, cx, cy, s);
+  return image;
+};
 
 describe("detectHeadPose", () => {
   it("reports no face in noise with the real cascades", () => {
-    expect(detectHeadPose(texture, { frontal: frontalFace, profile: profileFace })).toEqual({
-      pose: "none",
-    });
+    expect(detectHeadPose(texture, cascades)).toEqual({ pose: "none", faces: [] });
+  });
+
+  it("lists every face, the chosen one first, in input pixels", () => {
+    const image = withFaces(640, 360, [
+      [170, 180, 1.1],
+      [480, 180, 1],
+    ]);
+    const { pose, face, faces } = detectHeadPose(image, cascades);
+
+    expect(pose).toBe("frontal");
+    expect(faces).toHaveLength(2);
+    expect(faces[0]).toBe(face);
+    const centres = faces.map((f) => Math.round((f.x + f.width / 2) / 10) * 10).sort();
+    expect(centres).toEqual([170, 480]);
+    expect(faces.every((f) => f.width > 100)).toBe(true);
+  });
+
+  it("counts one person once", () => {
+    // Small enough to be searched without downscaling.
+    const { face, faces } = detectHeadPose(withFaces(320, 240, [[160, 120, 0.9]]), cascades);
+
+    expect(faces).toEqual([face]);
   });
 
   it("returns the best-supported pose with its box in input pixels", () => {
@@ -31,6 +67,7 @@ describe("detectHeadPose", () => {
 
     expect(result.pose).not.toBe("none");
     expect(result.face!.width).toBeGreaterThan(20);
+    expect(result.faces[0]).toBe(result.face);
     expect(result.face!.x + result.face!.width).toBeLessThanOrEqual(400 + 1);
   });
 

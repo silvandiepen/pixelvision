@@ -91,6 +91,35 @@ export const drawQuad = (
 };
 
 /**
+ * Draws a plain schematic face (hair, skin, eyes, brows, nose, mouth),
+ * enough structure for the frontal-face cascade.
+ *
+ * @param image - Gray image.
+ * @param cx - Centre x of the face.
+ * @param cy - Centre y of the face.
+ * @param s - Scale; 1 is a face about 112 pixels wide.
+ */
+export const drawFace = (image: Matrix<"u8">, cx: number, cy: number, s: number): void => {
+  const ellipse = (ex: number, ey: number, rx: number, ry: number, value: number) => {
+    for (let y = Math.max(0, Math.floor(ey - ry)); y < Math.min(image.height, ey + ry); y++) {
+      for (let x = Math.max(0, Math.floor(ex - rx)); x < Math.min(image.width, ex + rx); x++) {
+        if (((x + 0.5 - ex) / rx) ** 2 + ((y + 0.5 - ey) / ry) ** 2 <= 1) {
+          image.data[y * image.width + x] = value;
+        }
+      }
+    }
+  };
+  ellipse(cx, cy - 20 * s, 66 * s, 70 * s, 30);
+  ellipse(cx, cy + 5 * s, 56 * s, 72 * s, 190);
+  for (const side of [-1, 1]) {
+    ellipse(cx + side * 22 * s, cy - 12 * s, 11 * s, 5 * s, 42);
+    ellipse(cx + side * 22 * s, cy - 26 * s, 14 * s, 3 * s, 55);
+  }
+  ellipse(cx, cy + 14 * s, 7 * s, 4 * s, 140);
+  ellipse(cx, cy + 36 * s, 20 * s, 5 * s, 90);
+};
+
+/**
  * Corners of a square turned and tilted in perspective.
  *
  * @param cx - Centre x.

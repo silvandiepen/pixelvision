@@ -51,4 +51,9 @@ export interface HeadPoseResult {
   pose: HeadPose;
   /** The face's box in image pixels, when one was found. */
   face?: Detection;
+  /**
+   * Every face found, in image pixels: `face` first, then the other
+   * frontal faces, best supported first. Empty when there is none.
+   */
+  faces: Detection[];
 }
