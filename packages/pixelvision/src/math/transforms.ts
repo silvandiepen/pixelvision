@@ -81,7 +81,7 @@ const squareToQuad = (p: readonly Point[]): number[] => {
  *
  * @param from - Four source points, no three on one line.
  * @param to - Four target points, no three on one line.
- * @returns The 3x3 matrix, row by row.
+ * @returns The 3x3 matrix, row by row, scaled so its bottom-right entry is 1.
  * @throws {RangeError} When a list doesn't have 4 finite points, or the points are degenerate.
  *
  * @example
@@ -126,9 +126,13 @@ export function perspectiveTransform(from: readonly Point[], to: readonly Point[
     l6 * t49 + l7 * (t31 * t15) - t35 * t15,
     -l6 * t50 - l7 * (t44 * t15) + t47 * t15,
   );
-  if (!matrix.every(Number.isFinite)) {
+  if (!matrix.every(Number.isFinite) || matrix[8] === 0) {
     throw new RangeError("perspectiveTransform: three or more points lie on one line");
   }
+  // Scale so the bottom-right entry is 1, as OpenCV does (jsfeat left it unscaled).
+  const scale = 1 / matrix[8];
+  for (let i = 0; i < 9; i++) matrix[i] *= scale;
+  matrix[8] = 1;
   return matrix;
 }
 

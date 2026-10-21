@@ -208,7 +208,9 @@ describe("perspectiveTransform matches jsfeat.math.perspective_4point_transform"
         ...from.flatMap((p, k) => [p.x, p.y, to[k].x, to[k].y]),
       );
 
-      expectIdentical(perspectiveTransform(from, to), model.data, 9);
+      // pixelvision scales the result so the last entry is 1, as OpenCV does.
+      const scaled = Array.from(model.data, (v) => v / model.data[8]);
+      expectClose(perspectiveTransform(from, to), scaled, 9, 1e-12);
     });
   }
 });
