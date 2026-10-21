@@ -2,7 +2,7 @@
 // publint (package.json and files) and Are the types wrong? (types for every
 // entry point in every module mode).
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readdirSync } from "node:fs";
+import { copyFileSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import process from "node:process";
@@ -31,13 +31,30 @@ const packages = [
 const out = mkdtempSync(join(tmpdir(), "pixelvision-packs-"));
 const run = (command, args, cwd) => execFileSync(command, args, { cwd, stdio: "inherit" });
 
+const tarballs = [];
 for (const { dir, entrypoints, exclude } of packages) {
   run("pnpm", ["exec", "publint"], dir);
   const before = new Set(readdirSync(out));
   run("pnpm", ["pack", "--pack-destination", out], dir);
   const tarball = readdirSync(out).find((file) => !before.has(file));
+  tarballs.push(join(out, tarball));
   const args = [join(out, tarball)];
   if (entrypoints) args.push("--entrypoints", ...entrypoints);
   if (exclude) args.push("--exclude-entrypoints", ...exclude);
   run("pnpm", ["exec", "attw", ...args], process.cwd());
 }
+
+// Install the tarballs into an empty project with npm, as a user would, and
+// load every entry point through ESM and CommonJS.
+const app = mkdtempSync(join(tmpdir(), "pixelvision-consumer-"));
+writeFileSync(join(app, "package.json"), JSON.stringify({ name: "consumer", private: true }));
+run(
+  "npm",
+  ["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", ...tarballs],
+  app,
+);
+for (const file of ["esm.mjs", "cjs.cjs", "scene.mjs"]) {
+  copyFileSync(join("scripts/package-smoke", file), join(app, file));
+}
+run("node", ["esm.mjs"], app);
+run("node", ["cjs.cjs"], app);
