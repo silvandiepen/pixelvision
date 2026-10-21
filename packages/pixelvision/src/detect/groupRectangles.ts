@@ -50,8 +50,10 @@ export function groupRectangles(rects: readonly Detection[], minNeighbors = 1): 
   };
   for (let i = 0; i < n; i++) {
     let root = rootOf(i);
-    for (let j = 0; j < n; j++) {
-      if (i === j || !similar(rects[i], rects[j])) continue;
+    // Groups are the connected components of "either one is similar to the
+    // other", so each pair is visited once, in both directions.
+    for (let j = i + 1; j < n; j++) {
+      if (!similar(rects[i], rects[j]) && !similar(rects[j], rects[i])) continue;
       const root2 = rootOf(j);
       if (root2 === root) continue;
       if (rank[root] > rank[root2]) {
