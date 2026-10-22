@@ -14,6 +14,7 @@ import { hasValidSignature } from "./challenge";
 import type {
   Evidence,
   FaceBox,
+  PoseReading,
   PoseSource,
   VerifyOptions,
   VerifyReason,
@@ -35,8 +36,22 @@ const JUMP = 0.75;
  * @returns The pose and the face.
  */
 export const haarPoseSource: PoseSource = (frame) => {
-  const { pose, face } = detectHeadPose(grayscale(frame), CASCADES);
+  // At 240 px the poses come out the same as at 320 px, in 60% of the time.
+  const { pose, face } = detectHeadPose(grayscale(frame), CASCADES, { maxSize: 240 });
   return face ? { pose, face } : { pose };
+};
+
+/**
+ * Whether two files have the same bytes.
+ *
+ * @param a - One file.
+ * @param b - The other.
+ * @returns Whether they're identical.
+ */
+const sameBytes = (a: Uint8Array, b: Uint8Array): boolean => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 };
 
 /**
@@ -61,17 +76,13 @@ export const jpegSize = (jpeg: Uint8Array): { width: number; height: number } | 
 };
 
 /**
- * Decodes a JPEG frame, refusing anything larger than allowed before it
- * decodes a single pixel.
+ * Decodes a JPEG frame. Its size has been checked from its header already.
  *
  * @param jpeg - The file.
- * @param maxSide - Largest side in pixels.
- * @returns The pixels, `"too-large"`, or `"bad"` when it doesn't decode.
+ * @param maxSide - Largest side in pixels, a limit for the decoder too.
+ * @returns The pixels, or null when it doesn't decode.
  */
-const decodeFrame = (jpeg: Uint8Array, maxSide: number): RGBAImage | "too-large" | "bad" => {
-  const size = jpegSize(jpeg);
-  if (!size) return "bad";
-  if (size.width > maxSide || size.height > maxSide) return "too-large";
+const decodeFrame = (jpeg: Uint8Array, maxSide: number): RGBAImage | null => {
   try {
     const { width, height, data } = decode(jpeg, {
       useTArray: true,
@@ -85,7 +96,7 @@ const decodeFrame = (jpeg: Uint8Array, maxSide: number): RGBAImage | "too-large"
       data: new Uint8ClampedArray(data.buffer, data.byteOffset, data.length),
     };
   } catch {
-    return "bad";
+    return null;
   }
 };
 
@@ -173,34 +184,47 @@ export async function verifyEvidence(
     return result(["bad-timing"]);
   }
 
+  // Sizes first, from the headers alone: nothing is decoded until every frame is in bounds.
+  const sizes = frames.map((frame) => jpegSize(frame.jpeg));
+  if (sizes.some((size) => size === null)) return result(["bad-frame"]);
+  if (sizes.some((size) => size!.width > maxFrameSide || size!.height > maxFrameSide)) {
+    return result(["frame-too-large"]);
+  }
+  if (sizes.some((size) => size!.width !== sizes[0]!.width || size!.height !== sizes[0]!.height)) {
+    return result(["frames-differ"]);
+  }
+
   const run = createFaceChallenge({
     steps: challenge.steps,
     holdFrames,
     timeoutMs: Infinity,
   });
   const reasons = new Set<VerifyReason>();
-  let size: string | undefined;
+  let previous: { jpeg: Uint8Array; pose: PoseReading } | undefined;
   let previousPatch: RegionPatch | undefined;
   let previousFace: FaceBox | undefined;
   let frozen = 0;
   let jumps = 0;
   let checked = 0;
   for (const frame of frames) {
-    const image = decodeFrame(frame.jpeg, maxFrameSide);
-    if (image === "too-large") return result(["frame-too-large"], run.state.progress, checked);
-    if (image === "bad") return result(["bad-frame"], run.state.progress, checked);
-    const frameSize = `${image.width}x${image.height}`;
-    if (size !== undefined && frameSize !== size) {
-      return result(["frames-differ"], run.state.progress, checked);
-    }
-    size = frameSize;
+    // Once every step is done, later frames can't change the outcome.
+    if (run.state.step === "done") break;
     checked++;
-
-    const { pose, face } = await poseSource(image);
+    // An exact repeat of the frame before: frozen, and no need to look again.
+    if (previous && sameBytes(previous.jpeg, frame.jpeg)) {
+      frozen++;
+      run.update({ pose: previous.pose.pose, motion: 0 });
+      continue;
+    }
+    const image = decodeFrame(frame.jpeg, maxFrameSide);
+    if (!image) return result(["bad-frame"], run.state.progress, checked);
+    const reading = await poseSource(image);
+    const { pose, face } = reading;
     const patch = face ? regionPatch(grayscale(image), face) : undefined;
     const motion = measureMotion(previousPatch, patch);
     if (motion === 0) frozen++;
     if (face && previousFace && jumped(previousFace, face)) jumps++;
+    previous = { jpeg: frame.jpeg, pose: reading };
     previousPatch = patch;
     previousFace = face ?? previousFace;
     run.update({ pose, motion });

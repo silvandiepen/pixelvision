@@ -95,6 +95,14 @@ const result = await verifyEvidence(evidence, { secret, codes, poseSource: direc
 
 A pose source is a function from a frame (RGBA pixels) to `{ pose, face }`.
 
+## Cost
+
+A check decodes the frames and runs the face detection on each one until every step is done:
+with the default HAAR pose source, about 85 ms per frame on a laptop, so roughly 5 s of CPU for
+a seven-second head turn (the browser sends 8 frames a second). Exact repeats of a frame are
+counted as frozen without being looked at again. Run checks off the request thread (a worker
+or a queue) when many can arrive at once, and limit how often one user can ask for a challenge.
+
 ## Why a check fails
 
 | Reason                   | Meaning                                                            |

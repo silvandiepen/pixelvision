@@ -107,7 +107,9 @@ describe("verifyEvidence on a recorded head turn", () => {
     const challenge = await issue("head-turn");
     const result = await verifyEvidence({ challenge, frames: clip("head-turn") }, options());
     expect(result).toMatchObject({ passed: true, reasons: [], stepsDone: 4, stepsTotal: 4 });
-    expect(result.framesChecked).toBe(68);
+    // It stops once every step is done: the last frontal frames can't change the outcome.
+    expect(result.framesChecked).toBeGreaterThan(40);
+    expect(result.framesChecked).toBeLessThan(68);
   }, 60_000);
 
   it("passes the motion challenge on a live-looking face", async () => {
@@ -326,6 +328,20 @@ describe("verifyEvidence with odd frames", () => {
     const frames = clip("head-turn");
     frames[3] = { time: frames[3].time, jpeg: frames[3].jpeg.subarray(0, 400) };
     expect((await verifyEvidence({ challenge, frames }, options())).reasons).toEqual(["bad-frame"]);
+  });
+
+  it("decodes a frame of the same length that differs, rather than counting it as a repeat", async () => {
+    const challenge = await issue("motion");
+    const frames = clip("motion").slice(0, 12);
+    // Same length as the frame before, one byte different near the end of the image data.
+    const changed = Uint8Array.from(frames[0].jpeg);
+    changed[changed.length - 10] ^= 1;
+    frames[1] = { time: frames[1].time, jpeg: changed };
+    // It was decoded, not taken as a repeat: and the changed byte breaks the file.
+    expect(await verifyEvidence({ challenge, frames }, options())).toMatchObject({
+      reasons: ["bad-frame"],
+      framesChecked: 2,
+    });
   });
 
   it("checks frames where no face is found", async () => {
