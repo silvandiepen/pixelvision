@@ -26,6 +26,7 @@ const packages = [
   // It exports nothing and is exported for `import` only, so it has no types and no
   // CommonJS entry by design; publint still checks it.
   { dir: "packages/capture-ui", exclude: ["haar-worker"] },
+  { dir: "packages/verify" },
 ];
 
 // Temporary folders, removed when the script ends, whether it passes or fails.
@@ -54,9 +55,11 @@ for (const { dir, entrypoints, exclude } of packages) {
 const app = mkdtempSync(join(tmpdir(), "pixelvision-consumer-"));
 scratch.push(app);
 writeFileSync(join(app, "package.json"), JSON.stringify({ name: "consumer", private: true }));
+// --prefer-offline, not --offline: @pixelvision/verify depends on jpeg-js, which npm
+// fetches like any user's install would when it isn't cached yet.
 run(
   "npm",
-  ["install", "--offline", "--no-audit", "--no-fund", "--ignore-scripts", ...tarballs],
+  ["install", "--prefer-offline", "--no-audit", "--no-fund", "--ignore-scripts", ...tarballs],
   app,
 );
 for (const file of ["esm.mjs", "cjs.cjs", "scene.mjs"]) {

@@ -4,10 +4,12 @@ const console = require("node:console");
 const { findDocument } = require("pixelvision");
 const { frontalFace } = require("pixelvision/cascades/frontal-face");
 const { estimateHeadYaw } = require("@pixelvision/face-neural");
+const { createChallenge } = require("@pixelvision/verify");
 
 import("./scene.mjs").then(({ scene }) => {
   assert.ok(findDocument(scene()), "findDocument finds the drawn page");
   assert.ok(frontalFace.complexClassifiers.length > 0, "the frontal-face cascade loads");
   assert.equal(typeof estimateHeadYaw, "function");
-  console.log("ok  CJS: pixelvision, cascades, face-neural");
+  assert.equal(typeof createChallenge, "function");
+  console.log("ok  CJS: pixelvision, cascades, face-neural, verify");
 });

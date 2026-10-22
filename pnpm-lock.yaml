@@ -304,6 +304,28 @@ importers:
         specifier: 8.3.4
         version: 8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.105.2)(sass@1.105.2)(terser@5.51.2)(yaml@2.9.1)
 
+  examples/verify-server:
+    dependencies:
+      '@pixelvision/verify':
+        specifier: workspace:*
+        version: link:../../packages/verify
+      pixelvision:
+        specifier: workspace:*
+        version: link:../../packages/pixelvision
+    devDependencies:
+      '@pixelvision/capture-ui':
+        specifier: workspace:*
+        version: link:../../packages/capture-ui
+      '@types/node':
+        specifier: 24.19.2
+        version: 24.19.2
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 5.0.5
+        version: 5.0.5(@types/node@24.19.2)(@vitest/coverage-v8@5.0.5)(happy-dom@20.14.5)(jsdom@20.0.3(supports-color@8.1.1))(vite@8.3.4(@types/node@24.19.2)(esbuild@0.28.2)(jiti@2.7.0)(sass-embedded@1.105.2)(sass@1.105.2)(terser@5.51.2)(yaml@2.9.1))
+
   examples/vue:
     dependencies:
       pixelvision:
@@ -407,6 +429,19 @@ importers:
 
   packages/pixelvision:
     devDependencies:
+      tsup:
+        specifier: ^9.0.0
+        version: 9.0.0(jiti@2.7.0)(postcss@8.5.31)(typescript@6.0.3)(yaml@2.9.1)
+
+  packages/verify:
+    dependencies:
+      jpeg-js:
+        specifier: 0.4.4
+        version: 0.4.4
+    devDependencies:
+      pixelvision:
+        specifier: workspace:*
+        version: link:../pixelvision
       tsup:
         specifier: ^9.0.0
         version: 9.0.0(jiti@2.7.0)(postcss@8.5.31)(typescript@6.0.3)(yaml@2.9.1)

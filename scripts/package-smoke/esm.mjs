@@ -8,6 +8,7 @@ import { createDocumentTracker, findDocument, grayscale } from "pixelvision";
 import { frontalFace } from "pixelvision/cascades/frontal-face";
 import { estimateHeadYaw } from "@pixelvision/face-neural";
 import * as captureUi from "@pixelvision/capture-ui";
+import { createChallenge, hasValidSignature } from "@pixelvision/verify";
 import { scene, CORNERS } from "./scene.mjs";
 
 const image = scene();
@@ -23,4 +24,8 @@ assert.ok(
 );
 assert.ok(existsSync(fileURLToPath(import.meta.resolve("@pixelvision/capture-ui/haar-worker"))));
 assert.ok(Object.keys(captureUi).length > 0, "capture-ui imports without a DOM");
-console.log("ok  ESM: pixelvision, cascades, face-neural, model file, capture-ui, haar-worker");
+const secret = "a-smoke-test-secret-long-enough-to-sign";
+assert.ok(await hasValidSignature(await createChallenge({ secret }), secret), "verify signs");
+console.log(
+  "ok  ESM: pixelvision, cascades, face-neural, model file, capture-ui, haar-worker, verify",
+);
