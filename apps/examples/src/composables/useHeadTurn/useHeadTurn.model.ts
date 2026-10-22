@@ -1,13 +1,22 @@
 import type { ComputedRef, Ref, ShallowRef } from "vue";
-import type { HeadPose, HeadTurnState, Point, RGBAImage } from "pixelvision";
+import type { ChallengePreset, FaceChallengeState, HeadPose, Point, RGBAImage } from "pixelvision";
 import type { HeadPoseResources } from "../../examples/detect-head-pose/demo.model";
 import type { UseCamera } from "../useCamera/useCamera.model";
 
-/** Where the poses come from. */
-export type PoseSource = "idle" | "camera" | "scripted";
+/** Where the frames come from: the camera, or a sample video of an AI-generated person. */
+export type PoseSource = "idle" | "camera" | "sample";
 
-/** Which face detector runs on camera frames. */
+/** Which face detector runs on the frames. */
 export type FaceBackend = "haar" | "neural";
+
+/** The challenges the demos offer. */
+export type DemoChallenge = Exclude<ChallengePreset, "none">;
+
+/** The challenge's state, with the instruction to show. */
+export interface CheckState extends FaceChallengeState {
+  /** What to ask the person, for the current step. */
+  instruction: string;
+}
 
 /** A face's box, in frame pixels. */
 export interface FaceBox {
@@ -28,19 +37,21 @@ export interface FrontalPhoto {
 }
 
 export interface UseHeadTurnOptions {
-  /** Frames in a row a pose must be seen before it counts. */
+  /** Matching frames a step needs before it counts. */
   holdFrames: number;
   /** Loads the frontal and profile cascades for the built-in detector. */
   loadCascades: () => Promise<HeadPoseResources>;
-  /** Called after every pose, camera or scripted. */
-  onUpdate?: (state: HeadTurnState, source: PoseSource) => void;
+  /** Called after every frame, from the camera or the sample video. */
+  onUpdate?: (state: CheckState, source: PoseSource) => void;
 }
 
 export interface UseHeadTurn {
   camera: UseCamera;
   source: Ref<PoseSource>;
+  /** The challenge being run. */
+  challenge: Ref<DemoChallenge>;
   /** The challenge's state. */
-  state: ShallowRef<HeadTurnState>;
+  state: ShallowRef<CheckState>;
   /** Whether the built-in cascades have loaded. */
   cascadesState: Ref<"loading" | "ready" | "error">;
   backend: Ref<FaceBackend>;
@@ -67,10 +78,15 @@ export interface UseHeadTurn {
   message: Ref<string | null>;
   /** Switches the detector, loading the neural one the first time. */
   chooseBackend: (choice: FaceBackend) => Promise<void>;
+  /**
+   * Switches the challenge. One that asks for left, right, up or down switches to the neural
+   * detector, which is the one that can tell.
+   */
+  chooseChallenge: (choice: DemoChallenge) => Promise<void>;
   /** Starts the selfie camera and a new check. */
   start: () => Promise<boolean>;
-  /** Stops the camera and resets the check. */
+  /** Plays the sample video of the challenge through the same detector and check. */
+  playSample: () => Promise<boolean>;
+  /** Stops the camera or video and resets the check. */
   stop: () => void;
-  /** Plays a scripted sequence of poses through the same challenge. */
-  playScripted: (photo?: FrontalPhoto) => void;
 }

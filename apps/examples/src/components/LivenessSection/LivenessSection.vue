@@ -11,6 +11,7 @@
           v-if="outcome === 'checking'"
           :key="attempt"
           :backend="backend"
+          :challenge="challenge"
           :autostart="attempt > 0"
           @complete="onComplete"
           @fail="outcome = 'failed'"
@@ -34,14 +35,8 @@
             />
             <SuccessMark :class="bemm('mark')" label="Passed" />
           </div>
-          <p :class="bemm('result-title')">You're live.</p>
-          <p :class="bemm('result-text')">
-            {{
-              scripted
-                ? "The scripted run looked, turned both ways and looked back."
-                : "You looked, turned both ways and looked back. This is the photo it kept."
-            }}
-          </p>
+          <p :class="bemm('result-title')">Check passed.</p>
+          <p :class="bemm('result-text')">{{ resultText }}</p>
           <AppButton variant="primary" data-liveness-again @click="retry(false)">
             Run it again
           </AppButton>
@@ -56,7 +51,7 @@
           </div>
           <p :class="bemm('result-title')">Time's up.</p>
           <p :class="bemm('result-text')">
-            All four steps need to happen within 30 seconds. Face the light, and turn further.
+            Every step needs to happen within 30 seconds. Face the light, and turn further.
           </p>
           <AppButton variant="primary" data-liveness-retry @click="retry(true)"
             >Try again</AppButton
@@ -70,14 +65,21 @@
         eyebrow="Liveness"
         title="Check there's a person there."
         heading-id="liveness-heading"
-        lede="Look at the camera, turn your head one way, then the other. A printed photo or a still screen can't do that."
+        lede="Look at the camera and do what it asks: turn your head, move it in a circle, or just be there. A printed photo or a still screen can't."
+      />
+      <SegmentedChoice
+        :model-value="challenge"
+        label="Check"
+        name="challenge"
+        :options="CHALLENGES"
+        @update:model-value="chooseChallenge($event as DemoChallenge)"
       />
       <SegmentedChoice
         :model-value="backend"
         label="Face detector"
         name="backend"
         :options="BACKENDS"
-        @update:model-value="backend = $event as FaceBackend"
+        @update:model-value="chooseBackend($event as FaceBackend)"
       />
       <p :class="bemm('note')">
         {{
@@ -100,7 +102,8 @@ import PixelCanvas from "../PixelCanvas";
 import SectionHeading from "../SectionHeading";
 import SegmentedChoice from "../SegmentedChoice";
 import SuccessMark from "../SuccessMark";
-import type { FaceBackend } from "../../composables/useHeadTurn/useHeadTurn.model";
+import { needsDirection } from "pixelvision";
+import type { DemoChallenge, FaceBackend } from "../../composables/useHeadTurn/useHeadTurn.model";
 import { publishResult } from "../../results";
 import { cropImage, portraitBox } from "../../utils/export";
 import type { LivenessOutcome } from "./LivenessSection.model";
@@ -112,7 +115,21 @@ const BACKENDS: { value: FaceBackend; label: string }[] = [
   { value: "neural", label: "Neural (YuNet)" },
 ];
 
+const CHALLENGES: { value: DemoChallenge; label: string }[] = [
+  { value: "head-turn", label: "Head turn" },
+  { value: "head-circle", label: "Head circle" },
+  { value: "motion", label: "Motion" },
+];
+
+/** What the person did, by challenge, for the result. */
+const DONE_TEXT: Record<DemoChallenge, string> = {
+  "head-turn": "looked, turned both ways and looked back",
+  "head-circle": "turned left, up, right and down",
+  motion: "looked at the camera and moved naturally",
+};
+
 const backend = ref<FaceBackend>("haar");
+const challenge = ref<DemoChallenge>("head-turn");
 const outcome = ref<LivenessOutcome>("checking");
 const attempt = ref(0);
 const result = shallowRef<FaceCaptureResult | null>(null);
@@ -122,7 +139,34 @@ const portrait = computed(() => {
   return photo ? cropImage(photo.frame, portraitBox(photo.face)) : null;
 });
 const mirrored = computed(() => result.value?.photo?.mirrored ?? false);
-const scripted = computed(() => result.value?.source === "scripted");
+const resultText = computed(() => {
+  const done = DONE_TEXT[result.value?.challenge ?? challenge.value];
+  return result.value?.source === "sample"
+    ? `The sample video ${done}. The person in it is AI-generated; this is the photo it kept.`
+    : `You ${done}. This is the photo it kept.`;
+});
+
+/**
+ * Switches the detector. The built-in one can't tell directions, so it goes back to the head
+ * turn from the head circle.
+ *
+ * @param choice - The detector.
+ */
+function chooseBackend(choice: FaceBackend): void {
+  backend.value = choice;
+  if (choice === "haar" && needsDirection(challenge.value)) challenge.value = "head-turn";
+}
+
+/**
+ * Switches the check. The head circle needs to tell left from right and up from down, which
+ * only the neural detector can.
+ *
+ * @param choice - The check.
+ */
+function chooseChallenge(choice: DemoChallenge): void {
+  challenge.value = choice;
+  if (needsDirection(choice)) backend.value = "neural";
+}
 
 /**
  * Shows the passed state.
@@ -154,6 +198,7 @@ watchEffect(() => {
     values: {
       outcome: outcome.value,
       source: result.value?.source ?? "",
+      challenge: challenge.value,
       photo: portrait.value ? `${portrait.value.width}x${portrait.value.height}` : "",
     },
   });

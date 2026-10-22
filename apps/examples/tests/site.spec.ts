@@ -277,13 +277,33 @@ test.describe("live effects", () => {
 });
 
 test.describe("head-turn check", () => {
-  test("a scripted run completes all four steps", async ({ page }) => {
-    await page.goto("/head-turn?demo=scripted");
+  test("the sample video passes the head turn with the built-in detector", async ({ page }) => {
+    // The clip steps at the detector's pace, which is slow in some headless browsers.
+    test.setTimeout(120_000);
+    await page.goto("/head-turn?demo=sample");
     const check = page.locator('[data-slug="head-turn"]');
-    await expect(check).toHaveAttribute("data-challenge-step", "done", { timeout: 15_000 });
+    await expect(check).toHaveAttribute("data-challenge-step", "done", { timeout: 100_000 });
     await expect(page.locator(".head-turn-check__step--done")).toHaveCount(4);
     const result = await published(page, "head-turn");
-    expect(result?.values.progress).toBe(4);
+    expect(result?.values).toMatchObject({ progress: 4, source: "sample", challenge: "head-turn" });
+  });
+
+  test("the motion sample passes, and the head circle switches to YuNet and passes", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await page.goto("/head-turn");
+    const check = page.locator('[data-slug="head-turn"]');
+    await page.locator('[data-challenge="motion"]').click();
+    await page.locator("[data-challenge-sample]").click();
+    await expect(check).toHaveAttribute("data-challenge-step", "done", { timeout: 80_000 });
+
+    await page.locator('[data-challenge="head-circle"]').click();
+    await expect(page.locator('[data-backend="neural"]')).toHaveAttribute("aria-checked", "true");
+    await expect(page.locator("[data-challenge-sample]")).toBeEnabled({ timeout: 30_000 });
+    await page.locator("[data-challenge-sample]").click();
+    await expect(check).toHaveAttribute("data-challenge-step", "done", { timeout: 80_000 });
+    await expect(page.locator(".head-turn-check__step--done")).toHaveCount(6);
   });
 
   test("the neural detector loads and finds no face in a blank frame", async ({
@@ -303,7 +323,7 @@ test.describe("head-turn check", () => {
     await expect(page.locator("[data-challenge-pose]")).toContainText(" ms");
     await expect(page.locator('[data-slug="head-turn"]')).toHaveAttribute(
       "data-challenge-step",
-      "face-camera",
+      "frontal",
     );
     expect(errors).toEqual([]);
   });

@@ -1,6 +1,6 @@
 import { nextTick, onBeforeUnmount, ref, shallowRef } from "vue";
 import { readPixels } from "../../utils/input";
-import type { FacingMode, UseCamera } from "./useCamera.model";
+import type { FacingMode, UseCamera, VideoSource } from "./useCamera.model";
 
 /**
  * Explains a `getUserMedia` failure in plain words, with what to do next.
@@ -40,8 +40,69 @@ export function useCamera(): UseCamera {
   function stop(): void {
     stream?.getTracks().forEach((track) => track.stop());
     stream = null;
-    if (video.value) video.value.srcObject = null;
+    if (video.value) {
+      video.value.srcObject = null;
+      if (video.value.getAttribute("src")) {
+        video.value.removeAttribute("src");
+        video.value.load();
+      }
+    }
     active.value = false;
+  }
+
+  /**
+   * Plays a video file instead of the camera.
+   *
+   * @param sources - The clip in one or more formats.
+   * @returns Whether it started.
+   */
+  async function startVideo(sources: readonly VideoSource[]): Promise<boolean> {
+    stop();
+    error.value = null;
+    const element = video.value;
+    const playable = element && sources.find((source) => element.canPlayType(source.type) !== "");
+    if (!element || !playable) {
+      error.value = "This browser can't play the sample video.";
+      return false;
+    }
+    element.muted = true;
+    element.loop = false;
+    element.src = playable.src;
+    active.value = true;
+    await nextTick();
+    try {
+      // Paused on the first frame: stepVideo moves it on, frame by frame.
+      await new Promise<void>((resolve, reject) => {
+        element.addEventListener("loadeddata", () => resolve(), { once: true });
+        element.addEventListener("error", () => reject(new Error("it didn't load")), {
+          once: true,
+        });
+      });
+      element.pause();
+      return true;
+    } catch (caught) {
+      stop();
+      error.value = `The sample video couldn't play (${caught instanceof Error ? caught.message : String(caught)}).`;
+      return false;
+    }
+  }
+
+  /**
+   * Moves a paused video file on.
+   *
+   * @param seconds - How far.
+   * @returns Whether there's more to come.
+   */
+  async function stepVideo(seconds: number): Promise<boolean> {
+    const element = video.value;
+    if (!element || !active.value || !element.getAttribute("src")) return false;
+    const next = element.currentTime + seconds;
+    if (next >= element.duration) return false;
+    await new Promise<void>((resolve) => {
+      element.addEventListener("seeked", () => resolve(), { once: true });
+      element.currentTime = next;
+    });
+    return true;
   }
 
   /**
@@ -93,5 +154,5 @@ export function useCamera(): UseCamera {
   }
 
   onBeforeUnmount(stop);
-  return { active, error, video, start, stop, frame };
+  return { active, error, video, start, startVideo, stepVideo, stop, frame };
 }

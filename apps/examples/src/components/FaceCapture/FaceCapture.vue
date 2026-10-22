@@ -5,16 +5,14 @@
     :data-challenge-step="state.step"
   >
     <div :class="bemm('stage', ['', source !== 'idle' ? 'live' : ''])">
-      <div v-show="source === 'camera'" :class="bemm('mirror')">
+      <!-- The camera is mirrored like a mirror; the sample video plays as recorded. -->
+      <div
+        v-show="source !== 'idle'"
+        :class="bemm('mirror', ['', source === 'sample' ? 'plain' : ''])"
+      >
         <video ref="video" :class="bemm('video')" playsinline muted></video>
       </div>
-      <div v-if="source === 'scripted'" :class="bemm('still')">
-        <PixelCanvas
-          :image="SCRIPTED_PHOTO.frame"
-          label="A drawn face, for the scripted run"
-          fit="cover"
-        />
-      </div>
+      <p v-if="source === 'sample'" :class="bemm('badge')">Sample video · AI-generated person</p>
 
       <svg
         :class="bemm('guide')"
@@ -71,7 +69,7 @@
         </div>
         <ol :class="bemm('progress')" aria-label="Progress">
           <li
-            v-for="(label, index) in STEP_LABELS"
+            v-for="(label, index) in labels"
             :key="label"
             :class="bemm('segment', ['', segmentState(index)])"
             :aria-current="segmentState(index) === 'current' ? 'step' : undefined"
@@ -95,13 +93,13 @@
         <AppButton variant="primary" :disabled="!ready" data-challenge-start @click="startCamera">
           Start the check
         </AppButton>
-        <AppButton variant="secondary" data-challenge-scripted @click="playScripted">
-          Watch a demo run
+        <AppButton variant="secondary" :disabled="!ready" data-challenge-sample @click="playSample">
+          Play a sample video
         </AppButton>
       </div>
     </div>
 
-    <div v-if="source === 'camera'" :class="bemm('actions')">
+    <div v-if="source !== 'idle'" :class="bemm('actions')">
       <AppButton variant="secondary" @click="stop">Cancel</AppButton>
     </div>
     <p v-if="message" :class="bemm('message')" role="alert" data-capture-error>{{ message }}</p>
@@ -112,39 +110,23 @@
 import { computed, onMounted, useId, watch } from "vue";
 import { useBemm } from "bemm";
 import AppButton from "../AppButton";
-import PixelCanvas from "../PixelCanvas";
-import { useHeadTurn } from "../../composables/useHeadTurn";
-import type { FrontalPhoto } from "../../composables/useHeadTurn/useHeadTurn.model";
+import { stepLabels, useHeadTurn } from "../../composables/useHeadTurn";
 import { loadHeadPoseCascades } from "../../examples/detect-head-pose/resources";
-import { PORTRAIT_FACE, getSample } from "../../samples/samples";
 import type { FaceCaptureEmits, FaceCaptureProps } from "./FaceCapture.model";
 
-const props = withDefaults(defineProps<FaceCaptureProps>(), { autostart: false });
+const props = withDefaults(defineProps<FaceCaptureProps>(), {
+  autostart: false,
+  challenge: "head-turn",
+});
 const emit = defineEmits<FaceCaptureEmits>();
 const bemm = useBemm("face-capture", { includeBaseClass: true });
 const maskId = useId();
 const clipId = useId();
 
-const STEP_LABELS = [
-  "Face the camera",
-  "Turn one way",
-  "Turn the other way",
-  "Face the camera again",
-];
-const SCRIPTED_PHOTO: FrontalPhoto = {
-  frame: getSample("portrait").generate(),
-  face: {
-    x: PORTRAIT_FACE.x - PORTRAIT_FACE.width / 2,
-    y: PORTRAIT_FACE.y - PORTRAIT_FACE.height / 2,
-    width: PORTRAIT_FACE.width,
-    height: PORTRAIT_FACE.height,
-  },
-  mirrored: false,
-};
-
 const check = useHeadTurn({ holdFrames: 3, loadCascades: loadHeadPoseCascades });
 const { camera, source, state, ready, message, hint, stop } = check;
 const { video } = camera;
+const labels = computed(() => stepLabels(check.challenge.value));
 
 const loading = computed(
   () =>
@@ -179,9 +161,9 @@ function startCamera(): void {
   void check.start();
 }
 
-/** Plays the scripted run with the drawn face. */
-function playScripted(): void {
-  check.playScripted(SCRIPTED_PHOTO);
+/** Plays the sample video of the challenge through the same check. */
+function playSample(): void {
+  void check.playSample();
 }
 
 watch(
@@ -190,12 +172,18 @@ watch(
   { immediate: true },
 );
 watch(
+  () => props.challenge,
+  (choice) => void check.chooseChallenge(choice),
+  { immediate: true },
+);
+watch(
   () => state.value.step,
   (step) => {
     if (step === "done") {
       emit("complete", {
         photo: check.photo.value,
-        source: source.value === "scripted" ? "scripted" : "camera",
+        source: source.value === "sample" ? "sample" : "camera",
+        challenge: check.challenge.value,
       });
     } else if (step === "failed") {
       emit("fail");
@@ -238,6 +226,10 @@ onMounted(() => {
     position: absolute;
     inset: 0;
     transform: scaleX(-1);
+
+    &--plain {
+      transform: none;
+    }
   }
 
   &__video {
@@ -248,9 +240,18 @@ onMounted(() => {
     object-fit: cover;
   }
 
-  &__still {
+  // Says what's playing: not the viewer's camera, and not a real person.
+  &__badge {
     position: absolute;
-    inset: 0;
+    // Bottom left, above the step bars: the instruction has the top.
+    bottom: calc(var(--auno-space-l) + var(--auno-space-m));
+    left: var(--auno-space-m);
+    z-index: 2;
+    padding: var(--auno-space-2xs) var(--auno-space-xs);
+    border-radius: var(--auno-radius-s);
+    background: rgb(0 0 0 / 0.55);
+    color: #fff;
+    font-size: var(--auno-text-small);
   }
 
   &__guide {

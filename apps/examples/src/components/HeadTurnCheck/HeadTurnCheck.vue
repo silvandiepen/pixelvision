@@ -23,11 +23,27 @@
         </button>
       </div>
       <p :class="bemm('backend-status')" data-backend-status>{{ backendStatus }}</p>
+      <p :id="challengeLabelId" :class="bemm('backend-label')">Check</p>
+      <div :class="bemm('choices')" role="radiogroup" :aria-labelledby="challengeLabelId">
+        <button
+          v-for="option in CHALLENGES"
+          :key="option.value"
+          type="button"
+          role="radio"
+          :aria-checked="challenge === option.value"
+          :class="bemm('choice', ['', challenge === option.value ? 'selected' : ''])"
+          :data-challenge="option.value"
+          @click="chooseChallenge(option.value)"
+        >
+          {{ option.label }}
+        </button>
+      </div>
     </div>
 
     <div :class="bemm('stage')">
       <div v-show="camera.active.value" :class="bemm('frame')">
-        <div :class="bemm('mirror')">
+        <!-- The camera is mirrored like a mirror; the sample video plays as recorded. -->
+        <div :class="bemm('mirror', ['', source === 'sample' ? 'plain' : ''])">
           <video ref="video" :class="bemm('video')" playsinline muted></video>
           <svg
             v-if="frameSize && face"
@@ -44,6 +60,7 @@
             />
           </svg>
         </div>
+        <p v-if="source === 'sample'" :class="bemm('badge')">Sample video · AI-generated person</p>
       </div>
 
       <div :class="bemm('panel')">
@@ -53,7 +70,7 @@
         <p v-if="hint" :class="bemm('hint')" data-challenge-hint>{{ hint }}</p>
         <ol :class="bemm('steps')" aria-label="Progress">
           <li
-            v-for="(label, index) in STEP_LABELS"
+            v-for="(label, index) in labels"
             :key="label"
             :class="bemm('step', ['', stepState(index)])"
             :aria-current="stepState(index) === 'current' ? 'step' : undefined"
@@ -68,7 +85,7 @@
         </ol>
         <div :class="bemm('actions')">
           <AppButton
-            v-if="source !== 'camera' || finished"
+            v-if="source === 'idle' || finished"
             variant="primary"
             :disabled="!ready"
             data-challenge-start
@@ -77,8 +94,8 @@
             {{ finished && source === "camera" ? "Try again" : "Start the check" }}
           </AppButton>
           <AppButton v-else variant="secondary" @click="stop">Stop</AppButton>
-          <AppButton variant="plain" data-challenge-scripted @click="playScripted">
-            Play a scripted run
+          <AppButton variant="plain" :disabled="!ready" data-challenge-sample @click="playSample">
+            Play a sample video
           </AppButton>
         </div>
         <p v-if="message" :class="bemm('message')" role="alert" data-demo-error>{{ message }}</p>
@@ -102,8 +119,9 @@ import { computed, onMounted, useId, watch } from "vue";
 import { useBemm } from "bemm";
 import AppButton from "../AppButton";
 import DataTable from "../DataTable";
-import { useHeadTurn } from "../../composables/useHeadTurn";
-import type { FaceBackend } from "../../composables/useHeadTurn/useHeadTurn.model";
+import { needsDirection } from "pixelvision";
+import { stepLabels, useHeadTurn } from "../../composables/useHeadTurn";
+import type { DemoChallenge, FaceBackend } from "../../composables/useHeadTurn/useHeadTurn.model";
 import { defaultValues } from "../../examples/define";
 import type { HeadPoseResources } from "../../examples/detect-head-pose/demo.model";
 import { publishResult } from "../../results";
@@ -112,12 +130,12 @@ import type { HeadTurnCheckProps } from "./HeadTurnCheck.model";
 const props = defineProps<HeadTurnCheckProps>();
 const bemm = useBemm("head-turn-check", { includeBaseClass: true });
 
-const STEP_LABELS = [
-  "Face the camera",
-  "Turn one way",
-  "Turn the other way",
-  "Face the camera again",
+const CHALLENGES: { value: DemoChallenge; label: string }[] = [
+  { value: "head-turn", label: "Head turn" },
+  { value: "head-circle", label: "Head circle (YuNet)" },
+  { value: "motion", label: "Motion" },
 ];
+const challengeLabelId = useId();
 const BACKENDS: { value: FaceBackend; label: string }[] = [
   { value: "haar", label: "Built-in (HAAR)" },
   { value: "neural", label: "Neural (YuNet, optional package)" },
@@ -144,7 +162,8 @@ const check = useHeadTurn({
       values: {
         step: next.step,
         progress: next.progress,
-        firstSide: next.firstSide ?? "",
+        side: next.side ?? "",
+        challenge: check.challenge.value,
         source: from,
       },
     }),
@@ -154,6 +173,7 @@ const {
   source,
   state: challengeState,
   backend,
+  challenge,
   neuralState,
   ready,
   finished,
@@ -164,10 +184,10 @@ const {
   detectionTime,
   message,
   hint,
-  chooseBackend,
   stop,
 } = check;
 const { video } = camera;
+const labels = computed(() => stepLabels(challenge.value));
 const status = check.cascadesState;
 
 const backendStatus = computed(() => {
@@ -180,9 +200,11 @@ const backendStatus = computed(() => {
 });
 const instruction = computed(() => {
   if (source.value === "idle") return "Start the check, then follow the instructions here.";
-  if (challengeState.value.step === "done") return "Done. You turned your head both ways.";
+  if (challengeState.value.step === "done") {
+    return source.value === "sample" ? "Done. The sample video passed." : "Done. You passed.";
+  }
   if (challengeState.value.step === "failed")
-    return "Time's up before all four steps were done. Try again.";
+    return "Time's up before every step was done. Try again.";
   return challengeState.value.instruction;
 });
 
@@ -203,9 +225,29 @@ function startCamera(): void {
   void check.start();
 }
 
-/** Plays the scripted sequence of poses through the same challenge and screen. */
-function playScripted(): void {
-  check.playScripted();
+/** Plays the sample video of the challenge through the same detector and check. */
+function playSample(): void {
+  void check.playSample();
+}
+
+/**
+ * Switches the detector. The built-in one can't tell directions, so it goes back to the head
+ * turn from the head circle.
+ *
+ * @param choice - The detector.
+ */
+function chooseBackend(choice: FaceBackend): void {
+  if (choice === "haar" && needsDirection(challenge.value)) void check.chooseChallenge("head-turn");
+  void check.chooseBackend(choice);
+}
+
+/**
+ * Switches the check; the head circle switches to the neural detector.
+ *
+ * @param choice - The check.
+ */
+function chooseChallenge(choice: DemoChallenge): void {
+  void check.chooseChallenge(choice);
 }
 
 onMounted(() => {
@@ -215,12 +257,12 @@ onMounted(() => {
     defaults: true,
     values: scripted.values,
   });
-  if (new URLSearchParams(window.location.search).get("demo") === "scripted") {
+  if (new URLSearchParams(window.location.search).get("demo") === "sample") {
     const stopWatching = watch(
       status,
       (loaded) => {
         if (loaded !== "ready") return;
-        playScripted();
+        playSample();
         queueMicrotask(() => stopWatching());
       },
       { immediate: true },
@@ -290,6 +332,7 @@ onMounted(() => {
   }
 
   &__frame {
+    position: relative;
     overflow: hidden;
     border-radius: var(--auno-radius-control);
     background: var(--auno-surface);
@@ -299,6 +342,23 @@ onMounted(() => {
   &__mirror {
     position: relative;
     transform: scaleX(-1);
+
+    &--plain {
+      transform: none;
+    }
+  }
+
+  // Says what's playing: not the viewer's camera, and not a real person.
+  &__badge {
+    position: absolute;
+    top: var(--auno-space-s);
+    left: var(--auno-space-s);
+    padding: var(--auno-space-2xs) var(--auno-space-xs);
+    border-radius: var(--auno-radius-s);
+    background: rgb(0 0 0 / 0.55);
+    color: #fff;
+    font-size: var(--auno-text-small);
+    line-height: 1.4;
   }
 
   &__video {

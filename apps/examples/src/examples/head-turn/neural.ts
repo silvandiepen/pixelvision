@@ -28,5 +28,6 @@ export async function loadNeuralBackend(): Promise<NeuralBackend> {
     detector,
     estimateHeadYaw: neural.estimateHeadYaw,
     headPoseFromFace: neural.headPoseFromFace,
+    createHeadPoseTracker: () => neural.createHeadPoseTracker(),
   };
 }

@@ -2,7 +2,7 @@ pixelvision runs in the browser or app of the person being checked. Whatever run
 
 Each level builds on the one before. Pick the lowest level that covers the risk you actually have: every level adds work and asks more of the person being checked.
 
-**Status.** Level 0 is available today and level 1 partly. Levels 2 and 3 are being built; their API below is the planned one and may still change. Level 4 is an integration with a separate, certified service, which pixelvision prepares the data for but doesn't replace.
+**Status.** Level 0 is available today, with every challenge below, and level 1 partly. Levels 2 and 3 are being built; their API below is the planned one and may still change. Level 4 is an integration with a separate, certified service, which pixelvision prepares the data for but doesn't replace.
 
 ## The short version
 
@@ -37,11 +37,10 @@ The capture components guide the person to a usable photo: the face in the oval,
 **Use it for** profile photos, scanning receipts and forms, and as the capture step in front of any of the levels below.
 
 ```html
-<pv-face-capture></pv-face-capture>
-<!-- runs the head-turn challenge; steps="off" captures without one -->
+<pv-face-capture challenge="head-turn"></pv-face-capture>
 ```
 
-The `challenge` attribute with the choices above is planned; today the flow has the head turn, on or off.
+Pick another check with `challenge="head-circle"`, `challenge="motion"`, `challenge="none"` or your own steps, such as `challenge="frontal,left,right"`.
 
 ## Level 1: hardened page
 
@@ -52,7 +51,7 @@ Keep the photos away from everything else on the page and catch the crudest tric
 - Use the standalone worker (`@pixelvision/capture-ui/haar-worker`), so the policy needn't allow `blob:` workers.
 - Listen for `pv-capture` on the element itself: it doesn't bubble, so scripts elsewhere on the page don't receive the photo.
 - Upload the photo straight away and call `dispose()`, which stops the camera and clears the photo from the component's memory.
-- Keep the head turn on (or use the planned `motion` challenge): a printed photo held up to the camera can't complete it.
+- Keep a challenge on: `motion` stops a frozen picture, and a head turn or circle stops a printed photo held up to the camera.
 
 **Still open.** Someone can change the page, play a recording, or use a virtual camera, and the page will report success.
 

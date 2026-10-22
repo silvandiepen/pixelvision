@@ -138,11 +138,14 @@ test.describe("landing page: scan a document", () => {
 });
 
 test.describe("landing page: liveness check", () => {
-  test("the demo run passes and shows the photo it kept", async ({ page }) => {
+  test("the sample video passes the head turn with the built-in detector", async ({ page }) => {
+    // The clip steps at the detector's pace, which is slow in some headless browsers.
+    test.setTimeout(120_000);
     const errors = collectErrors(page);
     await page.goto("/");
     const section = page.locator("[data-home-liveness]");
-    await section.locator("[data-challenge-scripted]").click();
+    await expect(section.locator("[data-challenge-sample]")).toBeEnabled();
+    await section.locator("[data-challenge-sample]").click();
     await expect(section.locator('[data-capture-state="running"]')).toBeVisible();
     // The ring fills as a step holds, rather than jumping from step to step.
     await expect
@@ -150,11 +153,12 @@ test.describe("landing page: liveness check", () => {
         Number(await section.locator("[data-hold-ring]").getAttribute("data-hold-progress")),
       )
       .toBeGreaterThan(0);
-    await expect(section).toHaveAttribute("data-liveness-state", "success", { timeout: 15_000 });
+    await expect(section).toHaveAttribute("data-liveness-state", "success", { timeout: 100_000 });
     await expect(section.locator("[data-success-mark]")).toBeVisible();
     await expect(section.locator("[data-liveness-photo]")).toBeVisible();
     const result = await published(page, "home-liveness");
-    expect(result.source).toBe("scripted");
+    expect(result.source).toBe("sample");
+    expect(result.challenge).toBe("head-turn");
     expect(result.photo).toMatch(/^\d+x\d+$/);
 
     await section.locator("[data-liveness-again]").click();

@@ -1,1 +1,1 @@
-export { useHeadTurn } from "./useHeadTurn";
+export { stepLabels, useHeadTurn } from "./useHeadTurn";

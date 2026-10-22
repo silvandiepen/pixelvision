@@ -27,9 +27,11 @@ and in React Native (Hermes).
   and upper-body cascades, and OpenCV's own `haarcascade_*.xml` files; QR codes, ArUco markers and
   skin detection.
 - **Document scanning:** find a document in a photo, straighten it, and track it across frames.
-- **Face and head-turn capture:** head-pose detection and a head-turn challenge (a client-side
-  signal, not liveness proof); optional neural face detection with landmarks in
-  `@pixelvision/face-neural`.
+- **Face capture challenges:** head-pose detection and face challenges (head turn, head circle,
+  natural motion, or your own steps), as a client-side signal, not liveness proof; optional neural
+  face detection with landmarks and up/down tilt in `@pixelvision/face-neural`. See the
+  [security levels](https://pixelvision.hakobs.com/guide/security) for what a client-side check can
+  and can't prove.
 - **Shape analysis:** contours, polygon approximation, convex hulls, moments, bounding and rotated
   rectangles, and connected components.
 - **Vectorising:** trace a raster image into SVG paths, with holes, sharp corners and Bézier curves,
