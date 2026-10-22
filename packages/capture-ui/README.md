@@ -231,38 +231,39 @@ than one person is in view (see [One person at a time](#one-person-at-a-time)). 
 
 ### Attributes
 
-| Attribute             | Default     | What it does                                                                                                                                                    |
-| --------------------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `autostart`           | off         | Start the camera when connected. Without it, an intro panel with a start button shows first                                                                     |
-| `guide-shape`         | `oval`      | `oval`, `circle` or `rect`                                                                                                                                      |
-| `guide-aspect`        | `0.78`      | Width / height of the guide, as `0.75`, `3/4` or `3:4` (ignored for `circle`)                                                                                   |
-| `mirrored`            | on          | Mirror the preview like a mirror. The capture is never mirrored                                                                                                 |
-| `challenge`           | `head-turn` | What the person does after lining up their face: `head-turn`, `head-circle`, `motion`, `none`, or steps such as `left,up,right`. See [Challenges](#challenges)  |
-| `steps`               | on          | The older switch: `steps="off"` is `challenge="none"`. Ignored when `challenge` is set                                                                          |
-| `auto-capture`        | on          | Capture when the flow finishes. When off, a "Take photo" button appears instead                                                                                 |
-| `hold-frames`         | `3`         | Matching detections a step (or the alignment) needs                                                                                                             |
-| `window-frames`       | `6`         | Recent detections with a face considered for `hold-frames`. A stray or missed detection slows a step instead of resetting it                                    |
-| `smooth-frames`       | `8`         | Detections the face box is median-smoothed over before guidance is derived                                                                                      |
-| `several-faces-ratio` | `0.4`       | Smallest width, as a fraction of the largest face's, from which another face counts as a second person (0–1). See [One person at a time](#one-person-at-a-time) |
-| `accept-pause`        | `900`       | Milliseconds the acceptance moment (full ring, check mark) lasts after each step                                                                                |
-| `hint-delay`          | `700`       | Milliseconds a positional hint must persist before it shows. "Keep your face in the oval" waits at least 1200                                                   |
-| `hint-hold`           | `1500`      | Minimum milliseconds a hint, or a guide colour, stays on screen                                                                                                 |
-| `message-hold`        | `1500`      | Minimum milliseconds each main instruction stays on screen                                                                                                      |
-| `timeout`             | `45000`     | Milliseconds before giving up (`pv-error` with `timeout`). `0` disables it                                                                                      |
-| `first-turn`          | `left`      | The side asked for first, with a directional source                                                                                                             |
-| `show-landmarks`      | off         | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                                                   |
-| `show-debug`          | off         | Show detector, phase, step, pose, guidance, face count, quality, sharpness and detection rate                                                                   |
-| `min-sharpness`       | `120`       | Lowest sharpness of the face region for a frame to be kept. See [Quality gates](#quality-gates)                                                                 |
-| `min-brightness`      | `80`        | Lowest mean brightness of the face region, 0–255                                                                                                                |
-| `max-brightness`      | `212`       | Highest mean brightness of the face region, 0–255                                                                                                               |
-| `min-contrast`        | `22`        | Lowest contrast (standard deviation of the levels) of the face region                                                                                           |
-| `detect-size`         | `480`       | Longest side of the frame handed to the detector                                                                                                                |
-| `detect-interval`     | `120`       | Minimum milliseconds between detections. One frame is analysed at a time, so a slow detector lowers the rate instead                                            |
-| `worker`              | on          | Run the built-in detector in a worker                                                                                                                           |
-| `max-pixels`          | 2764800     | Most pixels a capture may have (1920 × 1440). A larger camera frame is scaled down. Kept between 320 × 240 and 4096 × 4096                                      |
-| `include-image-data`  | off         | Also put the raw `ImageData` in `pv-capture`. Off, the capture is only the JPEG                                                                                 |
-| `start-timeout`       | `10000`     | Milliseconds the camera gets to deliver its first frame size before `pv-error` with `start-timeout`                                                             |
-| `lang`                | page        | Language of the built-in texts (`en`, `nl`). If not set, the closest `lang` attribute is used                                                                   |
+| Attribute             | Default     | What it does                                                                                                                                                                                                                                |
+| --------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `autostart`           | off         | Start the camera when connected. Without it, an intro panel with a start button shows first                                                                                                                                                 |
+| `guide-shape`         | `oval`      | `oval`, `circle` or `rect`                                                                                                                                                                                                                  |
+| `guide-aspect`        | `0.78`      | Width / height of the guide, as `0.75`, `3/4` or `3:4` (ignored for `circle`)                                                                                                                                                               |
+| `mirrored`            | on          | Mirror the preview like a mirror. The capture is never mirrored                                                                                                                                                                             |
+| `challenge`           | `head-turn` | What the person does after lining up their face: `head-turn`, `head-circle`, `motion`, `none`, or steps such as `left,up,right`. See [Challenges](#challenges)                                                                              |
+| `challenge-url`       | off         | A URL your server issues signed challenges at (`createChallenge` in `@pixelvision/verify`). Each run fetches one and asks for its steps, and `pv-evidence` hands back the frames for the server to check. See [Server check](#server-check) |
+| `steps`               | on          | The older switch: `steps="off"` is `challenge="none"`. Ignored when `challenge` is set                                                                                                                                                      |
+| `auto-capture`        | on          | Capture when the flow finishes. When off, a "Take photo" button appears instead                                                                                                                                                             |
+| `hold-frames`         | `3`         | Matching detections a step (or the alignment) needs                                                                                                                                                                                         |
+| `window-frames`       | `6`         | Recent detections with a face considered for `hold-frames`. A stray or missed detection slows a step instead of resetting it                                                                                                                |
+| `smooth-frames`       | `8`         | Detections the face box is median-smoothed over before guidance is derived                                                                                                                                                                  |
+| `several-faces-ratio` | `0.4`       | Smallest width, as a fraction of the largest face's, from which another face counts as a second person (0–1). See [One person at a time](#one-person-at-a-time)                                                                             |
+| `accept-pause`        | `900`       | Milliseconds the acceptance moment (full ring, check mark) lasts after each step                                                                                                                                                            |
+| `hint-delay`          | `700`       | Milliseconds a positional hint must persist before it shows. "Keep your face in the oval" waits at least 1200                                                                                                                               |
+| `hint-hold`           | `1500`      | Minimum milliseconds a hint, or a guide colour, stays on screen                                                                                                                                                                             |
+| `message-hold`        | `1500`      | Minimum milliseconds each main instruction stays on screen                                                                                                                                                                                  |
+| `timeout`             | `45000`     | Milliseconds before giving up (`pv-error` with `timeout`). `0` disables it                                                                                                                                                                  |
+| `first-turn`          | `left`      | The side asked for first, with a directional source                                                                                                                                                                                         |
+| `show-landmarks`      | off         | Draw the detector's landmarks (eyes, nose tip, mouth corners)                                                                                                                                                                               |
+| `show-debug`          | off         | Show detector, phase, step, pose, guidance, face count, quality, sharpness and detection rate                                                                                                                                               |
+| `min-sharpness`       | `120`       | Lowest sharpness of the face region for a frame to be kept. See [Quality gates](#quality-gates)                                                                                                                                             |
+| `min-brightness`      | `80`        | Lowest mean brightness of the face region, 0–255                                                                                                                                                                                            |
+| `max-brightness`      | `212`       | Highest mean brightness of the face region, 0–255                                                                                                                                                                                           |
+| `min-contrast`        | `22`        | Lowest contrast (standard deviation of the levels) of the face region                                                                                                                                                                       |
+| `detect-size`         | `480`       | Longest side of the frame handed to the detector                                                                                                                                                                                            |
+| `detect-interval`     | `120`       | Minimum milliseconds between detections. One frame is analysed at a time, so a slow detector lowers the rate instead                                                                                                                        |
+| `worker`              | on          | Run the built-in detector in a worker                                                                                                                                                                                                       |
+| `max-pixels`          | 2764800     | Most pixels a capture may have (1920 × 1440). A larger camera frame is scaled down. Kept between 320 × 240 and 4096 × 4096                                                                                                                  |
+| `include-image-data`  | off         | Also put the raw `ImageData` in `pv-capture`. Off, the capture is only the JPEG                                                                                                                                                             |
+| `start-timeout`       | `10000`     | Milliseconds the camera gets to deliver its first frame size before `pv-error` with `start-timeout`                                                                                                                                         |
+| `lang`                | page        | Language of the built-in texts (`en`, `nl`). If not set, the closest `lang` attribute is used                                                                                                                                               |
 
 On/off attributes accept `on`/`off`, `true`/`false` and `1`/`0`. An attribute without a value is
 on.
@@ -294,15 +295,16 @@ on.
 Status events bubble and cross the shadow root. `pv-capture`, the only event with image data,
 does neither: listen on the element.
 
-| Event         | `detail`                                                                                                                                                                                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pv-ready`    | `{ width, height, facingMode }`: the camera runs                                                                                                                                                                                                             |
-| `pv-pose`     | `{ pose, guidance, phase, faceCount, box?, landmarks?, score?, yaw? }`: each detection, in camera pixels. `box` is the face being followed; `faceCount` the faces of a meaningful size in view, that one included (0 without a face)                         |
-| `pv-detector` | `{ name }`: the detector was switched through "Use precise detection"                                                                                                                                                                                        |
-| `pv-step`     | `{ step, stepsDone, totalSteps, progress }`: a challenge step started (`frontal`, `left`, `right`, `up`, `down`, `side`, `other-side` or `move`), or `step: "done"` once the steps are complete                                                              |
-| `pv-capture`  | `{ blob, image?, metadata }`: a JPEG, its `ImageData` with `include-image-data`, and `{ width, height, sharpness, quality, box, pose, challenge, challengePassed, durationMs, capturedAt, mirrored: false }`. On the element only                            |
-| `pv-complete` | `{ durationMs, stepsDone }`: the flow is finished                                                                                                                                                                                                            |
-| `pv-error`    | `{ code, message, cause? }`. `code` is one of `denied`, `blocked-frame`, `unavailable`, `in-use`, `insecure`, `unknown`, `timeout`, `detector`, `no-video` (the stream has no live video track), `ended` (the track ended), `media-error` or `start-timeout` |
+| Event         | `detail`                                                                                                                                                                                                                                                                                                                   |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pv-ready`    | `{ width, height, facingMode }`: the camera runs                                                                                                                                                                                                                                                                           |
+| `pv-pose`     | `{ pose, guidance, phase, faceCount, box?, landmarks?, score?, yaw? }`: each detection, in camera pixels. `box` is the face being followed; `faceCount` the faces of a meaningful size in view, that one included (0 without a face)                                                                                       |
+| `pv-detector` | `{ name }`: the detector was switched through "Use precise detection"                                                                                                                                                                                                                                                      |
+| `pv-step`     | `{ step, stepsDone, totalSteps, progress }`: a challenge step started (`frontal`, `left`, `right`, `up`, `down`, `side`, `other-side` or `move`), or `step: "done"` once the steps are complete                                                                                                                            |
+| `pv-capture`  | `{ blob, image?, metadata }`: a JPEG, its `ImageData` with `include-image-data`, and `{ width, height, sharpness, quality, box, pose, challenge, challengePassed, durationMs, capturedAt, mirrored: false }`. On the element only                                                                                          |
+| `pv-evidence` | `{ challenge, frames, photo }` with `challenge-url`: the server's challenge, every detection frame (`{ time, blob }`, JPEG) and the photo, for your server to check. On the element only                                                                                                                                   |
+| `pv-complete` | `{ durationMs, stepsDone }`: the flow is finished                                                                                                                                                                                                                                                                          |
+| `pv-error`    | `{ code, message, cause? }`. `code` is one of `denied`, `blocked-frame`, `unavailable`, `in-use`, `insecure`, `unknown`, `timeout`, `detector`, `challenge` (the challenge from `challenge-url` didn't load), `no-video` (the stream has no live video track), `ended` (the track ended), `media-error` or `start-timeout` |
 
 ### Challenges
 
@@ -340,6 +342,32 @@ side), `other-side` (the opposite of the last `side`) and `move`.
 
 `metadata.challenge` lists the steps that were asked, so your server knows what the capture went
 through.
+
+### Server check
+
+A challenge chosen in the page can be recorded and replayed. With `challenge-url`, your server
+chooses the steps (a new random order each time) and checks the frames itself:
+
+```html
+<pv-face-capture challenge-url="/challenge"></pv-face-capture>
+<script type="module">
+  import { evidenceForm } from "@pixelvision/capture-ui";
+
+  const selfie = document.querySelector("pv-face-capture");
+  selfie.addEventListener("pv-evidence", async (event) => {
+    const response = await fetch("/verify", { method: "POST", body: evidenceForm(event.detail) });
+    // Your server's answer decides; see @pixelvision/verify.
+  });
+</script>
+```
+
+- Each run fetches its own challenge, signed by your server, and asks for its steps. A retake
+  fetches a new one: a challenge can be tried once.
+- From the first face to the end of the steps, every detection frame is kept, scaled to 320 px
+  and encoded as JPEG (about 15 KB each, at most 240).
+- `pv-evidence` (on the element only, like `pv-capture`) carries `{ challenge, frames, photo }`.
+  `evidenceForm` packs it for `readEvidenceForm` in `@pixelvision/verify`.
+- Without `challenge-url`, no frames are kept.
 
 ### How it behaves
 

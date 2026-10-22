@@ -51,6 +51,7 @@ const ERROR_LABELS: Record<CaptureErrorCode, [LabelKey, LabelKey]> = {
   unknown: ["cameraErrorTitle", "cameraErrorBody"],
   timeout: ["timeoutTitle", "timeoutBody"],
   detector: ["cameraErrorTitle", "cameraErrorBody"],
+  challenge: ["challengeErrorTitle", "challengeErrorBody"],
   "no-video": ["cameraUnavailableTitle", "cameraUnavailableBody"],
   ended: ["cameraUnavailableTitle", "cameraUnavailableBody"],
   "media-error": ["cameraErrorTitle", "cameraErrorBody"],

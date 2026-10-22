@@ -2,6 +2,7 @@ import type { ChallengeStep, HeadPose, Point, Quad } from "pixelvision";
 import type { CameraErrorCode } from "../camera/camera.model";
 import type { StreamFailure } from "../camera/startup.model";
 import type { AspectPreset } from "../logic/documentFlow.model";
+import type { ServerChallenge } from "../logic/evidence.model";
 import type { FacePhase } from "../logic/faceFlow.model";
 import type { Box, FaceGuidance } from "../logic/geometry.model";
 import type { QualityAssessment } from "../logic/quality.model";
@@ -12,7 +13,7 @@ import type { QualityAssessment } from "../logic/quality.model";
  * a media error (`media-error`), or that delivered no frame size in time (`start-timeout`).
  */
 export type CaptureErrorCode =
-  CameraErrorCode | "timeout" | "detector" | Exclude<StreamFailure, "aborted">;
+  CameraErrorCode | "timeout" | "detector" | "challenge" | Exclude<StreamFailure, "aborted">;
 
 /** `pv-ready`: the camera is running. */
 export interface ReadyDetail {
@@ -80,6 +81,8 @@ export interface FaceCaptureMetadata {
   pose: HeadPose;
   /** The challenge's steps, as asked; empty without a challenge. */
   challenge: ChallengeStep[];
+  /** The server challenge's one-time code, with `challenge-url`. */
+  challengeId?: string;
   /**
    * Whether the challenge was completed in this browser.
    *
@@ -108,6 +111,20 @@ export interface FaceCaptureDetail {
   /** Pixels of the capture; only with `include-image-data`. */
   image?: ImageData;
   metadata: FaceCaptureMetadata;
+}
+
+/**
+ * `pv-evidence`, with `challenge-url`: what your server needs to check the
+ * challenge itself (see `verifyEvidence` in `@pixelvision/verify`). Like
+ * `pv-capture`, it stays on the element. Post it with `evidenceForm`.
+ */
+export interface EvidenceDetail {
+  /** The challenge as the server signed it. */
+  challenge: ServerChallenge;
+  /** Every detection frame from the first face to the end, as JPEGs, 320 px at most. */
+  frames: { time: number; blob: Blob }[];
+  /** The captured photo. */
+  photo: Blob;
 }
 
 /** `pv-complete`. */

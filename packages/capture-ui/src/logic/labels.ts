@@ -12,6 +12,8 @@ export const englishLabels: CaptureLabels = {
   faceIntroBodyPlain: "Look at the camera. Find even light and take off sunglasses or a hat.",
   faceIntroBodySteps:
     "We'll ask you to move your head a few times. Find even light and take off sunglasses or a hat.",
+  challengeErrorTitle: "The check couldn't start",
+  challengeErrorBody: "Check your connection and try again.",
   start: "Start camera",
   noFace: "Position your face in the oval",
   tooFar: "Move a little closer",
@@ -106,6 +108,8 @@ export const dutchLabels: CaptureLabels = {
     "Kijk in de camera. Zorg voor gelijkmatig licht en zet een zonnebril of pet af.",
   faceIntroBodySteps:
     "We vragen je je hoofd een paar keer te bewegen. Zorg voor gelijkmatig licht en zet een zonnebril of pet af.",
+  challengeErrorTitle: "De controle kon niet starten",
+  challengeErrorBody: "Controleer je verbinding en probeer het opnieuw.",
   start: "Camera starten",
   noFace: "Plaats je gezicht in het ovaal",
   tooFar: "Kom iets dichterbij",

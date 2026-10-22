@@ -9,6 +9,8 @@ import type {
   ReadyDetail,
   StepDetail,
 } from "./elements/events.model";
+export type { ServerChallenge } from "./logic/evidence.model";
+export { evidenceForm, isServerChallenge } from "./logic/evidence";
 
 // Elements
 export { DocumentScannerElement } from "./elements/documentScanner";
@@ -21,6 +23,7 @@ export type {
   DetectorDetail,
   DocumentCaptureDetail,
   ErrorDetail,
+  EvidenceDetail,
   FaceCaptureDetail,
   FaceCaptureMetadata,
   PoseDetail,

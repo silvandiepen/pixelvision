@@ -12,6 +12,9 @@ export interface CaptureLabels {
   faceIntroBodyPlain: string;
   /** Intro for a custom sequence of steps. */
   faceIntroBodySteps: string;
+  /** The server challenge (`challenge-url`) couldn't be loaded. */
+  challengeErrorTitle: string;
+  challengeErrorBody: string;
   start: string;
   noFace: string;
   tooFar: string;

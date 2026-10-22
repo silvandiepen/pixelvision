@@ -6,11 +6,19 @@ import type {
   HeadPoseCascades,
   RegionPatch,
 } from "pixelvision";
-import { canvasPixels, canvasToBlob, context2d, createCanvas } from "../camera/frames";
+import {
+  canvasPixels,
+  canvasToBlob,
+  context2d,
+  createCanvas,
+  imageToCanvas,
+} from "../camera/frames";
 import type { GrabbedFrame } from "../camera/frames";
 import { parseBoolean, parseNumber, parseRatio, parseShape } from "../logic/attributes";
 import { fitToPixels } from "../logic/captureSize";
 import { zeroCanvas } from "../logic/disposal";
+import { isServerChallenge } from "../logic/evidence";
+import type { ServerChallenge } from "../logic/evidence.model";
 import { createFaceFlow, turnProgress } from "../logic/faceFlow";
 import { SEVERAL_FACES_RATIO, followFace } from "../logic/faces";
 import type { FaceFlow, FaceFlowState, TurnHint } from "../logic/faceFlow.model";
@@ -41,6 +49,7 @@ import { CaptureElement, SCRIM_BLEED } from "./captureElement";
 import type {
   CompleteDetail,
   DetectorDetail,
+  EvidenceDetail,
   FaceCaptureDetail,
   FaceCaptureMetadata,
   PoseDetail,
@@ -49,6 +58,11 @@ import type {
 import { faceStyles } from "./styles";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
+
+/** Evidence frames for the server are scaled to at most this many pixels on their longer side. */
+const EVIDENCE_SIDE = 320;
+/** Most evidence frames kept: about 30 s of detections. */
+const MAX_EVIDENCE = 240;
 
 /** The sharpest good frontal frame seen so far, at most `max-pixels` pixels. */
 interface BestFrame {
@@ -90,6 +104,7 @@ export class FaceCaptureElement extends CaptureElement {
       "guide-aspect",
       "steps",
       "challenge",
+      "challenge-url",
       "show-landmarks",
     ];
   }
@@ -122,6 +137,11 @@ export class FaceCaptureElement extends CaptureElement {
   private lastYaw: number | undefined;
   /** The face region of the previous detection, to measure motion against. */
   private lastPatch: RegionPatch | undefined;
+  /** The server's challenge for this run, with `challenge-url`. */
+  private serverChallenge: ServerChallenge | undefined;
+  /** Frames for the server, with `challenge-url`, as they encode. */
+  private evidence: { time: number; blob: Promise<Blob> }[] = [];
+  private evidenceStart = 0;
   private best: BestFrame | undefined;
   private lastQuality: QualityAssessment | undefined;
   private lastPose: PoseDetail | undefined;
@@ -220,6 +240,8 @@ export class FaceCaptureElement extends CaptureElement {
    * `steps="off"` (the older attribute) means `"none"`, and the default is `"head-turn"`.
    */
   private get challenge(): ChallengePreset | ChallengeStep[] {
+    // A server's challenge decides the steps.
+    if (this.serverChallenge) return [...this.serverChallenge.steps];
     const value = this.getAttribute("challenge")?.trim();
     if (!value) return parseBoolean(this.getAttribute("steps"), true) ? "head-turn" : "none";
     if (value in CHALLENGE_PRESETS) return value as ChallengePreset;
@@ -402,6 +424,14 @@ export class FaceCaptureElement extends CaptureElement {
     this.sourceValue?.reset?.();
     this.activeSource?.reset?.();
     this.lastPatch = undefined;
+    this.evidence = [];
+    const url = this.getAttribute("challenge-url");
+    if (url && !this.serverChallenge) {
+      // Each run gets its own challenge from the server; the steps start once it's here.
+      this.flow = undefined;
+      void this.loadChallenge(url);
+      return;
+    }
     try {
       this.flow = this.createFlow(holdFrames);
     } catch (error) {
@@ -468,6 +498,69 @@ export class FaceCaptureElement extends CaptureElement {
   protected clearCaptures(): void {
     this.dropFrames();
     this.hideStill();
+    // The evidence frames are face images too; a new run fetches a new challenge.
+    this.evidence = [];
+    this.serverChallenge = undefined;
+  }
+
+  /**
+   * Fetches this run's challenge from `challenge-url`, then starts the steps.
+   *
+   * @param url - Where the server issues challenges.
+   */
+  private async loadChallenge(url: string): Promise<void> {
+    const token = this.token;
+    try {
+      const response = await fetch(url, { credentials: "same-origin", cache: "no-store" });
+      if (!response.ok) throw new Error(`The challenge request failed (${response.status})`);
+      const challenge: unknown = await response.json();
+      if (!isServerChallenge(challenge)) throw new Error("The response isn't a signed challenge");
+      if (!token?.current) return;
+      this.serverChallenge = challenge;
+      this.onStarted();
+    } catch (error) {
+      if (token?.current) this.fail("challenge", error);
+    }
+  }
+
+  /**
+   * Keeps a detection frame for the server, scaled down and encoded as a JPEG.
+   *
+   * @param image - The detection frame.
+   */
+  private keepEvidence(image: ImageData): void {
+    if (this.evidence.length >= MAX_EVIDENCE) return;
+    const now = performance.now();
+    if (this.evidence.length === 0) this.evidenceStart = now;
+    const scale = Math.min(1, EVIDENCE_SIDE / Math.max(image.width, image.height));
+    const canvas = createCanvas(
+      Math.max(1, Math.round(image.width * scale)),
+      Math.max(1, Math.round(image.height * scale)),
+    );
+    const source = imageToCanvas(image);
+    context2d(canvas).drawImage(source, 0, 0, canvas.width, canvas.height);
+    zeroCanvas(source);
+    const blob = canvasToBlob(canvas, "image/jpeg", 0.8).finally(() => zeroCanvas(canvas));
+    // A frame that fails to encode is left out; the server then sees fewer frames.
+    blob.catch(() => undefined);
+    this.evidence.push({ time: now - this.evidenceStart, blob });
+  }
+
+  /**
+   * Fires `pv-evidence` with the server's challenge, the frames and the photo.
+   *
+   * @param challenge - This run's challenge.
+   * @param photo - The captured photo.
+   */
+  private async emitEvidence(challenge: ServerChallenge, photo: Blob): Promise<void> {
+    const settled = await Promise.allSettled(this.evidence.map((frame) => frame.blob));
+    const frames = settled.flatMap((result, i) =>
+      result.status === "fulfilled" ? [{ time: this.evidence[i].time, blob: result.value }] : [],
+    );
+    this.emitPayload<EvidenceDetail>("pv-evidence", { challenge, frames, photo });
+    // A challenge is good for one attempt: a retake fetches a new one.
+    this.serverChallenge = undefined;
+    this.evidence = [];
   }
 
   /** Frees the kept frame and forgets the last detection. */
@@ -543,6 +636,8 @@ export class FaceCaptureElement extends CaptureElement {
   }
 
   protected async processFrame(frame: GrabbedFrame, token: RunToken): Promise<void> {
+    // Waiting for the server's challenge.
+    if (!this.flow) return;
     const source = await this.ensureSource(token);
     if (!source || !token.current) return;
     if (!this.canRunChallenge(source)) return;
@@ -605,6 +700,9 @@ export class FaceCaptureElement extends CaptureElement {
       kept: this.best !== undefined,
     });
     this.flowState = state;
+    // From the first face to the end of the steps, every frame goes to the server.
+    const collecting = this.serverChallenge && state.phase !== "done";
+    if (collecting && (followed.box || this.evidence.length > 0)) this.keepEvidence(frame.image);
 
     if (landmarks && !smoothed.outlier) this.lastLandmarks = landmarks.map((p) => toView(p, t));
     if (!viewBox || !own) this.lastLandmarks = [];
@@ -724,6 +822,7 @@ export class FaceCaptureElement extends CaptureElement {
       box,
       pose: best ? best.pose : (this.lastPose?.pose ?? "none"),
       challenge: [...(this.flow?.steps ?? [])],
+      ...(this.serverChallenge ? { challengeId: this.serverChallenge.id } : {}),
       challengePassed: done && (this.flow?.steps.length ?? 0) > 0,
       durationMs: Math.round(performance.now() - this.startedAt),
       capturedAt: new Date().toISOString(),
@@ -756,6 +855,7 @@ export class FaceCaptureElement extends CaptureElement {
     this.setInstruction(this.text.faceDone);
     vibrate(HAPTICS.success);
     this.emitPayload<FaceCaptureDetail>("pv-capture", detail);
+    if (done && this.serverChallenge) await this.emitEvidence(this.serverChallenge, blob);
     this.emit<CompleteDetail>("pv-complete", {
       durationMs: metadata.durationMs,
       stepsDone: this.flowState?.stepsDone ?? 0,

@@ -9,7 +9,7 @@ import { guidanceScenes, toFrame } from "../logic/testScenes";
 import type { GuidanceCase } from "../logic/testScenes";
 import { haarPoseSource } from "../sources/haar";
 import type { FaceObservation, PoseSource } from "../sources/source.model";
-import type { FaceCaptureDetail, PoseDetail } from "./events.model";
+import type { EvidenceDetail, FaceCaptureDetail, PoseDetail } from "./events.model";
 import { FakeTrack, fakeCanvas, fakeStream, videoWithSize, wait } from "./testHarness";
 
 // The guidance states through <pv-face-capture>: drawn frames are injected into the detection
@@ -216,5 +216,60 @@ describe("<pv-face-capture> guidance on drawn faces", () => {
     expect(poses.map((p) => p.faceCount).slice(0, 5)).toEqual([1, 1, 2, 2, 1]);
     expect(list).toHaveLength(1);
     expect(hints).not.toContain("severalFaces");
+  });
+});
+
+describe("<pv-face-capture> with a server challenge", () => {
+  const challenge = {
+    id: "0123456789abcdef0123456789abcdef",
+    steps: ["frontal"],
+    issuedAt: 1,
+    expiresAt: 2,
+    signature: "signed-by-the-server",
+  };
+
+  it("asks for the server's steps and hands over the evidence", async () => {
+    const fetches = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(JSON.stringify(challenge)));
+    const { el, list } = await show(
+      "frontal",
+      'challenge="head-circle" challenge-url="/challenge"',
+    );
+    const evidence: EvidenceDetail[] = [];
+    el.addEventListener("pv-evidence", (e) =>
+      evidence.push((e as CustomEvent<EvidenceDetail>).detail),
+    );
+    await until(() => evidence.length > 0);
+
+    expect(fetches).toHaveBeenCalledWith(
+      "/challenge",
+      expect.objectContaining({ cache: "no-store" }),
+    );
+    // The server's one step, not the head circle the attribute asks for.
+    expect(list[0].metadata).toMatchObject({ challenge: ["frontal"], challengeId: challenge.id });
+    expect(evidence[0].challenge).toEqual(challenge);
+    expect(evidence[0].frames.length).toBeGreaterThan(1);
+    const times = evidence[0].frames.map((frame) => frame.time);
+    expect(times[0]).toBe(0);
+    expect(times.every((time, i) => i === 0 || time > times[i - 1])).toBe(true);
+    expect(evidence[0].photo).toBe(list[0].blob);
+  });
+
+  it("stops with an explanation when the challenge doesn't load", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("nope", { status: 500 }));
+    const { el } = await show("frontal", 'challenge-url="/challenge"');
+    const failed = () => el.shadowRoot!.textContent!.includes("The check couldn't start");
+    await until(failed);
+    expect(failed()).toBe(true);
+    expect(el.state).toBeUndefined();
+  });
+
+  it("refuses a response that isn't a signed challenge", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ steps: [] })));
+    const { el } = await show("frontal", 'challenge-url="/challenge"');
+    const failed = () => el.shadowRoot!.textContent!.includes("The check couldn't start");
+    await until(failed);
+    expect(failed()).toBe(true);
   });
 });
