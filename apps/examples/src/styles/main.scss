@@ -29,18 +29,20 @@
   --pv-accent: oklch(0.47 0.2 290);
   --pv-overlay: oklch(0.62 0.26 290);
 
-  // Code highlighting: tones of the anchors above, so they follow the theme.
-  // Weight and italics carry most of the difference; no hue.
+  // Code highlighting. The one place the site uses hue outside the accent:
+  // a muted palette, each token at least 4.5:1 on both code backgrounds
+  // (surface and raised). The dark palette is in `dark-tokens` below.
   --pv-code-background: var(--auno-surface);
   --pv-code-foreground: var(--auno-ink);
-  --pv-code-keyword: var(--auno-ink);
-  --pv-code-function: var(--auno-ink);
-  --pv-code-constant: var(--auno-ink);
-  --pv-code-type: color-mix(in srgb, var(--auno-ink) 85%, var(--auno-page));
-  --pv-code-property: color-mix(in srgb, var(--auno-ink) 85%, var(--auno-page));
-  --pv-code-string: var(--auno-secondary);
-  --pv-code-punctuation: var(--auno-secondary);
-  --pv-code-comment: var(--auno-faint);
+  --pv-code-keyword: #8239a8;
+  --pv-code-string: #2f6f1f;
+  --pv-code-number: #9c4a06;
+  --pv-code-literal: #0b6e78;
+  --pv-code-function: #1f5fa8;
+  --pv-code-type: #7d5a00;
+  --pv-code-property: #a83246;
+  --pv-code-comment: #626369;
+  --pv-code-punctuation: #4e5560;
 
   // Type
   --auno-font:
@@ -104,6 +106,15 @@
   --auno-help: #9cc4f2;
   --pv-accent: oklch(0.8 0.12 290);
   --pv-overlay: oklch(0.72 0.2 290);
+  --pv-code-keyword: #c4a2e8;
+  --pv-code-string: #9fcf86;
+  --pv-code-number: #e3a46f;
+  --pv-code-literal: #6fc7cf;
+  --pv-code-function: #8fbcf2;
+  --pv-code-type: #e0c27a;
+  --pv-code-property: #ec9aa5;
+  --pv-code-comment: #9a9b9f;
+  --pv-code-punctuation: #a6acb5;
   --auno-shadow-sheet: 0 18px 68px rgb(0 0 0 / 0.4);
 
   color-scheme: dark;

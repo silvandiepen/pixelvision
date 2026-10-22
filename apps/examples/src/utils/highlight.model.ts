@@ -1,6 +1,18 @@
 /** The languages the site highlights. Anything else is shown as plain text. */
 export type CodeLanguage = "typescript" | "javascript" | "bash" | "json";
 
+/** The token colours of the code theme, each a `--pv-code-<name>` custom property. */
+export type CodeTokenName =
+  | "comment"
+  | "keyword"
+  | "punctuation"
+  | "string"
+  | "number"
+  | "literal"
+  | "function"
+  | "type"
+  | "property";
+
 /** One coloured run of text on a line of highlighted code. */
 export interface CodeToken {
   content: string;

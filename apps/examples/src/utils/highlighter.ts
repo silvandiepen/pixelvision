@@ -3,7 +3,7 @@
 import { createHighlighterCore } from "@shikijs/core";
 import type { LanguageRegistration, ThemeRegistration } from "@shikijs/core";
 import { createJavaScriptRegexEngine } from "@shikijs/engine-javascript";
-import type { CodeHighlighter, CodeLanguage } from "./highlight.model";
+import type { CodeHighlighter, CodeLanguage, CodeTokenName } from "./highlight.model";
 
 const THEME_NAME = "pixelvision";
 
@@ -20,14 +20,78 @@ const GRAMMARS: Record<CodeLanguage, () => Promise<{ default: LanguageRegistrati
 };
 
 /**
+ * Each token colour of the code theme, as the name of its `--pv-code-*`
+ * custom property, with the TextMate scopes it colours. Where scopes overlap,
+ * the more specific one wins, so `keyword.operator` is punctuation even
+ * though `keyword` is a keyword.
+ */
+export const CODE_TOKEN_SCOPES: Record<CodeTokenName, readonly string[]> = {
+  comment: ["comment", "punctuation.definition.comment"],
+  keyword: [
+    "keyword",
+    "keyword.control",
+    "keyword.operator.new",
+    "keyword.operator.expression",
+    "storage.type",
+    "storage.modifier",
+    "variable.language",
+  ],
+  punctuation: [
+    "keyword.operator",
+    "punctuation",
+    "meta.brace",
+    "storage.type.function.arrow",
+    "punctuation.definition.template-expression",
+  ],
+  string: ["string", "string.template", "punctuation.definition.string"],
+  number: ["constant.numeric"],
+  literal: ["constant.language", "support.constant"],
+  function: [
+    "entity.name.function",
+    "support.function",
+    "meta.function-call entity.name.function",
+    "entity.name.command",
+  ],
+  type: [
+    "entity.name.type",
+    "entity.name.class",
+    "entity.other.inherited-class",
+    "support.type",
+    "support.class",
+  ],
+  property: [
+    "support.type.property-name",
+    "meta.object-literal.key",
+    "variable.other.property",
+    "variable.other.object.property",
+  ],
+};
+
+/**
+ * Names a `--pv-code-*` custom property.
+ *
+ * @param name - The token or editor colour name.
+ * @returns The CSS `var()` reference.
+ */
+function tone(name: string): string {
+  return `var(--pv-code-${name})`;
+}
+
+/**
  * Builds the code theme. Every colour is a `--pv-code-*` custom property,
- * defined in `styles/main.scss` as a tone between page and ink, so one theme
- * covers light, dark and any contrast setting.
+ * defined in `styles/main.scss` once for light and once for dark mode, so one
+ * theme covers both.
  *
  * @returns The theme.
  */
-function codeTheme(): ThemeRegistration {
-  const tone = (name: string): string => `var(--pv-code-${name})`;
+export function codeTheme(): ThemeRegistration {
+  const tokenColors = Object.entries(CODE_TOKEN_SCOPES).map(([name, scope]) => ({
+    scope: [...scope],
+    settings: {
+      foreground: tone(name),
+      fontStyle: name === "comment" ? "italic" : name === "keyword" ? "bold" : "",
+    },
+  }));
   return {
     name: THEME_NAME,
     type: "light",
@@ -38,43 +102,12 @@ function codeTheme(): ThemeRegistration {
     fg: tone("foreground"),
     bg: tone("background"),
     tokenColors: [
+      ...tokenColors,
+      // Code inside a template string's `${}` is code, and a shell command's
+      // unquoted arguments are plain words: neither is a string.
       {
-        scope: ["comment", "punctuation.definition.comment"],
-        settings: { foreground: tone("comment"), fontStyle: "italic" },
-      },
-      {
-        scope: [
-          "keyword",
-          "storage.type",
-          "storage.modifier",
-          "keyword.control",
-          "variable.language",
-        ],
-        settings: { foreground: tone("keyword"), fontStyle: "bold" },
-      },
-      {
-        scope: ["keyword.operator", "punctuation", "meta.brace"],
-        settings: { foreground: tone("punctuation"), fontStyle: "" },
-      },
-      {
-        scope: ["string", "string.template", "punctuation.definition.string"],
-        settings: { foreground: tone("string") },
-      },
-      {
-        scope: ["constant.numeric", "constant.language", "support.constant"],
-        settings: { foreground: tone("constant") },
-      },
-      {
-        scope: ["entity.name.function", "support.function", "entity.name.command"],
-        settings: { foreground: tone("function") },
-      },
-      {
-        scope: ["entity.name.type", "support.type", "support.class", "entity.name.class"],
-        settings: { foreground: tone("type") },
-      },
-      {
-        scope: ["support.type.property-name", "meta.object-literal.key", "variable.parameter"],
-        settings: { foreground: tone("property") },
+        scope: ["meta.template.expression", "string.unquoted.argument"],
+        settings: { foreground: tone("foreground") },
       },
     ],
   };
