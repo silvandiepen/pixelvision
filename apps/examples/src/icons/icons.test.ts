@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EXAMPLES } from "../examples/registry";
-import { ICONS, iconFor } from "./icons";
+import { ICONS, TOPIC_ICONS, iconFor } from "./icons";
 
 const slugs = EXAMPLES.map((example) => example.slug);
 const ALLOWED_PAINT = new Set(["currentColor", "none"]);
@@ -33,7 +33,7 @@ describe("icons", () => {
     expect(Object.keys(ICONS).filter((slug) => !slugs.includes(slug))).toEqual([]);
   });
 
-  it.each(Object.entries(ICONS))(
+  it.each([...Object.entries(ICONS), ...Object.entries(TOPIC_ICONS)])(
     "%s uses only the current ink and balanced markup",
     (_, markup) => {
       expect(markup).not.toMatch(/#[0-9a-f]{3,8}\b|rgba?\(|hsla?\(|oklch\(/i);

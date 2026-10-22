@@ -1,4 +1,4 @@
-import type { IconMarkup } from "./icons.model";
+import type { IconMarkup, TopicIcon } from "./icons.model";
 
 // Every icon follows the house iconography: outline at rest, one 1.5 stroke
 // weight, round caps and joins, monochrome in the current ink. A quieter
@@ -474,6 +474,7 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "head-turn": icon(
     `<circle cx="12" cy="12" r="5.5"/>${dot(10.2, 11, 0.9)}${dot(13.8, 11, 0.9)}<path d="M10.5 14.2C11.5 14.8 12.5 14.8 13.5 14.2"/>${arrow(5, 12, 2, 12)}${arrow(19, 12, 22, 12)}`,
   ),
+
   "edge-detection": icon(
     `<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 17L9 9L13 14L16 11L21 16.5" fill="none"/><path d="M3 17L9 9L13 14L16 11L21 16.5V18A2 2 0 0 1 19 20H5A2 2 0 0 1 3 18Z" fill="currentColor" stroke="none" opacity="0.15"/>`,
   ),
@@ -497,6 +498,53 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   ),
   "find-lines": icon(
     `<rect x="3" y="4" width="18" height="16" rx="2" ${SOFT}/><path d="M1.5 17L22.5 8M6 1.5L16 22.5"/>`,
+  ),
+};
+
+/** Icons for the landing page's feature areas and use cases. */
+export const TOPIC_ICONS: Readonly<Record<TopicIcon, IconMarkup>> = {
+  // Feature areas
+  // A photo with its right half run through a filter.
+  "image-processing": icon(
+    `<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4V20" ${SOFT}/><path d="M12 4H19A2 2 0 0 1 21 6V18A2 2 0 0 1 19 20H12Z" fill="currentColor" stroke="none" opacity="0.15"/><path d="M3 16.5L8 11L12 14.5L15.5 11.5L21 16"/>${dot(16.5, 7.5, 1.3)}`,
+  ),
+  // A point in a reticle, two others with the path they moved along.
+  "features-and-tracking": icon(
+    `<circle cx="14" cy="10" r="4.5"/><path d="M14 3.5V5.5M14 14.5V16.5M7.5 10H9.5M18.5 10H20.5"/>${dot(14, 10, 1.3)}${dot(4, 20, 1, SOFT)}${arrow(4, 20, 8, 17.5)}${dot(11, 21, 1, SOFT)}${arrow(11, 21, 15.5, 19.5)}`,
+  ),
+  // A face in the viewfinder, turning.
+  "faces-and-liveness": icon(
+    `<path d="M3 7.5V4.5A1.5 1.5 0 0 1 4.5 3H7.5M16.5 3H19.5A1.5 1.5 0 0 1 21 4.5V7.5M21 16.5V19.5A1.5 1.5 0 0 1 19.5 21H16.5M7.5 21H4.5A1.5 1.5 0 0 1 3 19.5V16.5" ${SOFT}/><ellipse cx="12" cy="11" rx="4" ry="5"/>${dot(10.4, 10.2, 0.85)}${dot(13.6, 10.2, 0.85)}<path d="M10.8 13.4C11.6 13.9 12.4 13.9 13.2 13.4"/><path d="M8 18.5C10.5 19.8 13.5 19.8 16 18.5"/><path d="M14.3 17.6L16 18.5L15.3 20.2"/>`,
+  ),
+  // A tilted page in the viewfinder, its corners found.
+  "document-scanning": icon(
+    `<path d="M3 7.5V4.5A1.5 1.5 0 0 1 4.5 3H7.5M16.5 3H19.5A1.5 1.5 0 0 1 21 4.5V7.5M21 16.5V19.5A1.5 1.5 0 0 1 19.5 21H16.5M7.5 21H4.5A1.5 1.5 0 0 1 3 19.5V16.5" ${SOFT}/><path d="M7 8L16 6.5L17 16L8 17.5Z"/>${dot(7, 8, 1.3)}${dot(16, 6.5, 1.3)}${dot(17, 16, 1.3)}${dot(8, 17.5, 1.3)}`,
+  ),
+  // A matrix with its diagonal picked out.
+  maths: icon(
+    `${brackets(3, 21, 4, 20)}${dotGrid([8, 12, 16], [8, 12, 16], (c, r) => (c === r ? "" : SOFT))}<path d="M8 8L16 16" ${SOFT}/>`,
+  ),
+
+  // Use cases
+  // An ID card: portrait on the left, text lines on the right.
+  "id-and-kyc-capture": icon(
+    `<rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="8" cy="10.5" r="2"/><path d="M4.75 16.5C5.25 14.5 6.5 13.5 8 13.5S10.75 14.5 11.25 16.5"/><path d="M14 10H19M14 13H19M14 16H17" ${SOFT}/>`,
+  ),
+  // A receipt with a scan line across it.
+  receipts: icon(
+    `<path d="M6 3H18V21L16 19.5L14 21L12 19.5L10 21L8 19.5L6 21Z"/><path d="M9 7.5H15M9 10.5H15M9 16H13" ${SOFT}/><path d="M3 13.25H21"/>`,
+  ),
+  // A cube standing on a marker seen in perspective.
+  "ar-markers-and-tracking": icon(
+    `<path d="M2.5 17L12 13.5L21.5 17L12 21Z" ${SOFT}/><path d="M12 3L17 5.5V11L12 13.5L7 11V5.5Z"/><path d="M7 5.5L12 8L17 5.5M12 8V13.5"/>`,
+  ),
+  // The accessibility figure in a ring.
+  accessibility: icon(
+    `<circle cx="12" cy="12" r="9.25"/>${dot(12, 7, 1.5)}<path d="M7 9.75L12 10.75L17 9.75M12 10.75V14M12 14L9.5 18M12 14L14.5 18"/>`,
+  ),
+  // An open book.
+  education: icon(
+    `<path d="M12 6.5C10 5 6.5 4.5 3 5V18.5C6.5 18 10 18.5 12 20C14 18.5 17.5 18 21 18.5V5C17.5 4.5 14 5 12 6.5Z"/><path d="M12 6.5V20"/><path d="M5.5 8.5C7.25 8.4 8.75 8.6 9.75 9.1M5.5 11.5C7.25 11.4 8.75 11.6 9.75 12.1M14.25 9.1C15.25 8.6 16.75 8.4 18.5 8.5M14.25 12.1C15.25 11.6 16.75 11.4 18.5 11.5" ${SOFT}/>`,
   ),
 };
 

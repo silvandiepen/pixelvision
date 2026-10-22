@@ -66,6 +66,14 @@
         />
         <div :class="bemm('features')">
           <article v-for="area in FEATURES" :key="area.title" :class="bemm('feature')">
+            <!-- eslint-disable vue/no-v-html -- icons drawn in this repository -->
+            <svg
+              :class="bemm('feature-icon')"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              v-html="TOPIC_ICONS[area.icon]"
+            ></svg>
+            <!-- eslint-enable vue/no-v-html -->
             <h3 :class="bemm('feature-title')">{{ area.title }}</h3>
             <p :class="bemm('feature-text')">{{ area.text }}</p>
             <ul :class="bemm('feature-links')">
@@ -145,6 +153,14 @@
             :class="bemm('use')"
             :to="`/guide/use-cases#${use.anchor}`"
           >
+            <!-- eslint-disable vue/no-v-html -- icons drawn in this repository -->
+            <svg
+              :class="bemm('use-icon')"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              v-html="TOPIC_ICONS[use.icon]"
+            ></svg>
+            <!-- eslint-enable vue/no-v-html -->
             <span :class="bemm('use-title')">{{ use.title }}</span>
             <span :class="bemm('use-text')">{{ use.text }}</span>
           </RouterLink>
@@ -197,6 +213,7 @@ import SectionHeading from "../../components/SectionHeading";
 import { SITE_FACTS, fillFacts } from "../../content/facts";
 import { findGuide, markdownSection } from "../../content/guides";
 import { findExample } from "../../examples/registry";
+import { TOPIC_ICONS } from "../../icons/icons";
 import { functionPages } from "../../navigation";
 import type { FeatureArea, UseCaseTeaser } from "./HomeView.model";
 
@@ -213,26 +230,31 @@ const numbers = [
 const FEATURES: FeatureArea[] = [
   {
     title: "Image processing",
+    icon: "image-processing",
     text: "Gray, blur, resize, gradients, Canny edges, Hough lines, histograms, thresholds, morphology and warps.",
     links: ["edge-detection", "canny", "warp-perspective", "threshold"],
   },
   {
     title: "Features and tracking",
+    icon: "features-and-tracking",
     text: "FAST, YAPE and ORB keypoints, descriptor matching, robust homographies and Lucas–Kanade optical flow.",
     links: ["track-points", "match-descriptors", "detect-fast", "estimate-homography"],
   },
   {
     title: "Faces and liveness",
+    icon: "faces-and-liveness",
     text: "Haar cascades for faces, eyes and upper bodies, head pose, and an active head-turn check.",
     links: ["head-turn", "detect-haar", "detect-head-pose"],
   },
   {
     title: "Document scanning",
+    icon: "document-scanning",
     text: "Find a page or card in a camera frame, wait for it to be still, and straighten it to its true proportions.",
     links: ["scan-document", "find-document", "extract-document"],
   },
   {
     title: "Maths",
+    icon: "maths",
     text: "The linear algebra underneath: LU, Cholesky, SVD, eigenvalues, least squares and transforms.",
     links: ["svd-solve", "perspective-transform", "eigen-symmetric"],
   },
@@ -241,26 +263,31 @@ const FEATURES: FeatureArea[] = [
 const USE_CASES: UseCaseTeaser[] = [
   {
     title: "ID and KYC capture",
+    icon: "id-and-kyc-capture",
     text: "A straight ID photo and a head-turn check, before upload.",
     anchor: "id-and-kyc-capture",
   },
   {
     title: "Document scanning",
+    icon: "receipts",
     text: "Receipts, forms and pages, straightened on the device.",
     anchor: "document-scanning",
   },
   {
     title: "AR markers and tracking",
+    icon: "ar-markers-and-tracking",
     text: "Find a known image in the camera and follow it.",
     anchor: "ar-markers-and-tracking",
   },
   {
     title: "Accessibility",
+    icon: "accessibility",
     text: "Head movement as input; clean pages for text recognition.",
     anchor: "accessibility",
   },
   {
     title: "Education",
+    icon: "education",
     text: "Classic computer vision, one readable step at a time.",
     anchor: "education",
   },
@@ -498,6 +525,12 @@ onMounted(async () => {
     background: var(--auno-surface);
   }
 
+  &__feature-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: var(--auno-space-xs);
+  }
+
   &__feature-title {
     font-size: var(--auno-text-title);
     letter-spacing: -0.01em;
@@ -575,6 +608,12 @@ onMounted(async () => {
     &:hover {
       background: var(--auno-pressed);
     }
+  }
+
+  &__use-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: var(--auno-space-2xs);
   }
 
   &__use-title {
