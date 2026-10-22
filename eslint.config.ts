@@ -11,6 +11,9 @@ export default tseslint.config(
       "**/.turbo/**",
       "**/.angular/**",
       "**/.out/**",
+      "**/.expo/**",
+      "examples/expo/ios/**",
+      "examples/expo/android/**",
       "packages/pixelvision/src/cascades/*.ts",
       "!packages/pixelvision/src/cascades/*.test.ts",
     ],
@@ -27,7 +30,12 @@ export default tseslint.config(
     files: ["**/*.cjs"],
     languageOptions: {
       sourceType: "commonjs",
-      globals: { require: "readonly", module: "writable", exports: "writable" },
+      globals: {
+        require: "readonly",
+        module: "writable",
+        exports: "writable",
+        __dirname: "readonly",
+      },
     },
     rules: {
       "@typescript-eslint/no-require-imports": "off",

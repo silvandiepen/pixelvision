@@ -8,3 +8,6 @@ test-results
 playwright-report
 blob-report
 .out
+.expo
+examples/expo/ios
+examples/expo/android

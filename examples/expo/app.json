@@ -1,0 +1,26 @@
+{
+  "expo": {
+    "name": "pixelvision",
+    "slug": "pixelvision-example",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "bundleIdentifier": "dev.pixelvision.example",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "dev.pixelvision.example"
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "pixelvision reads the photo you pick to find the document in it.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
+      ]
+    ]
+  }
+}
