@@ -28,6 +28,11 @@
         :key="`head-turn-${example.slug}`"
         :example="example"
       />
+      <LiveEffects
+        v-else-if="example.live === 'live-effects'"
+        :key="`live-effects-${example.slug}`"
+        :example="example"
+      />
       <ExampleDemo v-else :key="example.slug" :example="example" />
     </section>
 
@@ -127,6 +132,7 @@ import CodeBlock from "../../components/CodeBlock";
 import DocumentScanner from "../../components/DocumentScanner";
 import ExampleDemo from "../../components/ExampleDemo";
 import HeadTurnCheck from "../../components/HeadTurnCheck";
+import LiveEffects from "../../components/LiveEffects";
 import RichText from "../../components/RichText";
 import { describeExpectation } from "../../examples/define";
 import { EXAMPLES, findExample } from "../../examples/registry";

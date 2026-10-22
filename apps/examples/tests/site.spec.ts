@@ -230,7 +230,51 @@ test.describe("document scanner", () => {
   });
 });
 
+test.describe("live effects", () => {
+  test("starts with the sketch preset on the sample", async ({ page }) => {
+    await page.goto("/live-effects");
+    const demo = page.locator('[data-slug="live-effects"]');
+    await expect(demo).toHaveAttribute("data-demo-status", "ready");
+    await expect(demo).toHaveAttribute("data-demo-defaults", "true");
+    await expect(page.locator("[data-layer]")).toHaveCount(3);
+    const result = await published(page, "live-effects");
+    expect(result?.values.sameSize).toBe(true);
+  });
 
+  test("adds an effect by pressing it and by dragging it, then takes a photo", async ({ page }) => {
+    // Tall enough for the palette and the stack to be in view together while dragging.
+    await page.setViewportSize({ width: 1280, height: 1400 });
+    await page.goto("/live-effects");
+    await page.locator('[data-add-effect="blur"]').click();
+    await expect(page.locator('[data-layer="blur"]')).toHaveCount(1);
+    // Dropped on a layer, an effect goes in above it.
+    await page.locator('[data-add-effect="mirror"]').dragTo(page.locator('[data-layer="thicken"]'));
+    await expect(page.locator('[data-layer="mirror"]')).toHaveCount(1);
+    await page.getByRole("button", { name: "Remove Negative" }).click();
+
+    await page.locator("[data-effects-capture]").click();
+    await expect(page.locator("[data-effects-photo]")).toBeVisible();
+    const result = await published(page, "live-effects");
+    expect(result?.values.effects).toBe("edges,mirror,thicken,blur");
+    expect(result?.values.photo).toMatch(/^\d+x\d+$/);
+  });
+
+  test("runs the stack on the camera and takes a full-size photo", async ({
+    page,
+    browserName,
+  }) => {
+    test.skip(canvasCameraUnsupported(browserName), CANVAS_CAMERA_SKIP);
+    await fakeCameraWithScene(page);
+    await page.goto("/live-effects");
+    await page.locator("[data-effects-camera]").click();
+    await expect(page.getByRole("button", { name: "Stop the camera" })).toBeVisible();
+    await page.locator("[data-effects-capture]").click();
+    await expect(page.locator("[data-effects-photo]")).toBeVisible();
+    const result = await published(page, "live-effects");
+    expect(result?.values.source).toBe("camera");
+    expect(result?.values.photo).toBe("640x480");
+  });
+});
 
 test.describe("head-turn check", () => {
   test("a scripted run completes all four steps", async ({ page }) => {

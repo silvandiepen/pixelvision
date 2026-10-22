@@ -2,7 +2,7 @@ import type { Matrix, Point, RGBAImage } from "pixelvision";
 import type { SampleId } from "../samples/samples.model";
 
 /** Dedicated live demos, for flows that don't fit one image in, one result out. */
-export type LiveDemo = "document-scanner" | "head-turn";
+export type LiveDemo = "document-scanner" | "head-turn" | "live-effects";
 
 /** Sidebar groups. */
 export type ExampleCategory =

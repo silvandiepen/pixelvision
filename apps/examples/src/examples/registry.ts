@@ -56,6 +56,7 @@ import { grayscaleExample } from "./grayscale";
 import { groupRectanglesExample } from "./group-rectangles";
 import { hammingDistanceExample } from "./hamming-distance";
 import { headTurnExample } from "./head-turn";
+import { liveEffectsExample } from "./live-effects";
 import { hlsToRgbExample } from "./hls-to-rgb";
 import { houghCirclesExample } from "./hough-circles";
 import { houghLinesExample } from "./hough-lines";
@@ -228,6 +229,7 @@ export const EXAMPLES: readonly Example[] = [
   minMaxLocExample,
   scanDocumentExample,
   headTurnExample,
+  liveEffectsExample,
   edgeDetectionExample,
   straightenDocumentExample,
   findLinesExample,

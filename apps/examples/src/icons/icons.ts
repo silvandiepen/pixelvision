@@ -474,7 +474,10 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "head-turn": icon(
     `<circle cx="12" cy="12" r="5.5"/>${dot(10.2, 11, 0.9)}${dot(13.8, 11, 0.9)}<path d="M10.5 14.2C11.5 14.8 12.5 14.8 13.5 14.2"/>${arrow(5, 12, 2, 12)}${arrow(19, 12, 22, 12)}`,
   ),
-
+  // A camera whose lens is half run through a filter.
+  "live-effects": icon(
+    `<path d="M3 9A2 2 0 0 1 5 7H7.5L9 5H15L16.5 7H19A2 2 0 0 1 21 9V17A2 2 0 0 1 19 19H5A2 2 0 0 1 3 17Z"/><circle cx="12" cy="13" r="3.75"/><path d="M12 9.25A3.75 3.75 0 0 1 12 16.75Z" fill="currentColor" stroke="none" opacity="0.4"/>${dot(17.75, 9.75, 0.9)}`,
+  ),
   "edge-detection": icon(
     `<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 17L9 9L13 14L16 11L21 16.5" fill="none"/><path d="M3 17L9 9L13 14L16 11L21 16.5V18A2 2 0 0 1 19 20H5A2 2 0 0 1 3 18Z" fill="currentColor" stroke="none" opacity="0.15"/>`,
   ),
