@@ -27,9 +27,9 @@ export const liveEffectsExample = defineExample<LiveEffectsDemoOptions>({
     "Take a photo runs the full-size frame through the same stack, so the photo is sharper than the preview, and offers it as a PNG.",
   ],
   howToTest:
-    "Runs the Pencil sketch preset (Edges, Thicken, Negative) on the desk sample and checks that the result has the sample's size and that a small share of it is dark lines: the outlines, not the wood grain. In the browsers, a test adds an effect from the palette, changes its setting, and takes a photo.",
+    "Runs the Pencil sketch preset (Blur, Edges, Thicken, Negative) on the card photo and checks that the result has the sample's size and that a small share of it is dark lines: the outlines, not the wood grain. In the browsers, a test adds an effect from the palette, changes its setting, and takes a photo.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   live: "live-effects",
   controls: [
     {

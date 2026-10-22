@@ -15,9 +15,9 @@ export const trackPointsExample = defineExample<TrackPointsDemoOptions>({
     "A shift of more than a few pixels breaks that small-motion assumption, so it starts on the smallest pyramid level, where the motion is a fraction of its size, and refines the estimate level by level. Points whose window leaves the image or has too little texture come back with `tracked: false`.",
   ],
   howToTest:
-    "Without a webcam the demo tracks FAST corners of the desk sample into a copy moved 6 pixels right and 4 down, and checks that nearly all points are tracked and the median motion is (6, 4) within 0.1 pixel.",
+    "Without a webcam the demo tracks FAST corners of the card photo into a copy moved 6 pixels right and 4 down, and checks that nearly all points are tracked and the median motion is (6, 4) within 0.1 pixel.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",

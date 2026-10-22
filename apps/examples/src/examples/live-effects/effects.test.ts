@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
-import { getSample } from "../../samples/samples";
+import type { RGBAImage } from "pixelvision";
+import { beforeAll, describe, expect, it } from "vitest";
+import { loadSample } from "../../samples/samples";
 import { demo, PRESETS, presetLayers } from "./demo";
 import { applyEffects, createLayer, EFFECTS } from "./effects";
 
-const photo = getSample("desk").generate();
+let photo: RGBAImage;
+beforeAll(async () => {
+  photo = await loadSample("card-photo");
+});
 
 describe("live effects", () => {
   it.each(EFFECTS.map((effect) => [effect.id] as const))(

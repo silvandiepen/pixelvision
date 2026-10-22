@@ -15,9 +15,9 @@ export const detectFastExample = defineExample<DetectFastDemoOptions>({
     "Each corner gets a score (how strongly it passes), and only corners that are the strongest in their 3 x 3 neighbourhood are kept. A lower threshold finds more, weaker corners; noise and texture start to count.",
   ],
   howToTest:
-    "Runs on the desk sample and checks that each of the card's four corners, which the sample generator placed, has a detected corner within 3 pixels, that the total stays in a sensible range, and that every corner has a positive score.",
+    "Runs on the card photo and checks that most corners land on the card (inside its labelled outline: its lettering, photo and edges) rather than on the wood grain, that the total stays in a sensible range, and that every corner has a positive score.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -27,14 +27,14 @@ export const detectFastExample = defineExample<DetectFastDemoOptions>({
       min: 1,
       max: 100,
       step: 1,
-      default: 20,
+      default: 50,
     },
   ],
   code,
   demo,
   expectations: [
-    { key: "cardCornersFound", label: "All four card corners found", equals: 4 },
-    { key: "cornerCount", label: "Corners, not texture", min: 10, max: 40 },
+    { key: "onCardShare", label: "Most corners on the card, not the wood", min: 0.8 },
+    { key: "cornerCount", label: "Lettering and edges, not texture", min: 200, max: 700 },
     { key: "allScored", label: "Every corner has a score", equals: true },
   ],
 });

@@ -65,7 +65,7 @@ import { canny, createMatrix, gaussianBlur, grayscale } from "pixelvision";
 import type { Matrix, RGBAImage } from "pixelvision";
 import AppButton from "../AppButton";
 import { useCamera } from "../../composables/useCamera";
-import { getSample } from "../../samples/samples";
+import { loadSample } from "../../samples/samples";
 import { toDisplayPixels } from "../../utils/display";
 import type { HeroSource } from "./HeroDemo.model";
 
@@ -76,9 +76,10 @@ const input = useTemplateRef<HTMLCanvasElement>("input");
 const output = useTemplateRef<HTMLCanvasElement>("output");
 
 const source = ref<HeroSource>("sample");
-const low = ref(40);
+const low = ref(60);
 const timing = ref("");
-const sample = getSample("desk").generate();
+// The sample photo, once it has loaded.
+let sample: RGBAImage | null = null;
 // Reused on every frame, so the camera loop allocates nothing.
 const gray = createMatrix(0, 0);
 const smooth = createMatrix(0, 0);
@@ -132,15 +133,19 @@ function useSample(): void {
   cancelAnimationFrame(frameRequest);
   camera.stop();
   source.value = "sample";
-  process(sample);
+  if (sample) process(sample);
 }
 
 watch(low, () => {
-  if (source.value === "sample") process(sample);
+  if (source.value === "sample" && sample) process(sample);
 });
 onMounted(() => {
-  draw(input.value, sample);
-  process(sample);
+  void loadSample("card-photo").then((image) => {
+    sample = image;
+    if (source.value !== "sample") return;
+    draw(input.value, image);
+    process(image);
+  });
 });
 onBeforeUnmount(() => cancelAnimationFrame(frameRequest));
 </script>

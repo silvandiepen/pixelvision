@@ -10,8 +10,9 @@ import type { WarpAffineDemoOptions } from "./demo.model";
  */
 export function demo({ image, options }: DemoInput<WarpAffineDemoOptions>): DemoOutput {
   const rgba = fromImageData(image);
-  const cx = rgba.width / 2;
-  const cy = rgba.height / 2;
+  // A whole pixel as the centre, so the centre pixel maps exactly onto itself.
+  const cx = Math.floor(rgba.width / 2);
+  const cy = Math.floor(rgba.height / 2);
   const radians = (options.angle * Math.PI) / 180;
 
   // Output → input: undo the rotation and scale around the centre.

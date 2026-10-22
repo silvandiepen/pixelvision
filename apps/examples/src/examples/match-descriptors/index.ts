@@ -15,9 +15,9 @@ export const matchDescriptorsExample = defineExample<MatchDescriptorsDemoOptions
     "Two optional filters remove ambiguous matches. The ratio test (Lowe's) keeps a match only when the best distance is clearly smaller than the second best: `best < ratio × second`. The cross-check keeps it only when the two descriptors are each other's nearest. Results are sorted by distance, best first. Some wrong matches always remain; `estimateHomography` and `estimateAffine` are built to ignore them.",
   ],
   howToTest:
-    "Matches the desk sample against a copy rotated 20° and scaled 0.9 around its centre. Because the transform is known, each match can be checked: most of the matches (with the ratio test and cross-check on) must land within 3 pixels of where the point really went.",
+    "Matches the card photo against a copy rotated 20° and scaled 0.9 around its centre. Because the transform is known, each match can be checked: most of the matches (with the ratio test and cross-check on) must land within 3 pixels of where the point really went.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   webcam: false,
   controls: [
     {

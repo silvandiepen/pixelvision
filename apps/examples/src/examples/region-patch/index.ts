@@ -18,7 +18,7 @@ export const regionPatchExample = defineExample<RegionPatchDemoOptions>({
   howToTest:
     "Takes the face region of the portrait sample, then the same region in the same frame (a frozen picture) and in a copy moved a few pixels (a head that moved). The frozen one must measure exactly 0, the moved one above the `move` step's threshold.",
   input: "image",
-  sample: "portrait",
+  sample: "face-photo",
   webcam: false,
   controls: [
     {

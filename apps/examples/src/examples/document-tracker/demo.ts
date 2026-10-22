@@ -2,7 +2,7 @@ import { createDocumentTracker } from "pixelvision";
 import type { Point, Quad } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
 import { round } from "../../utils/format";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import type { DocumentTrackerDemoOptions } from "./demo.model";
 
 const FRAMES = 30;
@@ -17,7 +17,7 @@ const STRAY = 6;
  * Also shows when the old "8 in a row, each corner within 6 px" rule would
  * have captured.
  *
- * @param input - The desk sample and how much the hand wobbles.
+ * @param input - The card photo and how much the hand wobbles.
  * @returns The smoothed outline, progress per frame and when it was steady.
  */
 export function demo({ image, options }: DemoInput<DocumentTrackerDemoOptions>): DemoOutput {
@@ -26,7 +26,7 @@ export function demo({ image, options }: DemoInput<DocumentTrackerDemoOptions>):
     seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
     return seed / 2 ** 32 - 0.5;
   };
-  const card = DESK_CARD_CORNERS as unknown as Quad;
+  const card = PHOTO_CARD_CORNERS as unknown as Quad;
   const detections: (Quad | null)[] = Array.from({ length: FRAMES }, (_, frame) => {
     if (MISSED.has(frame)) return null;
     if (frame === STRAY) return card.map((p) => ({ x: p.x * 0.5, y: p.y * 0.6 })) as Quad;

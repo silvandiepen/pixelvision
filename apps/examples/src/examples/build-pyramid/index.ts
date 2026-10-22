@@ -14,9 +14,9 @@ export const buildPyramidExample = defineExample<BuildPyramidDemoOptions>({
     "Level 0 is the image itself (not copied). Each next level is `pyrDown` of the one before: every 2 x 2 block averaged into one pixel. Pass the pyramid to `trackPoints` instead of the image to reuse it: this frame's pyramid becomes the next frame's previous one.",
   ],
   howToTest:
-    "Builds four levels from the 320 x 240 gray sample and checks the sizes are exactly 320 x 240, 160 x 120, 80 x 60 and 40 x 30, and that level 0 is the input itself.",
+    "Builds four levels from the 640 x 427 gray card photo and checks the sizes are exactly 640 x 427, 320 x 213, 160 x 106 and 80 x 53 (odd sizes round down), and that level 0 is the input itself.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -33,7 +33,7 @@ export const buildPyramidExample = defineExample<BuildPyramidDemoOptions>({
   demo,
   expectations: [
     { key: "levels", label: "Four levels", equals: 4 },
-    { key: "sizes", label: "Each half the one before", equals: "320x240,160x120,80x60,40x30" },
+    { key: "sizes", label: "Each half the one before", equals: "640x427,320x213,160x106,80x53" },
     { key: "levelZeroIsInput", label: "Level 0 isn't copied", equals: true },
   ],
 });

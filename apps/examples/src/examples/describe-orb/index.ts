@@ -15,9 +15,9 @@ export const describeOrbExample = defineExample<DescribeOrbDemoOptions>({
     "The result is a `u8` matrix with 32 columns (bytes) and one row per keypoint. Two descriptors are compared by counting differing bits (`hammingDistance`): around 128 for unrelated points, much less for the same point. Blur the image first; single-pixel noise flips bits.",
   ],
   howToTest:
-    "Describes the 25 strongest corners of the blurred desk sample, then the same points in a copy rotated 30°. The median distance between each point and itself must stay under 30 of 256 bits, while different points differ by 90 bits or more, close to the 128 of unrelated ones.",
+    "Describes the 25 strongest corners of the blurred card photo, then the same points in a copy rotated 30°. The median distance between each point and itself must stay under 30 of 256 bits, while different points differ by 90 bits or more, close to the 128 of unrelated ones.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",

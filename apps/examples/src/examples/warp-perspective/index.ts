@@ -15,9 +15,9 @@ export const warpPerspectiveExample = defineExample<WarpPerspectiveDemoOptions>(
     "Output pixels that land outside the input get `fill` (here 0, which also makes them transparent). Every channel is warped, so RGBA works directly.",
   ],
   howToTest:
-    "Leans the desk sample back by 15% of its width and checks that the top-left corner and a band of wedge-shaped pixels are filled, while the middle of the bottom edge, which maps onto itself, matches the input to within 1.",
+    "Leans the card photo back by 15% of its width and checks that the top-left corner and a band of wedge-shaped pixels are filled, while the middle of the bottom edge, which maps onto itself, matches the input to within 1.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -35,7 +35,7 @@ export const warpPerspectiveExample = defineExample<WarpPerspectiveDemoOptions>(
   demo,
   expectations: [
     { key: "topLeftFilled", label: "Top-left corner maps outside the input", equals: true },
-    { key: "filledPixels", label: "Two wedges filled", min: 8000, max: 10500 },
+    { key: "filledPixels", label: "Two wedges filled", min: 29000, max: 35000 },
     { key: "bottomMiddleDifference", label: "Middle of the bottom edge unchanged", max: 1 },
   ],
 });

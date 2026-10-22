@@ -15,9 +15,9 @@ export const warpAffineExample = defineExample<WarpAffineDemoOptions>({
     "Pixels that sample outside the input get `fill`. `affineTransform` builds the matrix from three point pairs.",
   ],
   howToTest:
-    "Rotates the desk sample 30° around its centre and checks that the centre pixel is exactly unchanged (it maps onto itself) and that the top-left corner, rotated outside the input, is filled.",
+    "Rotates the card photo 30° around its centre and checks that the centre pixel is exactly unchanged (it maps onto itself) and that the top-left corner, rotated outside the input, is filled.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -45,6 +45,6 @@ export const warpAffineExample = defineExample<WarpAffineDemoOptions>({
   expectations: [
     { key: "centreDifference", label: "Centre maps onto itself", equals: 0 },
     { key: "topLeftFilled", label: "Corner rotated outside is filled", equals: true },
-    { key: "width", label: "Same size by default", equals: 320 },
+    { key: "width", label: "Same size by default", equals: 640 },
   ],
 });

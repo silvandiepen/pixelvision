@@ -183,7 +183,7 @@ import {
 import type { Effect, EffectId, EffectLayer } from "../../examples/live-effects/effects.model";
 import type { SelectControl } from "../../examples/example.model";
 import { publishResult } from "../../results";
-import { getSample } from "../../samples/samples";
+import { loadSample } from "../../samples/samples";
 import { encodeImage, saveBlob } from "../../utils/export";
 import { readImageFile } from "../../utils/input";
 import type { DragItem, LiveEffectsProps } from "./LiveEffects.model";
@@ -202,7 +202,7 @@ const preset = ref<PresetId>(presetControl.default as PresetId);
 const layers = ref<EffectLayer[]>(presetLayers(preset.value));
 const facing = ref<FacingMode>("user");
 const source = ref<"sample" | "upload" | "camera">("sample");
-const still = shallowRef<RGBAImage>(getSample(props.example.sample ?? "desk").generate());
+const still = shallowRef<RGBAImage | null>(null);
 const preview = shallowRef<Matrix<"u8"> | null>(null);
 const photo = shallowRef<Matrix<"u8"> | null>(null);
 const message = ref<string | null>(null);
@@ -242,6 +242,7 @@ function process(image: RGBAImage): Matrix<"u8"> {
 
 /** Shows the still photo with the current stack, and publishes it for the tests. */
 function renderStill(): void {
+  if (!still.value) return;
   try {
     preview.value = process(still.value);
     message.value = null;
@@ -260,7 +261,7 @@ function publish(): void {
     error: null,
     defaults: usingDefaults.value,
     values: usingDefaults.value
-      ? props.example.run(still.value, { preset: preset.value }).values
+      ? props.example.run(still.value!, { preset: preset.value }).values
       : {
           effects: layers.value
             .filter((layer) => layer.enabled)
@@ -419,7 +420,12 @@ watch(
 );
 
 onBeforeUnmount(() => cancelAnimationFrame(loop));
-renderStill();
+void loadSample(props.example.sample ?? "card-photo").then((image) => {
+  // Unless an upload arrived first.
+  if (still.value) return;
+  still.value = image;
+  if (!camera.active.value) renderStill();
+});
 </script>
 
 <style lang="scss">

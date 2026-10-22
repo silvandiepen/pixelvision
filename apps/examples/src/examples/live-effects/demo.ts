@@ -4,7 +4,7 @@ import type { LiveEffectsDemoOptions, Preset, PresetId } from "./demo.model";
 
 /** Ready-made stacks, top effect first. */
 export const PRESETS: readonly Preset[] = [
-  { id: "sketch", label: "Pencil sketch", effects: ["edges", "thicken", "invert"] },
+  { id: "sketch", label: "Pencil sketch", effects: ["blur", "edges", "thicken", "invert"] },
   { id: "comic", label: "Comic", effects: ["smooth", "sharpen"] },
   { id: "scan", label: "Scanned page", effects: ["scan", "invert"] },
   { id: "relief", label: "Relief", effects: ["blur", "emboss"] },

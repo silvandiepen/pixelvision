@@ -2,7 +2,7 @@ import { extractDocument, findDocument } from "pixelvision";
 import type { FoundDocument, Matrix, RGBAImage } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
 import { round } from "../../utils/format";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import type { DocumentAspect, ScanDocumentDemoOptions } from "./demo.model";
 
 /** Width / height of common documents; `undefined` follows the photo. */
@@ -43,10 +43,10 @@ export function demo({ image, options }: DemoInput<ScanDocumentDemoOptions>): De
     return { images: [{ label: "No document found", image }], values: { found: false } };
   }
   const { found, document } = result;
-  // Compared with the card the desk sample drew, for the tests.
+  // Compared with the card's corners labelled by hand, for the tests.
   const cornerError = Math.max(
     ...found.corners.map((c, i) =>
-      Math.hypot(c.x - DESK_CARD_CORNERS[i].x, c.y - DESK_CARD_CORNERS[i].y),
+      Math.hypot(c.x - PHOTO_CARD_CORNERS[i].x, c.y - PHOTO_CARD_CORNERS[i].y),
     ),
   );
 

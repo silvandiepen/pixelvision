@@ -17,7 +17,7 @@ export const fromImageDataExample = defineExample<FromImageDataDemoOptions>({
   howToTest:
     "Converts the sample and checks that the matrix is 4-channel `u8`, that every one of its bytes equals the input's, and that it doesn't share the input's buffer.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",

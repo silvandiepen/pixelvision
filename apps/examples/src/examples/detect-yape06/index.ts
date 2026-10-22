@@ -15,9 +15,9 @@ export const detectYape06Example = defineExample<DetectYape06DemoOptions>({
     "Edges also give a Laplacian response, so each candidate's Hessian (second derivatives) is checked: along an edge one eigenvalue is near zero. A candidate is kept only when the smaller eigenvalue exceeds `minEigenvalueThreshold`, which leaves points that are distinctive in every direction. Blur first; the input here is blurred with a 5-pixel Gaussian.",
   ],
   howToTest:
-    "Runs on the desk sample and checks that a sensible number of keypoints is found and that none lies within the 5-pixel border the Laplacian needs.",
+    "Runs on the card photo and checks that a sensible number of keypoints is found, that most land on the card rather than the wood grain, and that none lies within the 5-pixel border the Laplacian needs.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -27,7 +27,7 @@ export const detectYape06Example = defineExample<DetectYape06DemoOptions>({
       min: 1,
       max: 120,
       step: 1,
-      default: 30,
+      default: 120,
     },
     {
       type: "range",
@@ -37,13 +37,14 @@ export const detectYape06Example = defineExample<DetectYape06DemoOptions>({
       min: 1,
       max: 120,
       step: 1,
-      default: 25,
+      default: 90,
     },
   ],
   code,
   demo,
   expectations: [
-    { key: "pointCount", label: "Distinct points, not texture", min: 20, max: 120 },
+    { key: "pointCount", label: "Distinct points, not texture", min: 100, max: 500 },
+    { key: "onCardShare", label: "Most keypoints on the card, not the wood", min: 0.7 },
     { key: "insideBorder", label: "None in the border", equals: true },
   ],
 });

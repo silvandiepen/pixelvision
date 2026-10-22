@@ -119,7 +119,7 @@ import FileButton from "../FileButton";
 import { defaultValues } from "../../examples/define";
 import type { ControlValues, DemoOutput } from "../../examples/example.model";
 import { publishResult } from "../../results";
-import { SAMPLES, getSample } from "../../samples/samples";
+import { SAMPLES, getSample, loadSample } from "../../samples/samples";
 import type { SampleId } from "../../samples/samples.model";
 import { MAX_WEBCAM_SIZE, readImageFile, readPixels } from "../../utils/input";
 import type { ExampleDemoProps, InputSource } from "./ExampleDemo.model";
@@ -169,9 +169,19 @@ let frameRequest = 0;
 const frameCanvas = document.createElement("canvas");
 
 /** Loads the chosen sample as the input. */
-function loadSample(): void {
-  input.value =
-    props.example.input === "image" ? getSample(sampleId.value).generate() : EMPTY_IMAGE;
+async function useSample(): Promise<void> {
+  if (props.example.input !== "image") {
+    input.value = EMPTY_IMAGE;
+    return;
+  }
+  const id = sampleId.value;
+  try {
+    const image = await loadSample(id);
+    // Another input may have been chosen while the photo loaded.
+    if (source.value === "sample" && sampleId.value === id) input.value = image;
+  } catch (caught) {
+    inputError.value = caught instanceof Error ? caught.message : String(caught);
+  }
 }
 
 /** Runs the demo on the current input and options, and publishes the result. */
@@ -258,7 +268,7 @@ function chooseInput(choice: string): void {
   source.value = "sample";
   sampleId.value = choice as SampleId;
   inputError.value = null;
-  loadSample();
+  void useSample();
 }
 
 /**
@@ -286,10 +296,10 @@ function reset(): void {
   source.value = "sample";
   sampleId.value = props.example.sample ?? "shapes";
   inputError.value = null;
-  loadSample();
+  void useSample();
 }
 
-loadSample();
+void useSample();
 watch([input, values], run, { deep: true, immediate: true });
 if (props.example.loadResources) {
   props.example

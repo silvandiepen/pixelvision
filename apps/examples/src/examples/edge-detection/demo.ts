@@ -1,7 +1,7 @@
 import { canny, gaussianBlur, grayscale } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
 import { countNonZero, valueAt } from "../../utils/stats";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import type { EdgeDetectionDemoOptions } from "./demo.model";
 
 /**
@@ -15,9 +15,9 @@ export function demo({ image, options }: DemoInput<EdgeDetectionDemoOptions>): D
   const blurred = gaussianBlur(gray, { kernelSize: options.kernelSize });
   const edges = canny(blurred, { low: options.low, high: options.high });
 
-  // Check the middle of each side of the card in the desk sample for an edge.
-  const cardSidesFound = DESK_CARD_CORNERS.filter((corner, i) => {
-    const next = DESK_CARD_CORNERS[(i + 1) % 4];
+  // Check the middle of each side of the card in the card photo for an edge.
+  const cardSidesFound = PHOTO_CARD_CORNERS.filter((corner, i) => {
+    const next = PHOTO_CARD_CORNERS[(i + 1) % 4];
     const cx = Math.round((corner.x + next.x) / 2);
     const cy = Math.round((corner.y + next.y) / 2);
     for (let dy = -2; dy <= 2; dy++) {

@@ -1,6 +1,6 @@
 import * as pixelvision from "pixelvision";
 import { beforeAll, describe, expect, it } from "vitest";
-import { getSample } from "../samples/samples";
+import { loadSample } from "../samples/samples";
 import { checkExpectation, defaultValues } from "./define";
 import { PAGES_PENDING } from "./pending";
 import type { DemoOutput } from "./example.model";
@@ -51,7 +51,7 @@ describe("registry", () => {
 describe.each(EXAMPLES.map((example) => [example.slug, example] as const))("%s", (_, example) => {
   let output: DemoOutput = { values: {} };
   beforeAll(async () => {
-    const image = getSample(example.sample ?? "shapes").generate();
+    const image = await loadSample(example.sample ?? "shapes");
     const resources = await example.loadResources?.();
     output = example.run(image, defaultValues(example.controls), { previous: null, resources });
   });

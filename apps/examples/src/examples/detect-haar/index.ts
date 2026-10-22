@@ -17,9 +17,9 @@ export const detectHaarExample = defineExample<DetectHaarDemoOptions, Cascades>(
     "The cascades are separate entry points, e.g. `pixelvision/cascades/frontal-face`, so you only load the ones you use. Each is a few hundred kilobytes.",
   ],
   howToTest:
-    "Runs the frontal-face cascade on the drawn face sample and checks that exactly one face is found, centred within 8 pixels of the drawn face, with a plausible size.",
+    "Runs the frontal-face cascade on the face photo and checks that exactly one face is found, centred within 16 pixels of the face labelled by hand (161 x 221 px, hairline to chin), with a plausible size: the cascade's box takes in the hair and ears too.",
   input: "image",
-  sample: "portrait",
+  sample: "face-photo",
   resources: loadCascades,
   controls: [
     {
@@ -68,7 +68,7 @@ export const detectHaarExample = defineExample<DetectHaarDemoOptions, Cascades>(
   demo,
   expectations: [
     { key: "count", label: "One face", equals: 1 },
-    { key: "centreOffset", label: "On the drawn face", min: 0, max: 8 },
-    { key: "width", label: "About the face's size", min: 80, max: 130 },
+    { key: "centreOffset", label: "On the face", min: 0, max: 16 },
+    { key: "width", label: "About the face's size", min: 130, max: 260 },
   ],
 });

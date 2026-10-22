@@ -86,7 +86,7 @@ import type { SelectControl } from "../../examples/example.model";
 import { ASPECT_RATIOS } from "../../examples/scan-document/demo";
 import type { DocumentAspect } from "../../examples/scan-document/demo.model";
 import { publishResult } from "../../results";
-import { getSample } from "../../samples/samples";
+import { loadSample } from "../../samples/samples";
 import { round } from "../../utils/format";
 import { encodeImage, saveBlob } from "../../utils/export";
 import { readImageFile } from "../../utils/input";
@@ -222,7 +222,10 @@ async function download(): Promise<void> {
   saveBlob(await encodeImage(straightened.value, "image/png"), "document.png");
 }
 
-usePhoto(getSample(props.example.sample ?? "desk").generate());
+void loadSample(props.example.sample ?? "card-photo").then((image) => {
+  // Unless the camera or an upload took over while the photo loaded.
+  if (fromSample.value && state.value === "photo") usePhoto(image);
+});
 </script>
 
 <style lang="scss">

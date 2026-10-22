@@ -1,7 +1,7 @@
 import { findDocument } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
 import { round } from "../../utils/format";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import type { FindDocumentDemoOptions } from "./demo.model";
 
 /**
@@ -13,11 +13,11 @@ import type { FindDocumentDemoOptions } from "./demo.model";
 export function demo({ image, options }: DemoInput<FindDocumentDemoOptions>): DemoOutput {
   const found = findDocument(image, { maxSize: options.maxSize, minArea: options.minArea });
 
-  // How far each corner is from where the desk sample drew the card.
+  // How far each corner is from the card's corners labelled by hand.
   const cornerError = found
     ? Math.max(
         ...found.corners.map((corner, i) =>
-          Math.hypot(corner.x - DESK_CARD_CORNERS[i].x, corner.y - DESK_CARD_CORNERS[i].y),
+          Math.hypot(corner.x - PHOTO_CARD_CORNERS[i].x, corner.y - PHOTO_CARD_CORNERS[i].y),
         ),
       )
     : Infinity;

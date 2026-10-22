@@ -16,9 +16,9 @@ export const findDocumentExample = defineExample<FindDocumentDemoOptions>({
     "On seven labelled photos of whole documents (in `packages/parity`), it finds six, with the worst corner 3 to 15 px off on a 1024 px photo, including a white page on a pale table, a page on a busy desk and one shot at a steep angle; jscanify (Canny, Otsu, the largest contour) finds one. Neither finds a flyer held up against a bright window. It needs the whole document in view; with `reportCut`, a document running off the edge is reported as cut.",
   ],
   howToTest:
-    "Runs on the desk sample and compares the four corners with the card corners the sample was drawn with: each must be within 4 pixels.",
+    "Runs on the card photo and compares the four corners with the card's corners labelled by hand (where its straight edges meet; the card's corners are rounded): each must be within 6 pixels on the 640 px photo.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -46,6 +46,6 @@ export const findDocumentExample = defineExample<FindDocumentDemoOptions>({
   demo,
   expectations: [
     { key: "found", label: "Finds the card", equals: true },
-    { key: "cornerError", label: "Every corner within 4 px of the drawn one", max: 4 },
+    { key: "cornerError", label: "Every corner within 6 px of the labelled one", max: 6 },
   ],
 });

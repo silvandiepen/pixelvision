@@ -1,7 +1,7 @@
 import { detectFast, grayscale } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
-import { countFound } from "../../utils/points";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { shareInside } from "../../utils/points";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import type { DetectFastDemoOptions } from "./demo.model";
 
 /**
@@ -18,8 +18,8 @@ export function demo({ image, options }: DemoInput<DetectFastDemoOptions>): Demo
     images: [{ label: `${corners.length} corners`, image, overlay: { points: corners } }],
     values: {
       cornerCount: corners.length,
-      // The card's four corners in the desk sample, each within 3 pixels.
-      cardCornersFound: countFound(DESK_CARD_CORNERS, corners, 3),
+      // On the card (its lettering and edges), not the wood grain.
+      onCardShare: shareInside(PHOTO_CARD_CORNERS, corners),
       allScored: corners.every((corner) => corner.score > 0),
     },
   };

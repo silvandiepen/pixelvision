@@ -1,4 +1,5 @@
 import type { Point, RGBAImage } from "pixelvision";
+import { insidePolygon } from "../samples/raster";
 
 /**
  * Finds the distance from a point to the nearest of a list of points.
@@ -82,4 +83,17 @@ export function contourThrough<T extends readonly Point[]>(
   radius: number,
 ): T | undefined {
   return contours.find((contour) => countFound(corners, contour, radius) === corners.length);
+}
+
+/**
+ * The share of points inside a polygon, such as a document's outline.
+ *
+ * @param polygon - Corners in order.
+ * @param points - The points.
+ * @returns 0–1, or 0 without points.
+ */
+export function shareInside(polygon: readonly Point[], points: readonly Point[]): number {
+  if (points.length === 0) return 0;
+  const inside = points.filter((p) => insidePolygon(polygon, p.x, p.y)).length;
+  return Math.round((inside / points.length) * 1000) / 1000;
 }

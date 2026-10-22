@@ -14,9 +14,9 @@ export const pyrDownExample = defineExample<PyrDownDemoOptions>({
     "Output pixel `(x, y)` is the rounded-down mean of input pixels `(2x, 2y)`, `(2x + 1, 2y)`, `(2x, 2y + 1)` and `(2x + 1, 2y + 1)`. An odd last row or column is dropped. Repeat it for more levels: each one has a quarter of the pixels.",
   ],
   howToTest:
-    "Builds two levels from the 320 x 240 sample and checks the result is 80 x 60 with nearly the same average brightness.",
+    "Builds two levels from the 640 x 427 card photo and checks the result is 160 x 106 (427 halves to 213, then 106) with nearly the same average brightness.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -32,8 +32,8 @@ export const pyrDownExample = defineExample<PyrDownDemoOptions>({
   code,
   demo,
   expectations: [
-    { key: "width", label: "320 / 4", equals: 80 },
-    { key: "height", label: "240 / 4", equals: 60 },
+    { key: "width", label: "640 / 4", equals: 160 },
+    { key: "height", label: "427 / 4, rounding down each time", equals: 106 },
     { key: "meanShift", label: "Brightness about the same (averages round down)", max: 2 },
   ],
 });

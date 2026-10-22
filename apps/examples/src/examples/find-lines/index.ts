@@ -15,9 +15,9 @@ export const findLinesExample = defineExample<FindLinesDemoOptions>({
     "Long straight edges collect many votes; curved or short ones (the mug, the text on the card) don't. Raise the vote threshold to keep only the longest lines.",
   ],
   howToTest:
-    "Runs on the desk sample and compares the lines with the card's four sides, computed from the corners the sample was drawn with: each side must match a detected line within 3 pixels and 2°.",
+    "Runs on the card photo and compares the lines with the card's four sides, computed from its corners labelled by hand: each side must match a detected line within 5 pixels and 3°.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -27,7 +27,7 @@ export const findLinesExample = defineExample<FindLinesDemoOptions>({
       min: 10,
       max: 200,
       step: 1,
-      default: 60,
+      default: 100,
     },
     {
       type: "range",

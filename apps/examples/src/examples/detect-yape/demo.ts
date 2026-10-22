@@ -1,7 +1,7 @@
 import { detectYape, gaussianBlur, grayscale } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
-import { countFound } from "../../utils/points";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { shareInside } from "../../utils/points";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import type { DetectYapeDemoOptions } from "./demo.model";
 
 /**
@@ -18,8 +18,8 @@ export function demo({ image, options }: DemoInput<DetectYapeDemoOptions>): Demo
     images: [{ label: `${points.length} keypoints`, image, overlay: { points } }],
     values: {
       pointCount: points.length,
-      // The card's corners in the desk sample, each within 4 pixels.
-      cardCornersFound: countFound(DESK_CARD_CORNERS, points, 4),
+      // On the card (its lettering and edges), not the wood grain.
+      onCardShare: shareInside(PHOTO_CARD_CORNERS, points),
     },
   };
 }

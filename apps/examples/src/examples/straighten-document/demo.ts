@@ -25,18 +25,19 @@ export function demo({ image, options }: DemoInput<StraightenDocumentDemoOptions
     const i = (Math.floor(v * height) * width + Math.floor(u * width)) * 4;
     return Array.from(card.data.subarray(i, i + 3));
   };
-  const [hr, hg, hb] = at(0.5, 0.12);
-  const [wr, wg, wb] = at(0.5, 0.5);
-  const [sr, sg, sb] = at(0.84, 0.77);
+  // Where the specimen card has its title, plain card and printed waves.
+  const [tr, tg, tb] = at(0.3, 0.2);
+  const [cr, cg, cb] = at(0.6, 0.35);
+  const [wr, , wb] = at(0.75, 0.88);
 
   return {
     images: [{ label: `Straightened, ${width} x ${height}`, image: card }],
     values: {
       width,
       height,
-      headerIsBlue: hb > 180 && hr < 80 && hg < 160,
-      middleIsWhite: Math.min(wr, wg, wb) > 200,
-      stampIsRed: sr > 180 && sg < 80 && sb < 80,
+      titleIsDark: Math.max(tr, tg, tb) < 100 && tb > tr,
+      cardIsLight: Math.min(cr, cg, cb) > 180,
+      wavesAreBlue: wb > 120 && wr < 60,
     },
   };
 }

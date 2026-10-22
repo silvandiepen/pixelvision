@@ -1,5 +1,5 @@
 import { defineExample } from "../define";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import { demo } from "./demo";
 import type { ExtractDocumentDemoOptions } from "./demo.model";
 import code from "./demo.ts?raw";
@@ -16,16 +16,16 @@ export const extractDocumentExample = defineExample<ExtractDocumentDemoOptions>(
     "Without options the size follows the document's longest edges in the photo, so a page seen at an angle comes out a little squashed. Pass `aspectRatio` to get its true proportions: 85.6 / 53.98 for an ID card, 210 / 297 for A4. The output keeps the input's channels; draw it with `toImageData`.",
   ],
   howToTest:
-    "Straightens the card in the desk sample from its drawn corners with the ID card ratio, and checks the size, the blue header at the top and the white middle.",
+    "Straightens the card in the card photo from its hand-labelled corners with the ID card ratio, and checks the channels, the dark SPECIMEN title at the top left and the plain light card beside it.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "points",
       key: "corners",
       label: "Corners",
       description: "Top-left, top-right, bottom-right, bottom-left. Drag them on the input image.",
-      default: DESK_CARD_CORNERS.map((point) => ({ ...point })),
+      default: PHOTO_CARD_CORNERS.map((point) => ({ ...point })),
     },
     {
       type: "select",
@@ -44,7 +44,7 @@ export const extractDocumentExample = defineExample<ExtractDocumentDemoOptions>(
   demo,
   expectations: [
     { key: "channels", label: "Keeps RGBA", equals: 4 },
-    { key: "headerIsBlue", label: "Blue header on top", equals: true },
-    { key: "middleIsWhite", label: "White in the middle", equals: true },
+    { key: "titleIsDark", label: "Dark title at the top left", equals: true },
+    { key: "cardIsLight", label: "Plain light card beside it", equals: true },
   ],
 });

@@ -17,9 +17,9 @@ export const detectHeadPoseExample = defineExample<DetectHeadPoseDemoOptions, He
     "It takes about 100 ms for a 640 x 480 frame on a desktop, so a camera loop should run it a few times a second rather than on every frame.",
   ],
   howToTest:
-    "There are no face photos in the repository yet, so the automated test checks the honest part: on the desk sample it finds no face and reports `none` (no false positive). Faces are checked by hand with the webcam.",
+    "Runs on the face photo (an AI-generated person looking at the camera) and checks that it finds the face and reports `frontal`. The head-turn page runs it on a sample video with turns to both sides.",
   input: "image",
-  sample: "desk",
+  sample: "face-photo",
   resources: loadHeadPoseCascades,
   controls: [
     {
@@ -47,7 +47,7 @@ export const detectHeadPoseExample = defineExample<DetectHeadPoseDemoOptions, He
   code,
   demo,
   expectations: [
-    { key: "pose", label: "No face on the desk", equals: "none" },
-    { key: "faceFound", label: "No false face box", equals: false },
+    { key: "pose", label: "Facing the camera", equals: "frontal" },
+    { key: "faceFound", label: "Finds the face", equals: true },
   ],
 });

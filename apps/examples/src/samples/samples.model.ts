@@ -2,6 +2,8 @@ import type { RGBAImage } from "pixelvision";
 
 /** Bundled sample images. */
 export type SampleId =
+  | "card-photo"
+  | "face-photo"
   | "desk"
   | "shapes"
   | "low-contrast"
@@ -25,12 +27,14 @@ export interface TurnedSquare {
   angle: number;
 }
 
-/** A generated sample image. */
+/** A sample image: drawn by code, or a photo. */
 export interface Sample {
   id: SampleId;
   label: string;
   /** What's in it and what it's good for. */
   description: string;
-  /** Draws the image; the same pixels every time, in every browser. */
-  generate: () => RGBAImage;
+  /** Draws the image; the same pixels every time, in every browser. Drawn samples only. */
+  generate?: () => RGBAImage;
+  /** Where the photo is: a PNG decoded by `decodePng`, so its pixels are the same everywhere. */
+  photo?: URL;
 }

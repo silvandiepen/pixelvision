@@ -15,9 +15,9 @@ export const sharpnessExample = defineExample<SharpnessDemoOptions>({
     'The score depends on the scene: a white wall is never "sharp". Compare frames of the same scene (capture when the score peaks, or is well above the last few frames), or calibrate a minimum for your documents.',
   ],
   howToTest:
-    "Scores the desk sample, then copies of it blurred with Gaussian kernels of 3, 5, 7, 9 and 13. Every step of blur must lower the score, and even the 3 x 3 blur must take it below half the original.",
+    "Scores the card photo, then copies of it blurred with Gaussian kernels of 3, 5, 7, 9 and 13. Every step of blur must lower the score, and even the 3 x 3 blur must take it below half the original.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",

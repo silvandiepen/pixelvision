@@ -1,7 +1,7 @@
 import { createMatrix, grayscale, measureMotion, regionPatch, resample } from "pixelvision";
 import type { Matrix } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
-import { PORTRAIT_FACE } from "../../samples/samples";
+import { PHOTO_FACE } from "../../samples/samples";
 import type { RegionPatchDemoOptions } from "./demo.model";
 
 /**
@@ -31,12 +31,7 @@ function moved(gray: Matrix<"u8">, shift: number): Matrix<"u8"> {
  */
 export function demo({ image, options }: DemoInput<RegionPatchDemoOptions>): DemoOutput {
   const gray = grayscale(image);
-  const face = {
-    x: PORTRAIT_FACE.x - PORTRAIT_FACE.width / 2,
-    y: PORTRAIT_FACE.y - PORTRAIT_FACE.height / 2,
-    width: PORTRAIT_FACE.width,
-    height: PORTRAIT_FACE.height,
-  };
+  const face = PHOTO_FACE;
   const before = regionPatch(gray, face)!;
   const frozen = measureMotion(before, regionPatch(gray, face))!;
   const after = regionPatch(moved(gray, options.shift), face)!;

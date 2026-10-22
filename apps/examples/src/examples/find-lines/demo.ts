@@ -3,7 +3,7 @@ import type { DemoInput, DemoOutput, Segment } from "../example.model";
 import { round } from "../../utils/format";
 import { lineThrough, sameLine } from "../../utils/geometry";
 import { houghLineToSegment } from "../../utils/visualize";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import type { FindLinesDemoOptions } from "./demo.model";
 
 /**
@@ -15,7 +15,8 @@ import type { FindLinesDemoOptions } from "./demo.model";
  */
 export function demo({ image, options }: DemoInput<FindLinesDemoOptions>): DemoOutput {
   const gray = grayscale(image);
-  const edges = canny(gaussianBlur(gray, { kernelSize: 5 }), { low: 40, high: 100 });
+  // A strong blur first, so the wood grain of the photo doesn't vote.
+  const edges = canny(gaussianBlur(gray, { kernelSize: 9 }), { low: 40, high: 100 });
   const lines = houghLines(edges, { threshold: options.threshold, maxLines: options.maxLines });
 
   const segments = lines
@@ -23,9 +24,9 @@ export function demo({ image, options }: DemoInput<FindLinesDemoOptions>): DemoO
     .filter((segment): segment is Segment => segment !== null);
 
   // Which of the card's four sides (known from the sample) were found?
-  const cardSidesFound = DESK_CARD_CORNERS.filter((corner, i) => {
-    const side = lineThrough(corner, DESK_CARD_CORNERS[(i + 1) % 4]);
-    return lines.some((line) => sameLine(line, side, 3, (2 * Math.PI) / 180));
+  const cardSidesFound = PHOTO_CARD_CORNERS.filter((corner, i) => {
+    const side = lineThrough(corner, PHOTO_CARD_CORNERS[(i + 1) % 4]);
+    return lines.some((line) => sameLine(line, side, 5, (3 * Math.PI) / 180));
   }).length;
 
   return {

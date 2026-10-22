@@ -15,9 +15,9 @@ export const edgeDetectionExample = defineExample<EdgeDetectionDemoOptions>({
     "Canny then thins the gradients to one-pixel ridges and keeps strong edges plus the weak pixels connected to them. Lower thresholds find more, including texture; higher ones keep only the clearest outlines.",
   ],
   howToTest:
-    "Runs the pipeline on the desk sample and checks that the middle of each of the card's four sides (whose positions the sample generator knows) has an edge pixel within 2 pixels, and that the total edge count stays in range, i.e. the wood grain is suppressed.",
+    "Runs the pipeline on the card photo and checks that the middle of each of the card's four sides (from its labelled corners) has an edge pixel within 2 pixels, and that the total edge count stays in range: with a 5 x 5 blur the wood grain more than doubles it.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "select",
@@ -25,7 +25,7 @@ export const edgeDetectionExample = defineExample<EdgeDetectionDemoOptions>({
       label: "Blur kernel",
       description: "Gaussian kernel size; bigger removes more texture.",
       options: [3, 5, 7, 9].map((value) => ({ label: `${value}`, value })),
-      default: 5,
+      default: 9,
     },
     {
       type: "range",
@@ -52,6 +52,6 @@ export const edgeDetectionExample = defineExample<EdgeDetectionDemoOptions>({
   demo,
   expectations: [
     { key: "cardSidesFound", label: "All four card sides found", equals: 4 },
-    { key: "edgePixels", label: "Outlines, not wood grain", min: 1200, max: 4000 },
+    { key: "edgePixels", label: "Card and lettering, little wood grain", min: 5000, max: 10000 },
   ],
 });

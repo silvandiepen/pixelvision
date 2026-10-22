@@ -15,9 +15,9 @@ export const detectYapeExample = defineExample<DetectYapeDemoOptions>({
     "Survivors are scored by a Laplacian-like sum of the circle against the centre, and kept when they're the strongest within `radius`. Every pixel is tested, so corners are found on both sides of a shape, and each call starts from clean scores, so one frame never affects the next.",
   ],
   howToTest:
-    "Runs on the blurred desk sample and checks the number of keypoints and that at least three of the card's four known corners have a keypoint within 4 pixels.",
+    "Runs on the blurred card photo and checks the number of keypoints and that most of them land on the card (inside its labelled outline) rather than on the wood grain.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -38,13 +38,13 @@ export const detectYapeExample = defineExample<DetectYapeDemoOptions>({
       min: 1,
       max: 40,
       step: 1,
-      default: 7,
+      default: 25,
     },
   ],
   code,
   demo,
   expectations: [
-    { key: "pointCount", label: "Keypoints, not texture", min: 20, max: 80 },
-    { key: "cardCornersFound", label: "At least three card corners found", min: 3 },
+    { key: "pointCount", label: "Keypoints, not texture", min: 60, max: 300 },
+    { key: "onCardShare", label: "Most keypoints on the card, not the wood", min: 0.7 },
   ],
 });

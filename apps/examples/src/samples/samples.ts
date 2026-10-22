@@ -12,12 +12,29 @@ import {
   quadPoint,
 } from "./raster";
 import type { Color, Vec } from "./raster.model";
+import { decodePng } from "../utils/png";
 import type { Sample, SampleId, TurnedSquare } from "./samples.model";
 
 /** Width of every sample. */
 export const SAMPLE_WIDTH = 320;
 /** Height of every sample. */
 export const SAMPLE_HEIGHT = 240;
+
+/**
+ * Corners of the card in the card photo, top-left, top-right, bottom-right,
+ * bottom-left: labelled by eye where its straight edges meet (its corners are
+ * rounded), the labels of `packages/parity/fixtures/photos/doc-id-card.jpg`
+ * scaled to 640 px.
+ */
+export const PHOTO_CARD_CORNERS: readonly Point[] = [
+  { x: 170.1, y: 101.9 },
+  { x: 523.1, y: 155.5 },
+  { x: 502.7, y: 373.9 },
+  { x: 110.1, y: 301.9 },
+];
+
+/** The face in the face photo, labelled by eye: hairline to chin, cheek to cheek. */
+export const PHOTO_FACE = { x: 236, y: 86, width: 161, height: 221 };
 
 /** Corners of the card in the desk sample: top-left, top-right, bottom-right, bottom-left. */
 export const DESK_CARD_CORNERS: readonly Point[] = [
@@ -629,8 +646,22 @@ function logo(): RGBAImage {
   return image;
 }
 
-/** Every bundled sample. */
+/** Every bundled sample, photos first. */
 export const SAMPLES: readonly Sample[] = [
+  {
+    id: "card-photo",
+    label: "Photo: ID card on a desk",
+    description:
+      "A plastic card marked SPECIMEN on a wooden desk, at an angle, 640 x 427. AI-generated: not a real document.",
+    photo: new URL("./photos/card-on-desk.png", import.meta.url),
+  },
+  {
+    id: "face-photo",
+    label: "Photo: face",
+    description:
+      "A person looking at the camera against a plain wall, 640 x 427. AI-generated: not a real person.",
+    photo: new URL("./photos/face.png", import.meta.url),
+  },
   {
     id: "desk",
     label: "Card on a desk",
@@ -708,4 +739,42 @@ export function getSample(id: SampleId): Sample {
   const sample = SAMPLES.find((candidate) => candidate.id === id);
   if (!sample) throw new Error(`Unknown sample: ${id}`);
   return sample;
+}
+
+const loaded = new Map<SampleId, Promise<RGBAImage>>();
+
+/**
+ * Reads a photo's file: from the server in a browser, from disk in the tests.
+ *
+ * @param url - The photo's URL.
+ * @returns Its bytes.
+ */
+async function photoBytes(url: URL): Promise<Uint8Array> {
+  if (url.protocol === "file:") {
+    const { readFile } = await import(/* @vite-ignore */ "node:fs/promises");
+    return new Uint8Array(await readFile(url));
+  }
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`The sample photo didn't load (${response.status}).`);
+  return new Uint8Array(await response.arrayBuffer());
+}
+
+/**
+ * Gets a sample's pixels: draws it, or loads and decodes the photo (once).
+ *
+ * @param id - Sample id.
+ * @returns Its RGBA pixels.
+ * @throws {Error} When no sample has that id, or the photo doesn't load.
+ */
+export function loadSample(id: SampleId): Promise<RGBAImage> {
+  const sample = getSample(id);
+  if (sample.generate) return Promise.resolve(sample.generate());
+  let pending = loaded.get(id);
+  if (!pending) {
+    pending = photoBytes(sample.photo!).then(decodePng);
+    pending.catch(() => loaded.delete(id));
+    loaded.set(id, pending);
+  }
+  // A copy each time: a demo may write into its input.
+  return pending.then((image) => ({ ...image, data: new Uint8ClampedArray(image.data) }));
 }

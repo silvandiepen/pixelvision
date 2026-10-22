@@ -97,6 +97,12 @@ test.describe("landing page", () => {
     const errors = collectErrors(page);
     await page.goto("/");
     await expect(page.locator("h1")).toContainText("Computer vision for JavaScript");
+    // The sample photo loads first.
+    await expect
+      .poll(() =>
+        page.locator("[data-hero-output]").evaluate((canvas: HTMLCanvasElement) => canvas.width),
+      )
+      .toBe(640);
     const edges = await page.locator("[data-hero-output]").evaluate((canvas: HTMLCanvasElement) => {
       const data =
         canvas.getContext("2d")?.getImageData(0, 0, canvas.width, canvas.height).data ?? [];
@@ -104,7 +110,7 @@ test.describe("landing page", () => {
       for (let i = 0; i < data.length; i += 4) if (data[i] === 255) white++;
       return { width: canvas.width, white };
     });
-    expect(edges.width).toBe(320);
+    expect(edges.width).toBe(640);
     expect(edges.white).toBeGreaterThan(500);
     // Every number on the page is filled in, none left as a placeholder.
     await expect(page.locator(".home-view")).not.toContainText("{{");
@@ -236,7 +242,7 @@ test.describe("live effects", () => {
     const demo = page.locator('[data-slug="live-effects"]');
     await expect(demo).toHaveAttribute("data-demo-status", "ready");
     await expect(demo).toHaveAttribute("data-demo-defaults", "true");
-    await expect(page.locator("[data-layer]")).toHaveCount(3);
+    await expect(page.locator("[data-layer]")).toHaveCount(4);
     const result = await published(page, "live-effects");
     expect(result?.values.sameSize).toBe(true);
   });
@@ -245,8 +251,8 @@ test.describe("live effects", () => {
     // Tall enough for the palette and the stack to be in view together while dragging.
     await page.setViewportSize({ width: 1280, height: 1400 });
     await page.goto("/live-effects");
-    await page.locator('[data-add-effect="blur"]').click();
-    await expect(page.locator('[data-layer="blur"]')).toHaveCount(1);
+    await page.locator('[data-add-effect="smooth"]').click();
+    await expect(page.locator('[data-layer="smooth"]')).toHaveCount(1);
     // Dropped on a layer, an effect goes in above it.
     await page.locator('[data-add-effect="mirror"]').dragTo(page.locator('[data-layer="thicken"]'));
     await expect(page.locator('[data-layer="mirror"]')).toHaveCount(1);
@@ -255,7 +261,7 @@ test.describe("live effects", () => {
     await page.locator("[data-effects-capture]").click();
     await expect(page.locator("[data-effects-photo]")).toBeVisible();
     const result = await published(page, "live-effects");
-    expect(result?.values.effects).toBe("edges,mirror,thicken,blur");
+    expect(result?.values.effects).toBe("blur,edges,mirror,thicken,smooth");
     expect(result?.values.photo).toMatch(/^\d+x\d+$/);
   });
 

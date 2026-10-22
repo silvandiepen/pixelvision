@@ -15,9 +15,9 @@ export const detectBbfExample = defineExample<DetectBbfDemoOptions, BbfResources
     "Every window size is tried, `interval` sizes per halving of the image, and overlapping hits are merged; `minNeighbors` sets how many raw hits a face needs. The face cascade is its own entry point, `pixelvision/cascades/bbf-face`, so it's only downloaded where it's used. libccv has since deprecated BBF in favour of neural detectors.",
   ],
   howToTest:
-    "There are no face photos in the repository yet, and BBF doesn't fire on the schematic face that the Haar page uses (Haar finds it, BBF finds nothing), so the automated test checks the honest part: on the desk sample it reports no face, with no false positives. Faces are checked by hand with the webcam.",
+    "Runs on the face photo (an AI-generated person) and checks that exactly one face is found, centred within 20 pixels of the face labelled by hand.",
   input: "image",
-  sample: "desk",
+  sample: "face-photo",
   resources: async () => (await import("pixelvision/cascades/bbf-face")).bbfFace,
   controls: [
     {
@@ -44,5 +44,8 @@ export const detectBbfExample = defineExample<DetectBbfDemoOptions, BbfResources
   ],
   code,
   demo,
-  expectations: [{ key: "count", label: "No false faces on the desk", equals: 0 }],
+  expectations: [
+    { key: "count", label: "One face", equals: 1 },
+    { key: "centreOffset", label: "On the face", min: 0, max: 20 },
+  ],
 });

@@ -17,9 +17,9 @@ export const scanDocumentExample = defineExample<ScanDocumentDemoOptions>({
     "Limits: the whole document must be in view, and it needs some contrast with the background. A white page on a white desk, glare across an edge or a corner outside the frame stops it being found.",
   ],
   howToTest:
-    "Runs the scan on the desk sample and checks that the corners are within 4 pixels of the card the sample drew and that the ID card output has the right proportions. In the browsers, a test also feeds a generated scene to the page as a fake camera and as an upload, and checks the found corners and the auto-capture.",
+    "Runs the scan on the card photo and checks that the corners are within 6 pixels of the corners labelled by hand and that the ID card output has the right proportions. In the browsers, a test also feeds a generated scene to the page as a fake camera and as an upload, and checks the found corners and the auto-capture.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   webcam: false,
   live: "document-scanner",
   controls: [
@@ -40,8 +40,8 @@ export const scanDocumentExample = defineExample<ScanDocumentDemoOptions>({
   demo,
   expectations: [
     { key: "found", label: "Finds the card", equals: true },
-    { key: "cornerError", label: "Every corner within 4 px of the drawn one", max: 4 },
-    { key: "width", label: "As wide as the card's longest edge", equals: 176 },
-    { key: "height", label: "ID card proportions: 176 / (85.6 / 53.98)", equals: 111 },
+    { key: "cornerError", label: "Every corner within 6 px of the labelled one", max: 6 },
+    { key: "width", label: "As wide as the card's longest edge", equals: 402 },
+    { key: "height", label: "ID card proportions: 402 / (85.6 / 53.98)", equals: 254 },
   ],
 });

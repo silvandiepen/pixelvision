@@ -15,9 +15,9 @@ export const resampleExample = defineExample<ResampleDemoOptions>({
     "Enlarging (in either direction) uses bilinear interpolation with centre alignment. Every channel is resized on its own, so colour images keep their colours whichever way they're scaled.",
   ],
   howToTest:
-    "Shrinks the RGBA sample to half size and checks the output is 160 x 120 with 4 channels, with nearly the same average brightness.",
+    "Shrinks the 640 x 427 card photo to half size and checks the output is 320 x 214 with 4 channels, with nearly the same average brightness.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",
@@ -33,8 +33,8 @@ export const resampleExample = defineExample<ResampleDemoOptions>({
   code,
   demo,
   expectations: [
-    { key: "width", label: "Half of 320", equals: 160 },
-    { key: "height", label: "Half of 240", equals: 120 },
+    { key: "width", label: "Half of 640", equals: 320 },
+    { key: "height", label: "Half of 427, rounded", equals: 214 },
     { key: "channels", label: "Still RGBA", equals: 4 },
     { key: "meanShift", label: "Brightness about the same", max: 1.5 },
   ],

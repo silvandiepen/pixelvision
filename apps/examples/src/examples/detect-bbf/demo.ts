@@ -1,6 +1,6 @@
 import { detectBbf, grayscale } from "pixelvision";
 import type { DemoInput, DemoOutput } from "../example.model";
-import { PORTRAIT_FACE } from "../../samples/samples";
+import { PHOTO_FACE } from "../../samples/samples";
 import type { BbfResources, DetectBbfDemoOptions } from "./demo.model";
 
 /**
@@ -44,12 +44,12 @@ export function demo({
     ],
     values: {
       count: faces.length,
-      // Distance from the first face's centre to the drawn face's centre.
+      // Distance from the first face's centre to the centre of the face labelled by hand.
       centreOffset: first
         ? Math.round(
             Math.hypot(
-              first.x + first.width / 2 - PORTRAIT_FACE.x,
-              first.y + first.height / 2 - PORTRAIT_FACE.y,
+              first.x + first.width / 2 - (PHOTO_FACE.x + PHOTO_FACE.width / 2),
+              first.y + first.height / 2 - (PHOTO_FACE.y + PHOTO_FACE.height / 2),
             ),
           )
         : -1,

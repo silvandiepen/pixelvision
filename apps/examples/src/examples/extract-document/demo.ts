@@ -24,8 +24,9 @@ export function demo({ image, options }: DemoInput<ExtractDocumentDemoOptions>):
       (Math.floor(v * flat.height) * flat.width + Math.floor(u * flat.width)) * flat.channels;
     return Array.from(flat.data.subarray(i, i + 3));
   };
-  const [hr, , hb] = at(0.5, 0.15);
-  const [wr, wg, wb] = at(0.5, 0.5);
+  // Where the specimen card has its title and plain card.
+  const [tr, tg, tb] = at(0.3, 0.2);
+  const [cr, cg, cb] = at(0.6, 0.35);
 
   return {
     images: [{ label: `Straightened, ${flat.width} x ${flat.height}`, image: flat }],
@@ -33,8 +34,8 @@ export function demo({ image, options }: DemoInput<ExtractDocumentDemoOptions>):
       width: flat.width,
       height: flat.height,
       channels: flat.channels,
-      headerIsBlue: hb > 180 && hr < 80,
-      middleIsWhite: Math.min(wr, wg, wb) > 200,
+      titleIsDark: Math.max(tr, tg, tb) < 100 && tb > tr,
+      cardIsLight: Math.min(cr, cg, cb) > 180,
     },
   };
 }

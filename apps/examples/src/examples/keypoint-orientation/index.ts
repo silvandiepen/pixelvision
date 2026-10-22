@@ -15,9 +15,9 @@ export const keypointOrientationExample = defineExample<KeypointOrientationDemoO
     "When the image turns by some angle, the disc's contents turn with it, and so does the centroid. Pixels outside the image are skipped.",
   ],
   howToTest:
-    "Measures the orientation at the centre of the desk sample, rotates the image 40° around that point with `warpAffine`, and checks that the measured orientation turned by 40° too, within 3°.",
+    "Measures the orientation at the centre of the card photo, rotates the image 40° around that point with `warpAffine`, and checks that the measured orientation turned by 40° too, within 3°.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "range",

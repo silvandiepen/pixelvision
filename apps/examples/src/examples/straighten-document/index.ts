@@ -1,5 +1,5 @@
 import { defineExample } from "../define";
-import { DESK_CARD_CORNERS } from "../../samples/samples";
+import { PHOTO_CARD_CORNERS } from "../../samples/samples";
 import { demo } from "./demo";
 import type { StraightenDocumentDemoOptions } from "./demo.model";
 import code from "./demo.ts?raw";
@@ -16,9 +16,9 @@ export const straightenDocumentExample = defineExample<StraightenDocumentDemoOpt
     "`warpPerspective` then fills every output pixel by looking up where it lands in the photo, with bilinear interpolation. Because the warp maps output → input, the transform goes from the rectangle to the photo, not the other way round. The output size sets the aspect ratio; here it's a business card's 85.6 : 54.",
   ],
   howToTest:
-    "Uses the exact card corners the desk sample was drawn with and checks the straightened card: a blue header at the top, white in the middle, and the red stamp at the bottom right, where the generator put them.",
+    "Uses the card corners labelled by hand on the card photo and checks the straightened card: the dark SPECIMEN title at the top left, plain light card to the right of it, and the blue waves at the bottom right, where they are on the card.",
   input: "image",
-  sample: "desk",
+  sample: "card-photo",
   controls: [
     {
       type: "points",
@@ -26,7 +26,7 @@ export const straightenDocumentExample = defineExample<StraightenDocumentDemoOpt
       label: "Corners",
       description:
         "The document's corners in the photo: top-left, top-right, bottom-right, bottom-left. Drag them on the input image.",
-      default: DESK_CARD_CORNERS.map((point) => ({ ...point })),
+      default: PHOTO_CARD_CORNERS.map((point) => ({ ...point })),
     },
     {
       type: "range",
@@ -43,8 +43,8 @@ export const straightenDocumentExample = defineExample<StraightenDocumentDemoOpt
   demo,
   expectations: [
     { key: "height", label: "Card aspect ratio: 300 x 189", equals: 189 },
-    { key: "headerIsBlue", label: "Blue header on top", equals: true },
-    { key: "middleIsWhite", label: "White card in the middle", equals: true },
-    { key: "stampIsRed", label: "Red stamp bottom right", equals: true },
+    { key: "titleIsDark", label: "Dark title at the top left", equals: true },
+    { key: "cardIsLight", label: "Plain light card beside it", equals: true },
+    { key: "wavesAreBlue", label: "Blue waves at the bottom right", equals: true },
   ],
 });
