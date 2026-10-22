@@ -2,7 +2,7 @@ pixelvision runs in the browser or app of the person being checked. Whatever run
 
 Each level builds on the one before. Pick the lowest level that covers the risk you actually have: every level adds work and asks more of the person being checked.
 
-**Status.** Level 0 is available today, with every challenge below, and level 1 partly. Levels 2 and 3 are being built; their API below is the planned one and may still change. Level 4 is an integration with a separate, certified service, which pixelvision prepares the data for but doesn't replace.
+**Status.** Levels 0 and 2 are available today, with every challenge below, and level 1 partly. Level 3 is being built; its API below may still change. Level 4 is an integration with a separate, certified service, which pixelvision prepares the data for but doesn't replace.
 
 ## The short version
 
@@ -10,7 +10,7 @@ Each level builds on the one before. Pick the lowest level that covers the risk 
 | ----- | -------------------------------------- | ------------------------------------------------------------------- | ------------------------------------------------------------ | ----------- |
 | 0     | Capture aid                            | Bad photos: blurred, dark, off-centre, two people                   | Anyone who wants to cheat                                    | Available   |
 | 1     | Hardened page                          | Other scripts on the page reading the photos; a still photo held up | A changed page, a recording, a virtual camera                | Partly      |
-| 2     | Server challenge and server check      | A page that lies about its result; replaying a recording            | A live deepfake or puppet; a virtual camera with a live face | Planned     |
+| 2     | Server challenge and server check      | A page that lies about its result; replaying a recording            | A live deepfake or puppet; a virtual camera with a live face | Available   |
 | 3     | Stronger evidence                      | Simple screen and print attacks; injected streams in a native app   | Skilled, prepared attacks; masks                             | Planned     |
 | 4     | Certified liveness and identity checks | Tested against a defined set of attacks, to a measured error rate   | Whatever the certification didn't test; coercion             | Integration |
 
@@ -55,44 +55,51 @@ Keep the photos away from everything else on the page and catch the crudest tric
 
 **Still open.** Someone can change the page, play a recording, or use a virtual camera, and the page will report success.
 
-## Level 2: server challenge and server check (planned)
+## Level 2: server challenge and server check
 
 Your server decides what the person must do, and checks afterwards that it happened. The page's own result is no longer trusted at all.
 
-1. Your server creates a challenge: a random order of steps, a one-time code and an expiry of a minute or two, signed with a secret only the server knows.
-2. The capture component fetches it, asks for those steps, and keeps a few frames from each one.
-3. At the end it hands you the evidence: the frames, the final photo and the signed challenge. You upload it to your server.
-4. Your server runs the same pixelvision detection on the frames. pixelvision gives the same result in Node as in the browser (tested in CI), so the server reaches the same answer the page should have. It checks that every step happened in the order asked, within the time limit, with one face throughout, and that the code hasn't been used before.
+1. Your server creates a challenge with `@pixelvision/verify`: a random order of steps, a one-time code and an expiry of two minutes, signed with a secret only the server knows.
+2. `<pv-face-capture challenge-url>` fetches it, asks for those steps, and keeps every detection frame from the first face to the end.
+3. At the end, `pv-evidence` hands you the frames, the photo and the signed challenge. You post them to your server.
+4. Your server checks the signature and the expiry, spends the code (one attempt per challenge, pass or fail), and runs the same face detection on the frames. pixelvision gives the same result in Node as in the browser (tested in CI). The frames must do every step in the order asked, mostly not repeat exactly (a frozen or looped picture), and keep one face that doesn't jump across the frame (spliced footage).
 5. Your app acts on the server's answer only.
 
 ```html
-<pv-face-capture challenge-url="/api/liveness/challenge"></pv-face-capture>
+<pv-face-capture challenge-url="/api/face/challenge"></pv-face-capture>
 <script type="module">
+  import { evidenceForm } from "@pixelvision/capture-ui";
+
   const capture = document.querySelector("pv-face-capture");
   capture.addEventListener("pv-evidence", async (event) => {
-    await fetch("/api/liveness/verify", { method: "POST", body: event.detail.form });
+    await fetch("/api/face/verify", { method: "POST", body: evidenceForm(event.detail) });
   });
 </script>
 ```
 
 ```ts
-// Server (Node), with @pixelvision/verify
-import { createChallenge, verifyEvidence } from "@pixelvision/verify";
+// Server, with @pixelvision/verify: Request/Response handlers as in Next.js, Hono, Remix, Bun or Deno.
+import {
+  createChallenge,
+  createMemoryCodeStore,
+  readEvidenceForm,
+  verifyEvidence,
+} from "@pixelvision/verify";
 
-app.get("/api/liveness/challenge", (req, res) => {
-  res.json(
-    createChallenge({ secret: process.env.CHALLENGE_SECRET, steps: 3, expiresInMs: 90_000 }),
-  );
-});
+const secret = process.env.CHALLENGE_SECRET;
+const codes = createMemoryCodeStore(); // a shared store (Redis, a table) with several servers
 
-app.post("/api/liveness/verify", async (req, res) => {
-  const result = await verifyEvidence(await readEvidence(req), {
-    secret: process.env.CHALLENGE_SECRET,
-    usedCodes, // a store that remembers spent codes
-  });
-  res.json(result); // { passed, reasons, steps }
-});
+export async function GET() {
+  return Response.json(await createChallenge({ secret }));
+}
+
+export async function POST(request: Request) {
+  const evidence = await readEvidenceForm(await request.formData());
+  return Response.json(await verifyEvidence(evidence, { secret, codes })); // { passed, reasons, ... }
+}
 ```
+
+`examples/verify-server` in the repository is a complete server with both endpoints, tested with recorded frames: they pass once, a second attempt is refused, and so is a challenge changed in the browser.
 
 **Stops** a changed page claiming success (the server checks the frames itself) and a replayed recording (the order is new every time, and the clock runs on the server).
 

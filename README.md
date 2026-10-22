@@ -78,6 +78,7 @@ const onFrame = (frame: ImageData) => {
 | ---------------------- | ------------------------------------------------------------------------------------------------------------ |
 | `packages/pixelvision` | The library, published to npm as `pixelvision`                                                               |
 | `packages/face-neural` | Optional neural face detection (YuNet on onnxruntime), published as `@pixelvision/face-neural`               |
+| `packages/verify`      | Server check for face challenges: signed one-time challenges, frames checked again, `@pixelvision/verify`    |
 | `packages/parity`      | Tests against reference implementations (private)                                                            |
 | `packages/compat`      | Runs the same pipeline in Node and Hermes (React Native) and compares the results (private)                  |
 | `apps/examples`        | Documentation site: guides, API reference and a live, tested example for every function                      |

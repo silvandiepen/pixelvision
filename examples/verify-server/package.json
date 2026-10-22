@@ -1,0 +1,23 @@
+{
+  "name": "@pixelvision/example-verify-server",
+  "version": "0.0.0",
+  "private": true,
+  "description": "A server that issues face challenges and checks the evidence with @pixelvision/verify.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "start": "node --experimental-strip-types src/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@pixelvision/verify": "workspace:*",
+    "pixelvision": "workspace:*"
+  },
+  "devDependencies": {
+    "@pixelvision/capture-ui": "workspace:*",
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3",
+    "vitest": "5.0.5"
+  }
+}

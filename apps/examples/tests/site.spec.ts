@@ -97,10 +97,12 @@ test.describe("landing page", () => {
     const errors = collectErrors(page);
     await page.goto("/");
     await expect(page.locator("h1")).toContainText("Computer vision for JavaScript");
-    // The sample photo loads first.
+    // The sample photo loads and decodes first: slow in some headless browsers under load.
     await expect
-      .poll(() =>
-        page.locator("[data-hero-output]").evaluate((canvas: HTMLCanvasElement) => canvas.width),
+      .poll(
+        () =>
+          page.locator("[data-hero-output]").evaluate((canvas: HTMLCanvasElement) => canvas.width),
+        { timeout: 20_000 },
       )
       .toBe(640);
     const edges = await page.locator("[data-hero-output]").evaluate((canvas: HTMLCanvasElement) => {
