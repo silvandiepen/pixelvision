@@ -89,7 +89,7 @@ describe("face guidance on drawn faces", () => {
     expect(states.every((s) => s.hint === undefined || s.hint === "holdStill")).toBe(true);
     expect(states.at(-1)).toMatchObject({
       phase: "challenge",
-      step: "turn-one-side",
+      step: "side",
       stepsDone: 1,
     });
   });

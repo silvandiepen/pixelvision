@@ -120,9 +120,40 @@ describe("loadNeuralPoseSource", () => {
       createFaceDetector: async () => ({ detect: async () => [] }),
       headPoseFromFace: () => "none",
       estimateHeadYaw: () => 0,
+      createHeadPoseTracker: () => ({ update: () => "none", reset: () => {} }),
     }));
     const source = await loadNeuralPoseSource({ ort: {}, model: new Uint8Array(1) });
+    expect(source.vertical).toBe(true);
     await expect(source.detect(frame)).resolves.toEqual({ pose: "none" });
     vi.doUnmock("@pixelvision/face-neural");
+  });
+
+  it("reports up and down through a head pose tracker, and resets it", async () => {
+    const poses: string[] = [];
+    let resets = 0;
+    const source = neuralPoseSource({
+      detector: { detect: async () => [] },
+      headPoseFromFace: () => "frontal",
+      createHeadPoseTracker: () => ({
+        update: () => {
+          poses.push("tracked");
+          return "looking-up";
+        },
+        reset: () => resets++,
+      }),
+    });
+    expect(source).toMatchObject({ vertical: true, directional: true });
+    await expect(source.detect(frame)).resolves.toEqual({ pose: "looking-up" });
+    source.reset?.();
+    expect([poses.length, resets]).toEqual([1, 1]);
+  });
+
+  it("can't report up and down without a tracker", () => {
+    const source = neuralPoseSource({
+      detector: { detect: async () => [] },
+      headPoseFromFace: () => "frontal",
+    });
+    expect(source.vertical).toBe(false);
+    expect(() => source.reset?.()).not.toThrow();
   });
 });

@@ -1,5 +1,6 @@
 import type {
   FaceNeuralModuleLike,
+  HeadPoseTrackerLike,
   FaceObservation,
   LoadNeuralPoseSourceOptions,
   NeuralFaceLike,
@@ -22,7 +23,11 @@ const MAX_FACES = 10;
  * reported); every face is listed in `faces`, so the element can tell
  * when more than one person is in view.
  *
- * @param options - The detector, `headPoseFromFace`, optional `estimateHeadYaw`, and the turn threshold.
+ * With `createHeadPoseTracker`, the source also reports looking up and down,
+ * relative to the person's own frontal face, learned at the start of each run.
+ *
+ * @param options - The detector, `headPoseFromFace`, optional `estimateHeadYaw` and
+ *   `createHeadPoseTracker`, and the turn threshold.
  * @returns The pose source.
  * @throws {RangeError} When `threshold` isn't a number of degrees between 0 and 90.
  *
@@ -33,16 +38,25 @@ const MAX_FACES = 10;
  * element.source = neuralPoseSource({ detector, headPoseFromFace, estimateHeadYaw });
  */
 export function neuralPoseSource(options: NeuralPoseSourceOptions): PoseSource {
-  const { detector, headPoseFromFace, estimateHeadYaw, threshold = 18 } = options;
+  const {
+    detector,
+    headPoseFromFace,
+    estimateHeadYaw,
+    createHeadPoseTracker,
+    threshold = 18,
+  } = options;
   if (typeof threshold !== "number" || !(threshold > 0 && threshold < 90)) {
     throw new RangeError(
       `neuralPoseSource: threshold must be between 0 and 90 degrees, got ${threshold}`,
     );
   }
+  const tracker: HeadPoseTrackerLike | undefined = createHeadPoseTracker?.({ threshold });
   return {
     name: "yunet",
     directional: true,
+    vertical: tracker !== undefined,
     turnThreshold: threshold,
+    reset: () => tracker?.reset(),
     async detect(frame): Promise<FaceObservation> {
       const found = await detector.detect(frame, { maxFaces: MAX_FACES });
       // The largest face is the person's own; the others only tell that more people are in view.
@@ -50,7 +64,9 @@ export function neuralPoseSource(options: NeuralPoseSourceOptions): PoseSource {
         (largest, f) => (!largest || f.width > largest.width ? f : largest),
         undefined,
       );
-      const pose = headPoseFromFace(face, { threshold, mirrored: false });
+      const pose = tracker
+        ? tracker.update(face)
+        : headPoseFromFace(face, { threshold, mirrored: false });
       if (!face) return { pose };
       const { rightEye, leftEye, noseTip, mouthRight, mouthLeft } = face.landmarks;
       const toBox = ({ x, y, width, height }: NeuralFaceLike) => ({ x, y, width, height });
@@ -93,6 +109,7 @@ export async function loadNeuralPoseSource(
     detector,
     headPoseFromFace: faceNeural.headPoseFromFace,
     estimateHeadYaw: faceNeural.estimateHeadYaw,
+    createHeadPoseTracker: faceNeural.createHeadPoseTracker,
     threshold,
   });
 }

@@ -1,5 +1,11 @@
-import { grayscale } from "pixelvision";
-import type { HeadPose, HeadPoseCascades } from "pixelvision";
+import { CHALLENGE_PRESETS, grayscale, measureMotion, regionPatch } from "pixelvision";
+import type {
+  ChallengePreset,
+  ChallengeStep,
+  HeadPose,
+  HeadPoseCascades,
+  RegionPatch,
+} from "pixelvision";
 import { canvasPixels, canvasToBlob, context2d, createCanvas } from "../camera/frames";
 import type { GrabbedFrame } from "../camera/frames";
 import { parseBoolean, parseNumber, parseRatio, parseShape } from "../logic/attributes";
@@ -83,6 +89,7 @@ export class FaceCaptureElement extends CaptureElement {
       "guide-shape",
       "guide-aspect",
       "steps",
+      "challenge",
       "show-landmarks",
     ];
   }
@@ -113,6 +120,8 @@ export class FaceCaptureElement extends CaptureElement {
   private swapTimer: ReturnType<typeof setTimeout> | undefined;
   private hintTimer: ReturnType<typeof setTimeout> | undefined;
   private lastYaw: number | undefined;
+  /** The face region of the previous detection, to measure motion against. */
+  private lastPatch: RegionPatch | undefined;
   private best: BestFrame | undefined;
   private lastQuality: QualityAssessment | undefined;
   private lastPose: PoseDetail | undefined;
@@ -206,8 +215,15 @@ export class FaceCaptureElement extends CaptureElement {
     return this.flowState;
   }
 
-  private get steps(): boolean {
-    return parseBoolean(this.getAttribute("steps"), true);
+  /**
+   * The `challenge` attribute: a preset or a comma-separated list of steps. Without it,
+   * `steps="off"` (the older attribute) means `"none"`, and the default is `"head-turn"`.
+   */
+  private get challenge(): ChallengePreset | ChallengeStep[] {
+    const value = this.getAttribute("challenge")?.trim();
+    if (!value) return parseBoolean(this.getAttribute("steps"), true) ? "head-turn" : "none";
+    if (value in CHALLENGE_PRESETS) return value as ChallengePreset;
+    return value.split(",").map((step) => step.trim()) as ChallengeStep[];
   }
 
   private get autoCapture(): boolean {
@@ -248,6 +264,8 @@ export class FaceCaptureElement extends CaptureElement {
           </g>
           <path class="turn-arrow" data-dir="left" d="M -30 0 H -44 M -38 -6 L -44 0 L -38 6"></path>
           <path class="turn-arrow" data-dir="right" d="M 30 0 H 44 M 38 -6 L 44 0 L 38 6"></path>
+          <path class="turn-arrow" data-dir="up" d="M 0 -24 V -38 M -6 -32 L 0 -38 L 6 -32"></path>
+          <path class="turn-arrow" data-dir="down" d="M 0 24 V 38 M -6 32 L 0 38 L 6 32"></path>
         </g>
         <g class="success" part="success">
           <circle class="check-disc" r="30"></circle>
@@ -308,7 +326,18 @@ export class FaceCaptureElement extends CaptureElement {
   protected showIntro(): void {
     const t = this.text;
     this.container.dataset.tone = "idle";
-    this.showPanel(t.faceIntroTitle, t.faceIntroBody, [
+    const challenge = this.challenge;
+    const body =
+      challenge === "head-turn"
+        ? t.faceIntroBody
+        : challenge === "head-circle"
+          ? t.faceIntroBodyCircle
+          : challenge === "motion"
+            ? t.faceIntroBodyMotion
+            : challenge === "none"
+              ? t.faceIntroBodyPlain
+              : t.faceIntroBodySteps;
+    this.showPanel(t.faceIntroTitle, body, [
       { label: t.start, primary: true, action: () => void this.start() },
     ]);
   }
@@ -332,7 +361,8 @@ export class FaceCaptureElement extends CaptureElement {
     super.attributeChangedCallback(name);
     if (!this.ready) return;
     if (name === "guide-shape" || name === "guide-aspect") this.layout();
-    if (name === "steps" && this.running) this.onStarted();
+    if ((name === "steps" || name === "challenge") && this.running) this.onStarted();
+    if ((name === "steps" || name === "challenge") && this.viewState === "intro") this.showIntro();
   }
 
   protected layout(): void {
@@ -368,21 +398,21 @@ export class FaceCaptureElement extends CaptureElement {
 
   protected onStarted(): void {
     const holdFrames = parseNumber(this.getAttribute("hold-frames"), 3, 1, 60);
-    this.flow = createFaceFlow({
-      holdFrames,
-      windowFrames: parseNumber(this.getAttribute("window-frames"), holdFrames * 2, 1, 120),
-      timeoutMs: parseNumber(this.getAttribute("timeout"), 45_000, 0),
-      steps: this.steps,
-      // Only a custom source can be directional; the built-in HAAR one isn't.
-      directional: this.sourceValue?.directional ?? false,
-      firstTurn: this.getAttribute("first-turn") === "right" ? "right" : "left",
-      acceptPauseMs: parseNumber(this.getAttribute("accept-pause"), 900, 0, 5000),
-      hintDelayMs: parseNumber(this.getAttribute("hint-delay"), 700, 0, 5000),
-      hintHoldMs: parseNumber(this.getAttribute("hint-hold"), 1500, 0, 10_000),
-    });
+    // A new run, or a new detector: forget the person's frontal face and the last face region.
+    this.sourceValue?.reset?.();
+    this.activeSource?.reset?.();
+    this.lastPatch = undefined;
+    try {
+      this.flow = this.createFlow(holdFrames);
+    } catch (error) {
+      // An unknown challenge or step name.
+      this.fail("detector", error);
+      return;
+    }
     this.boxSmoother = createBoxSmoother({
       windowFrames: parseNumber(this.getAttribute("smooth-frames"), 8, 1, 30),
     });
+    this.activeSource = undefined;
     this.lastLandmarks = [];
     this.wasAccepted = false;
     this.messageShownAt = 0;
@@ -400,6 +430,28 @@ export class FaceCaptureElement extends CaptureElement {
     this.retake.parentElement!.hidden = true;
     this.flowState = this.flow.state;
     this.render(this.flowState);
+  }
+
+  /**
+   * Builds the selfie flow from the attributes.
+   *
+   * @param holdFrames - Matching detections a step needs.
+   * @returns The flow.
+   * @throws {RangeError} When the challenge names an unknown preset or step.
+   */
+  private createFlow(holdFrames: number): FaceFlow {
+    return createFaceFlow({
+      holdFrames,
+      windowFrames: parseNumber(this.getAttribute("window-frames"), holdFrames * 2, 1, 120),
+      timeoutMs: parseNumber(this.getAttribute("timeout"), 45_000, 0),
+      steps: this.challenge,
+      // Only a custom source can be directional; the built-in HAAR one isn't.
+      directional: this.sourceValue?.directional ?? false,
+      firstTurn: this.getAttribute("first-turn") === "right" ? "right" : "left",
+      acceptPauseMs: parseNumber(this.getAttribute("accept-pause"), 900, 0, 5000),
+      hintDelayMs: parseNumber(this.getAttribute("hint-delay"), 700, 0, 5000),
+      hintHoldMs: parseNumber(this.getAttribute("hint-hold"), 1500, 0, 10_000),
+    });
   }
 
   protected onStopped(): void {
@@ -493,6 +545,7 @@ export class FaceCaptureElement extends CaptureElement {
   protected async processFrame(frame: GrabbedFrame, token: RunToken): Promise<void> {
     const source = await this.ensureSource(token);
     if (!source || !token.current) return;
+    if (!this.canRunChallenge(source)) return;
     let observation;
     try {
       observation = (await source.detect(frame.image)) ?? { pose: "none" as const };
@@ -534,13 +587,19 @@ export class FaceCaptureElement extends CaptureElement {
     const pose = smoothed.outlier ? "none" : facePose;
     const guidance = assessFace(viewBox, this.guide);
     // The quality gate: only a sharp, well-lit face region counts as a frame worth keeping.
-    const quality = main && assessRegion(grayscale(frame.image), main);
+    const gray = main ? grayscale(frame.image) : undefined;
+    const quality = main && gray && assessRegion(gray, main);
+    // How much the face region changed since the last detection, for the move step.
+    const patch = main && gray ? regionPatch(gray, main) : undefined;
+    const motion = measureMotion(this.lastPatch, patch);
+    this.lastPatch = patch;
     if (quality) this.lastQuality = quality;
     const issue = quality ? checkQuality(quality, this.qualityThresholds).issue : null;
     const previous = this.flowState;
     const state = this.flow.update({
       pose,
       guidance,
+      motion,
       quality: issue,
       faceCount: followed.count,
       kept: this.best !== undefined,
@@ -664,7 +723,8 @@ export class FaceCaptureElement extends CaptureElement {
       quality: best ? best.quality : this.lastQuality,
       box,
       pose: best ? best.pose : (this.lastPose?.pose ?? "none"),
-      challengePassed: done && this.steps,
+      challenge: [...(this.flow?.steps ?? [])],
+      challengePassed: done && (this.flow?.steps.length ?? 0) > 0,
       durationMs: Math.round(performance.now() - this.startedAt),
       capturedAt: new Date().toISOString(),
       mirrored: false,
@@ -835,8 +895,9 @@ export class FaceCaptureElement extends CaptureElement {
    * @param hint - Side from the person's point of view.
    */
   private setHint(hint: TurnHint | undefined): void {
+    // Up and down look the same mirrored; left and right swap in a mirrored preview.
     const screen =
-      hint === "either" || hint === undefined
+      hint === "either" || hint === "up" || hint === "down" || hint === undefined
         ? hint
         : (hint === "left") === this.mirrored
           ? "left"
@@ -845,6 +906,29 @@ export class FaceCaptureElement extends CaptureElement {
     this.hintRight.toggleAttribute("data-show", screen === "either" || screen === "right");
     this.turnGuide.toggleAttribute("data-show", screen !== undefined);
     if (screen) this.turnGuide.dataset.side = screen;
+  }
+
+  /**
+   * Whether the detector can report what the challenge asks for. When it can't, switches to
+   * {@link preciseSource} if there is one (skipping frames while it loads).
+   *
+   * @param source - The active detector.
+   * @returns Whether to detect with it.
+   * @throws {Error} When the challenge needs a direction no available detector reports.
+   */
+  private canRunChallenge(source: PoseSource): boolean {
+    const steps = this.flow?.steps ?? [];
+    const sideways = steps.some((step) => step === "left" || step === "right");
+    const vertical = steps.some((step) => step === "up" || step === "down");
+    if ((!sideways || source.directional) && (!vertical || source.vertical)) return true;
+    if (this.preciseLoader && this.preciseState !== "failed") {
+      if (this.preciseState === "idle") void this.usePreciseSource();
+      return false;
+    }
+    throw new Error(
+      `The challenge asks to turn ${vertical ? "up or down" : "left or right"}, which this detector can't tell. ` +
+        "Set source or preciseSource to @pixelvision/face-neural (loadNeuralPoseSource).",
+    );
   }
 
   /** The screen side of a person's-point-of-view side in the preview. */

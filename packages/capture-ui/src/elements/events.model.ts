@@ -1,4 +1,4 @@
-import type { HeadPose, HeadTurnStep, Point, Quad } from "pixelvision";
+import type { ChallengeStep, HeadPose, Point, Quad } from "pixelvision";
 import type { CameraErrorCode } from "../camera/camera.model";
 import type { StreamFailure } from "../camera/startup.model";
 import type { AspectPreset } from "../logic/documentFlow.model";
@@ -29,10 +29,10 @@ export interface ErrorDetail {
   cause?: unknown;
 }
 
-/** `pv-step`: a head-turn step started or completed. */
+/** `pv-step`: a challenge step started or completed. */
 export interface StepDetail {
   /** The current step, or `"done"`. */
-  step: HeadTurnStep | "done";
+  step: ChallengeStep | "done";
   /** Completed steps. */
   stepsDone: number;
   totalSteps: number;
@@ -78,8 +78,10 @@ export interface FaceCaptureMetadata {
   /** Face box in capture pixels, when known. */
   box?: Box;
   pose: HeadPose;
+  /** The challenge's steps, as asked; empty without a challenge. */
+  challenge: ChallengeStep[];
   /**
-   * Whether the head-turn challenge was completed in this browser.
+   * Whether the challenge was completed in this browser.
    *
    * This is a client-side challenge result, not presentation-attack detection (PAD) and not
    * evidence that a live person was present: a replayed video, a virtual camera, an injected

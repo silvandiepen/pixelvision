@@ -2,7 +2,16 @@
 export interface CaptureLabels {
   // Face capture: intro and guidance
   faceIntroTitle: string;
+  /** Intro for the head turn (the default challenge). */
   faceIntroBody: string;
+  /** Intro for the head circle. */
+  faceIntroBodyCircle: string;
+  /** Intro for the motion challenge. */
+  faceIntroBodyMotion: string;
+  /** Intro without a challenge. */
+  faceIntroBodyPlain: string;
+  /** Intro for a custom sequence of steps. */
+  faceIntroBodySteps: string;
   start: string;
   noFace: string;
   tooFar: string;
@@ -21,6 +30,12 @@ export interface CaptureLabels {
   /** Second turn, to the left (`first-turn="right"`). */
   turnLeftNow: string;
   faceCameraAgain: string;
+  /** Tilt the head back. */
+  lookUp: string;
+  /** Tilt the head forward. */
+  lookDown: string;
+  /** The motion step: stay in view and move a little. */
+  moveNaturally: string;
   faceDone: string;
   timeoutTitle: string;
   timeoutBody: string;
@@ -33,6 +48,8 @@ export interface CaptureLabels {
   /** Helper hints when a step makes no progress for a while. */
   alignHelp: string;
   turnFurther: string;
+  tiltFurther: string;
+  moveHelp: string;
   faceCameraHelp: string;
   /** Quality hints: the face is too dark, too bright, washed out or blurred. */
   faceTooDark: string;

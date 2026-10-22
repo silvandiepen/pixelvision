@@ -593,12 +593,23 @@ export const faceStyles = /* css */ `
   transform: translateX(6px);
 }
 
+.turn-guide[data-side="up"] .turn-face {
+  transform: translateY(-5px);
+}
+
+.turn-guide[data-side="down"] .turn-face {
+  transform: translateY(5px);
+}
+
 .turn-guide:not([data-side="left"]) .turn-arrow[data-dir="left"],
-.turn-guide:not([data-side="right"]) .turn-arrow[data-dir="right"] {
+.turn-guide:not([data-side="right"]) .turn-arrow[data-dir="right"],
+.turn-guide:not([data-side="up"]) .turn-arrow[data-dir="up"],
+.turn-guide:not([data-side="down"]) .turn-arrow[data-dir="down"] {
   display: none;
 }
 
-.turn-guide[data-side="either"] .turn-arrow {
+.turn-guide[data-side="either"] .turn-arrow[data-dir="left"],
+.turn-guide[data-side="either"] .turn-arrow[data-dir="right"] {
   display: inline;
 }
 
@@ -631,6 +642,12 @@ export const faceStyles = /* css */ `
   .turn-guide[data-show][data-side="either"] .turn-face {
     animation: pv-look-either 4800ms var(--pv-easing) infinite;
   }
+  .turn-guide[data-show][data-side="up"] .turn-face {
+    animation: pv-look-up 2400ms var(--pv-easing) infinite;
+  }
+  .turn-guide[data-show][data-side="down"] .turn-face {
+    animation: pv-look-down 2400ms var(--pv-easing) infinite;
+  }
 }
 
 @keyframes pv-look-left {
@@ -658,6 +675,34 @@ export const faceStyles = /* css */ `
   }
   100% {
     transform: translateX(0);
+  }
+}
+
+@keyframes pv-look-up {
+  0%,
+  15% {
+    transform: translateY(0);
+  }
+  45%,
+  80% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+@keyframes pv-look-down {
+  0%,
+  15% {
+    transform: translateY(0);
+  }
+  45%,
+  80% {
+    transform: translateY(6px);
+  }
+  100% {
+    transform: translateY(0);
   }
 }
 

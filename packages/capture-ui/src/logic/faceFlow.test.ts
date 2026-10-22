@@ -99,14 +99,14 @@ describe("createFaceFlow", () => {
     feed("frontal");
     feed("none");
     const s = feed("frontal");
-    expect(s).toMatchObject({ phase: "challenge", step: "face-camera" });
+    expect(s).toMatchObject({ phase: "challenge", step: "frontal" });
   });
 
   it("completes the steps despite flickering detections", () => {
     const { feed } = make();
     let s = toFirstTurn(feed);
     expect(s).toMatchObject({
-      step: "turn-one-side",
+      step: "side",
       stepsDone: 1,
       message: "turnOneSide",
       turn: "either",
@@ -119,7 +119,7 @@ describe("createFaceFlow", () => {
     feed("none");
     s = feed("profile");
     expect(s).toMatchObject({
-      step: "turn-other-side",
+      step: "other-side",
       message: "turnOtherSide",
       turn: "either",
       stepsDone: 2,
@@ -128,7 +128,7 @@ describe("createFaceFlow", () => {
     expect(s.stepsDone).toBe(2);
     s = feed("mirrored-profile", 2);
     expect(s).toMatchObject({
-      step: "face-camera-again",
+      step: "frontal",
       message: "faceCameraAgain",
       turn: undefined,
     });
@@ -150,7 +150,7 @@ describe("createFaceFlow", () => {
     expect(s).toMatchObject({
       accepted: true,
       message: "faceCamera",
-      step: "turn-one-side",
+      step: "side",
       stepsDone: 1,
       hold: 1,
       progress: 0.25,
@@ -236,21 +236,41 @@ describe("createFaceFlow", () => {
     facing.feed("frontal");
     facing.feed("frontal");
     expect(facing.feed("profile", 30)).toMatchObject({
-      step: "face-camera",
+      step: "frontal",
       hint: "faceCameraHelp",
     });
   });
 
+  it("has helpers for tilting and for the motion step", () => {
+    const circle = make({ directional: true, steps: ["up"] });
+    circle.feed("frontal", 2);
+    expect(circle.feed("frontal", 31)).toMatchObject({ step: "up", hint: "tiltFurther" });
+    const moving = make({ steps: ["move"] });
+    moving.feed("frontal", 2);
+    expect(moving.feed("frontal", 31)).toMatchObject({ step: "move", hint: "moveHelp" });
+  });
+
+  it("takes true as the head turn, and mirrors a named side without a directional source", () => {
+    const { flow, feed } = make({ steps: true });
+    expect(flow.steps).toEqual(["frontal", "side", "other-side", "frontal"]);
+    toFirstTurn(feed);
+    expect(feed("turned-left", 2)).toMatchObject({ step: "other-side", turn: "right" });
+    const right = make({ steps: ["side", "other-side"] });
+    right.feed("frontal", 2);
+    expect(right.feed("turned-right", 2)).toMatchObject({ step: "other-side", turn: "left" });
+  });
+
   it("names the side with a directional source and ignores the wrong first turn", () => {
-    const { feed } = make({ directional: true });
+    const { flow, feed } = make({ directional: true });
+    expect(flow.steps).toEqual(["frontal", "left", "right", "frontal"]);
     let s = toFirstTurn(feed);
-    expect(s).toMatchObject({ step: "turn-one-side", message: "turnLeft", turn: "left" });
+    expect(s).toMatchObject({ step: "left", message: "turnLeft", turn: "left" });
     s = feed("turned-right", 3);
-    expect(s.step).toBe("turn-one-side");
+    expect(s.step).toBe("left");
     s = feed("turned-left", 2);
-    expect(s).toMatchObject({ step: "turn-other-side", message: "turnRight", turn: "right" });
+    expect(s).toMatchObject({ step: "right", message: "turnRight", turn: "right" });
     s = feed("turned-right", 2);
-    expect(s.step).toBe("face-camera-again");
+    expect(s).toMatchObject({ step: "frontal", message: "faceCameraAgain" });
   });
 
   it("can ask for the right side first", () => {
@@ -261,14 +281,36 @@ describe("createFaceFlow", () => {
     expect(flow.state).toMatchObject({ message: "turnLeftNow", turn: "left" });
   });
 
-  it("passes non-directional poses through in directional mode", () => {
+  it("doesn't count an undirected profile when the source names sides", () => {
     const { feed } = make({ directional: true });
     toFirstTurn(feed);
-    expect(feed("profile", 2)).toMatchObject({
-      step: "turn-other-side",
-      turn: "either",
-      message: "turnOtherSide",
-    });
+    expect(feed("profile", 4)).toMatchObject({ step: "left", turn: "left" });
+  });
+
+  it("runs a head circle, asking to tilt up and down", () => {
+    const { feed } = make({ directional: true, steps: "head-circle" });
+    let s = toFirstTurn(feed);
+    expect(s).toMatchObject({ step: "left", totalSteps: 6 });
+    s = feed("turned-left", 2);
+    expect(s).toMatchObject({ step: "up", message: "lookUp", turn: "up" });
+    s = feed("looking-up", 2);
+    expect(s).toMatchObject({ step: "right", message: "turnRight", turn: "right" });
+    s = feed("turned-right", 2);
+    expect(s).toMatchObject({ step: "down", message: "lookDown", turn: "down" });
+    s = feed("looking-down", 2);
+    expect(s).toMatchObject({ step: "frontal", message: "faceCameraAgain" });
+  });
+
+  it("finishes the motion challenge only while the face moves", () => {
+    const { flow, feed } = make({ steps: "motion", moveFrames: 3 });
+    toFirstTurn(feed);
+    expect(flow.state).toMatchObject({ step: "move", message: "moveNaturally", frontal: true });
+    const update = (motion: number) =>
+      flow.update({ pose: "frontal", guidance: "aligned", motion });
+    for (let i = 0; i < 10; i++) update(0);
+    expect(flow.state.step).toBe("move");
+    for (let i = 0; i < 3; i++) update(0.01);
+    expect(flow.state.phase).toBe("done");
   });
 
   it("finishes once aligned when steps are off", () => {
@@ -350,7 +392,7 @@ describe("createFaceFlow with quality", () => {
   it("doesn't call a turning head blurry, but does ask for light during turns", () => {
     const { feed } = makeGated();
     let s = feed(good, 3);
-    expect(s.step).toBe("turn-one-side");
+    expect(s.step).toBe("side");
     feed({ pose: "profile", guidance: "aligned", quality: "blurry" }, 1);
     s = feed({ pose: "none", guidance: "aligned", quality: "blurry" }, 6);
     expect(s.hint).toBeUndefined();
@@ -363,7 +405,7 @@ describe("createFaceFlow with quality", () => {
     feed(good, 3);
     feed({ ...good, pose: "profile" }, 2);
     let s = feed({ ...good, pose: "mirrored-profile" }, 2);
-    expect(s.step).toBe("face-camera-again");
+    expect(s.step).toBe("frontal");
     // Every frontal frame was too dark: nothing was kept.
     s = feed({ ...good, quality: "dark", kept: false }, 2);
     expect(s).toMatchObject({
@@ -425,7 +467,7 @@ describe("createFaceFlow with several faces", () => {
       frontal: false,
     });
     // Once alone, the flow goes on.
-    expect(feed(alone, 2)).toMatchObject({ phase: "challenge", step: "face-camera" });
+    expect(feed(alone, 2)).toMatchObject({ phase: "challenge", step: "frontal" });
   });
 
   it("puts the several-faces hint before positional and quality hints", () => {
@@ -440,18 +482,18 @@ describe("createFaceFlow with several faces", () => {
     expect(s.hint).toBeUndefined();
     s = feed(alone, 2);
     expect(s.hint).toBeUndefined();
-    expect(s).toMatchObject({ phase: "challenge", step: "face-camera" });
+    expect(s).toMatchObject({ phase: "challenge", step: "frontal" });
   });
 
   it("holds the head turns while two people are in view", () => {
     const { feed } = makeCrowded();
     let s = feed(alone, 3);
-    expect(s.step).toBe("turn-one-side");
+    expect(s.step).toBe("side");
     s = feed({ ...two, pose: "profile" }, 20);
-    expect(s).toMatchObject({ step: "turn-one-side", stepsDone: 1, hold: 0, hint: "severalFaces" });
+    expect(s).toMatchObject({ step: "side", stepsDone: 1, hold: 0, hint: "severalFaces" });
     expect(s.tone).toBe("found");
     s = feed({ ...alone, pose: "profile" }, 2);
-    expect(s).toMatchObject({ step: "turn-other-side", stepsDone: 2 });
+    expect(s).toMatchObject({ step: "other-side", stepsDone: 2 });
   });
 
   it("never finishes, even with a frame kept, until the other person has gone", () => {

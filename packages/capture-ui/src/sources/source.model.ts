@@ -50,6 +50,10 @@ export interface PoseSource {
   turnThreshold?: number;
   /** Reports `"turned-left"` / `"turned-right"`, so instructions can name the side. */
   directional?: boolean;
+  /** Reports `"looking-up"` / `"looking-down"`, so a challenge can ask for them. */
+  vertical?: boolean;
+  /** Forgets what it learned about the person; called when a run starts. */
+  reset?: () => void;
   /** Frees resources (a worker) when the element stops. */
   dispose?: () => void;
 }
@@ -91,6 +95,18 @@ export interface NeuralPoseSourceOptions {
    * observation reports `yaw` for a live turn gauge.
    */
   estimateHeadYaw?: (face: NeuralFaceLike) => number;
+  /**
+   * `createHeadPoseTracker` from `@pixelvision/face-neural`; when given, the
+   * source also reports looking up and down (it learns the person's frontal
+   * face first), so a challenge can ask for them.
+   */
+  createHeadPoseTracker?: (options?: { threshold?: number }) => HeadPoseTrackerLike;
+}
+
+/** The parts of a `@pixelvision/face-neural` head pose tracker this package uses. */
+export interface HeadPoseTrackerLike {
+  update: (face: NeuralFaceLike | undefined) => HeadPose;
+  reset: () => void;
 }
 
 /** The parts of `@pixelvision/face-neural` that {@link loadNeuralPoseSource} uses. */
@@ -102,6 +118,7 @@ export interface FaceNeuralModuleLike {
   }) => Promise<NeuralDetectorLike>;
   headPoseFromFace: NeuralPoseSourceOptions["headPoseFromFace"];
   estimateHeadYaw: (face: NeuralFaceLike) => number;
+  createHeadPoseTracker?: NeuralPoseSourceOptions["createHeadPoseTracker"];
 }
 
 /** Options for {@link loadNeuralPoseSource}. */

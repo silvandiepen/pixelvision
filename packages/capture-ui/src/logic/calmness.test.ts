@@ -32,10 +32,9 @@ interface Frame {
 }
 
 const POSE_FOR: Record<string, HeadPose> = {
-  "face-camera": "frontal",
-  "turn-one-side": "profile",
-  "turn-other-side": "mirrored-profile",
-  "face-camera-again": "frontal",
+  frontal: "frontal",
+  side: "profile",
+  "other-side": "mirrored-profile",
 };
 
 /**
@@ -88,7 +87,7 @@ function calmMinute(rate: number, seed = 7) {
   let intended: HeadPose = "frontal";
   for (let i = 0; i < 300; i++) {
     t += 200;
-    const asked = flow.state.accepted ? step : (flow.state.step ?? "face-camera");
+    const asked = flow.state.accepted ? step : (flow.state.step ?? "frontal");
     if (asked !== step) {
       step = asked;
       reactAt = t + 1000;

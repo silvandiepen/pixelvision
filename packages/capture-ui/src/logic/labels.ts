@@ -5,6 +5,13 @@ export const englishLabels: CaptureLabels = {
   faceIntroTitle: "Take a selfie",
   faceIntroBody:
     "We'll ask you to turn your head to each side. Find even light and take off sunglasses or a hat.",
+  faceIntroBodyCircle:
+    "We'll ask you to move your head in a circle: left, up, right and down. Find even light and take off sunglasses or a hat.",
+  faceIntroBodyMotion:
+    "Look at the camera for a few seconds. Find even light and take off sunglasses or a hat.",
+  faceIntroBodyPlain: "Look at the camera. Find even light and take off sunglasses or a hat.",
+  faceIntroBodySteps:
+    "We'll ask you to move your head a few times. Find even light and take off sunglasses or a hat.",
   start: "Start camera",
   noFace: "Position your face in the oval",
   tooFar: "Move a little closer",
@@ -19,6 +26,9 @@ export const englishLabels: CaptureLabels = {
   turnRightFirst: "Slowly turn your head to your right",
   turnLeftNow: "Now turn your head to your left",
   faceCameraAgain: "Look straight at the camera again",
+  lookUp: "Slowly tilt your head up",
+  lookDown: "Slowly tilt your head down",
+  moveNaturally: "Keep looking at the camera, and move your head a little",
   faceDone: "Done. Your photo has been taken",
   timeoutTitle: "That took too long",
   timeoutBody: "Let's try again. Keep your face in the oval and follow each step.",
@@ -27,6 +37,8 @@ export const englishLabels: CaptureLabels = {
   severalFaces: "Make sure only you are in the frame",
   alignHelp: "Face the light and keep your whole face in the oval",
   turnFurther: "Turn a bit further, then hold for a moment",
+  tiltFurther: "Tilt a bit further, then hold for a moment",
+  moveHelp: "Nod or tilt your head slightly, as you would in conversation",
   faceCameraHelp: "Look straight at the screen and keep still",
   faceTooDark: "Find a bit more light",
   faceTooBright: "Too much light. Move out of direct light",
@@ -86,6 +98,14 @@ export const dutchLabels: CaptureLabels = {
   faceIntroTitle: "Maak een selfie",
   faceIntroBody:
     "We vragen je je hoofd naar beide kanten te draaien. Zorg voor gelijkmatig licht en zet een zonnebril of pet af.",
+  faceIntroBodyCircle:
+    "We vragen je je hoofd in een rondje te bewegen: links, omhoog, rechts en omlaag. Zorg voor gelijkmatig licht en zet een zonnebril of pet af.",
+  faceIntroBodyMotion:
+    "Kijk een paar seconden in de camera. Zorg voor gelijkmatig licht en zet een zonnebril of pet af.",
+  faceIntroBodyPlain:
+    "Kijk in de camera. Zorg voor gelijkmatig licht en zet een zonnebril of pet af.",
+  faceIntroBodySteps:
+    "We vragen je je hoofd een paar keer te bewegen. Zorg voor gelijkmatig licht en zet een zonnebril of pet af.",
   start: "Camera starten",
   noFace: "Plaats je gezicht in het ovaal",
   tooFar: "Kom iets dichterbij",
@@ -100,6 +120,9 @@ export const dutchLabels: CaptureLabels = {
   turnRightFirst: "Draai je hoofd langzaam naar rechts",
   turnLeftNow: "Draai je hoofd nu naar links",
   faceCameraAgain: "Kijk weer recht in de camera",
+  lookUp: "Kantel je hoofd langzaam omhoog",
+  lookDown: "Kantel je hoofd langzaam omlaag",
+  moveNaturally: "Blijf in de camera kijken en beweeg je hoofd een beetje",
   faceDone: "Klaar. Je foto is gemaakt",
   timeoutTitle: "Dat duurde te lang",
   timeoutBody: "Probeer het opnieuw. Houd je gezicht in het ovaal en volg elke stap.",
@@ -108,6 +131,8 @@ export const dutchLabels: CaptureLabels = {
   severalFaces: "Zorg dat alleen jij in beeld bent",
   alignHelp: "Kijk naar het licht en houd je hele gezicht in het ovaal",
   turnFurther: "Draai iets verder en houd dat even vast",
+  tiltFurther: "Kantel iets verder en houd dat even vast",
+  moveHelp: "Knik of kantel je hoofd een klein beetje, zoals in een gesprek",
   faceCameraHelp: "Kijk recht naar het scherm en blijf stil",
   faceTooDark: "Zoek wat meer licht",
   faceTooBright: "Te veel licht. Ga uit het directe licht",

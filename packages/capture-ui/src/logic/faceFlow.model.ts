@@ -1,4 +1,4 @@
-import type { HeadPose, HeadTurnStep } from "pixelvision";
+import type { ChallengePreset, ChallengeStep, HeadPose } from "pixelvision";
 import type { FaceGuidance } from "./geometry.model";
 import type { LabelKey } from "./labels.model";
 import type { QualityIssue } from "./quality.model";
@@ -13,8 +13,8 @@ export type FacePhase = "searching" | "aligning" | "challenge" | "finishing" | "
 /** Colour state of the face guide. */
 export type GuideTone = "idle" | "found" | "aligned" | "hold" | "success" | "error";
 
-/** A turn direction from the person's own point of view, or either side. */
-export type TurnHint = "left" | "right" | "either";
+/** A direction to turn or tilt, from the person's own point of view, or either side. */
+export type TurnHint = "left" | "right" | "up" | "down" | "either";
 
 /** Options for {@link createFaceFlow}. */
 export interface FaceFlowOptions {
@@ -28,8 +28,15 @@ export interface FaceFlowOptions {
   windowFrames?: number;
   /** Fail after this many ms without finishing (default 45 000; 0 or less disables). */
   timeoutMs?: number;
-  /** Run the head-turn challenge; when off, the flow finishes once the face is aligned (default `true`). */
-  steps?: boolean;
+  /**
+   * The challenge after the alignment: a preset (`"head-turn"`, `"head-circle"`, `"motion"`,
+   * `"none"`) or a list of steps. `true` is `"head-turn"`, `false` is `"none"`: the flow
+   * finishes once the face is aligned (default `"head-turn"`). With a directional source, the
+   * head turn's `side` and `other-side` become `firstTurn` and its opposite.
+   */
+  steps?: boolean | ChallengePreset | readonly ChallengeStep[];
+  /** Frames with natural movement the `move` step needs (default `holdFrames * 4`). */
+  moveFrames?: number;
   /**
    * The pose source reports `"turned-left"` / `"turned-right"` (landmark
    * detectors), so instructions can name the direction (default `false`).
@@ -75,6 +82,11 @@ export interface FaceFlowInput {
    */
   faceCount?: number;
   /**
+   * How much the face region changed since the previous detection, 0–1 (pixelvision's
+   * `measureMotion`). Only the `move` step uses it.
+   */
+  motion?: number;
+  /**
    * Whether a good frame has been kept for the capture so far (default
    * `true`). When the steps finish without one, the flow waits in the
    * `finishing` phase until this is true.
@@ -86,10 +98,10 @@ export interface FaceFlowInput {
 export interface FaceFlowState {
   phase: FacePhase;
   /** The challenge step, while the challenge runs. */
-  step?: HeadTurnStep;
-  /** Completed challenge steps, 0–4. */
+  step?: ChallengeStep;
+  /** Completed challenge steps. */
   stepsDone: number;
-  /** Total challenge steps: 4, or 0 when steps are off. */
+  /** Total challenge steps; 0 without a challenge. */
   totalSteps: number;
   /** 0–1: overall progress for the ring around the guide. */
   progress: number;
@@ -121,8 +133,10 @@ export interface FaceFlowState {
   frontal: boolean;
 }
 
-/** The selfie flow: alignment, head-turn challenge, done. */
+/** The selfie flow: alignment, challenge, done. */
 export interface FaceFlow {
+  /** The challenge's steps, presets resolved and sides made directional. */
+  readonly steps: readonly ChallengeStep[];
   /** Advances with one detection. */
   update: (input: FaceFlowInput) => FaceFlowState;
   /** The current state. */

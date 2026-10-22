@@ -1,5 +1,5 @@
-import { createHeadTurnChallenge } from "pixelvision";
-import type { HeadPose, HeadTurnState, HeadTurnStep } from "pixelvision";
+import { challengeSteps, createFaceChallenge } from "pixelvision";
+import type { ChallengeStep, FaceChallengeState, HeadPose } from "pixelvision";
 import type {
   FaceFlow,
   FaceFlowInput,
@@ -12,8 +12,6 @@ import type { LabelKey } from "./labels.model";
 import { qualityHint } from "./quality";
 import { createSettledValue } from "./settle";
 
-const TOTAL_STEPS = 4;
-
 /** The opposite of a person's-point-of-view side. */
 const opposite = (side: "left" | "right"): "left" | "right" => (side === "left" ? "right" : "left");
 
@@ -21,9 +19,40 @@ const opposite = (side: "left" | "right"): "left" | "right" => (side === "left" 
 const sideOf = (pose: HeadPose | undefined): "left" | "right" | undefined =>
   pose === "turned-left" ? "left" : pose === "turned-right" ? "right" : undefined;
 
-/** Whether a step asks for a turn. */
-const isTurnStep = (step: HeadTurnStep | undefined): boolean =>
-  step === "turn-one-side" || step === "turn-other-side";
+/** Steps that ask the head to turn or tilt. */
+const TURN_STEPS: ReadonlySet<ChallengeStep | undefined> = new Set([
+  "left",
+  "right",
+  "up",
+  "down",
+  "side",
+  "other-side",
+]);
+
+/** Whether a step asks the head to turn or tilt. */
+const isTurnStep = (step: ChallengeStep | undefined): boolean => TURN_STEPS.has(step);
+
+/**
+ * Resolves the flow's `steps` option to a list of steps. With a directional
+ * source, undirected sides become the first turn and its opposite, so the
+ * instructions can name them.
+ *
+ * @param steps - The option.
+ * @param directional - Whether the source reports left and right.
+ * @param firstTurn - The side to ask for first.
+ * @returns The steps.
+ */
+function resolveSteps(
+  steps: FaceFlowOptions["steps"],
+  directional: boolean,
+  firstTurn: "left" | "right",
+): ChallengeStep[] {
+  const list = challengeSteps(steps === true ? "head-turn" : steps === false ? "none" : steps!);
+  if (!directional) return [...list];
+  return list.map((step) =>
+    step === "side" ? firstTurn : step === "other-side" ? opposite(firstTurn) : step,
+  );
+}
 
 /**
  * How far a head is turned towards the asked side, for a live turn gauge.
@@ -88,7 +117,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   const {
     holdFrames = 3,
     timeoutMs = 45_000,
-    steps = true,
+    steps: stepsOption = "head-turn",
     directional = false,
     firstTurn = "left",
     stallMs = 6000,
@@ -99,9 +128,12 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   } = options;
   const frames = Math.max(1, Math.round(holdFrames));
   const windowSize = Math.max(frames, Math.round(options.windowFrames ?? frames * 2));
-  const challenge = createHeadTurnChallenge({
+  const steps = resolveSteps(stepsOption, directional, firstTurn);
+  const challenge = createFaceChallenge({
+    steps,
     holdFrames: frames,
     windowFrames: windowSize,
+    moveFrames: options.moveFrames,
     timeoutMs: Infinity,
     now,
   });
@@ -130,26 +162,51 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   let pausedUntil = -Infinity;
   let current: FaceFlowState;
 
-  const totalSteps = steps ? TOTAL_STEPS : 0;
+  const totalSteps = steps.length;
 
   const turnHint = (
-    step: HeadTurnStep,
-    firstSide: HeadTurnState["firstSide"],
+    step: ChallengeStep,
+    side: FaceChallengeState["side"],
   ): TurnHint | undefined => {
-    if (step === "turn-one-side") return directional ? firstTurn : "either";
-    if (step === "turn-other-side") {
-      const side = sideOf(firstSide);
-      return side ? opposite(side) : "either";
+    switch (step) {
+      case "left":
+      case "right":
+      case "up":
+      case "down":
+        return step;
+      case "side":
+        return "either";
+      case "other-side": {
+        const first = sideOf(side);
+        return first ? opposite(first) : "either";
+      }
+      default:
+        return undefined;
     }
-    return undefined;
   };
 
-  const stepMessage = (step: HeadTurnStep, turn: TurnHint | undefined): LabelKey => {
-    if (step === "face-camera") return "faceCamera";
-    if (step === "face-camera-again") return "faceCameraAgain";
-    if (turn === "left") return step === "turn-one-side" ? "turnLeft" : "turnLeftNow";
-    if (turn === "right") return step === "turn-one-side" ? "turnRightFirst" : "turnRight";
-    return step === "turn-one-side" ? "turnOneSide" : "turnOtherSide";
+  /** Whether a step at this index comes after a turn, so its instruction says "now". */
+  const afterTurn = (index: number): boolean => steps.slice(0, index).some(isTurnStep);
+
+  const stepMessage = (step: ChallengeStep, index: number): LabelKey => {
+    switch (step) {
+      case "frontal":
+        return index === 0 ? "faceCamera" : "faceCameraAgain";
+      case "left":
+        return afterTurn(index) ? "turnLeftNow" : "turnLeft";
+      case "right":
+        return afterTurn(index) ? "turnRight" : "turnRightFirst";
+      case "up":
+        return "lookUp";
+      case "down":
+        return "lookDown";
+      case "side":
+        return "turnOneSide";
+      case "other-side":
+        return "turnOtherSide";
+      default:
+        return "moveNaturally";
+    }
   };
 
   /** Whether more than one face of a meaningful size is in view. */
@@ -158,7 +215,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   /** The several-faces, positional or quality hint this detection asks for, before settling. */
   const rawHint = (
     input: FaceFlowInput,
-    step: HeadTurnStep | undefined,
+    step: ChallengeStep | undefined,
     holding: boolean,
   ): LabelKey | undefined => {
     const { guidance, quality } = input;
@@ -183,8 +240,12 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     }
   };
 
-  const helperFor = (step: HeadTurnStep | undefined): LabelKey =>
-    !step ? "alignHelp" : isTurnStep(step) ? "turnFurther" : "faceCameraHelp";
+  const helperFor = (step: ChallengeStep | undefined): LabelKey => {
+    if (!step) return "alignHelp";
+    if (step === "up" || step === "down") return "tiltFurther";
+    if (step === "move") return "moveHelp";
+    return isTurnStep(step) ? "turnFurther" : "faceCameraHelp";
+  };
 
   /** Tracks progress within a stage, and whether it has stalled. */
   const trackStall = (key: string, hold: number, t: number): boolean => {
@@ -231,7 +292,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   /** Combines the settled positional or quality hint with a stall helper. */
   const secondary = (
     input: FaceFlowInput,
-    step: HeadTurnStep | undefined,
+    step: ChallengeStep | undefined,
     holding: boolean,
     stalled: boolean,
     t: number,
@@ -265,19 +326,14 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     };
   };
 
-  /** In directional mode, a first turn to the wrong side doesn't count. */
-  const filterPose = (pose: HeadPose): HeadPose => {
-    if (!directional || challenge.state.step !== "turn-one-side") return pose;
-    const side = sideOf(pose);
-    return side && side !== firstTurn ? "none" : pose;
-  };
-
   const runChallenge = (input: FaceFlowInput, t: number): FaceFlowState => {
     const before = challenge.state.progress;
     // With several people in view, nobody's turn counts.
-    const after = challenge.update(several(input) ? "none" : filterPose(input.pose));
+    const after = challenge.update(
+      several(input) ? "none" : { pose: input.pose, motion: input.motion },
+    );
     if (after.step === "done") return complete(input, t);
-    const step = after.step as HeadTurnStep;
+    const step = after.step as ChallengeStep;
     if (after.progress > before && acceptPauseMs > 0 && current.phase === "challenge") {
       // The acceptance moment: the finished step's instruction stays, the ring is full.
       pausedUntil = t + acceptPauseMs;
@@ -286,7 +342,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
         ...current,
         step,
         stepsDone: after.progress,
-        progress: after.progress / TOTAL_STEPS,
+        progress: after.progress / totalSteps,
         hold: 1,
         hint: undefined,
         accepted: true,
@@ -297,19 +353,20 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
       };
     }
     const hold = after.holdProgress;
-    const turn = turnHint(step, after.firstSide);
-    const stalled = trackStall(step, hold, t);
-    const facing = step === "face-camera" || step === "face-camera-again";
+    const turn = turnHint(step, after.side);
+    // Keyed by index: a challenge can ask for the same step twice.
+    const stalled = trackStall(`step-${after.index}`, hold, t);
+    const facing = step === "frontal" || step === "move";
     const raw: GuideTone =
       input.guidance === "no-face" || several(input) ? "found" : hold > 0 ? "hold" : "aligned";
     return {
       phase: "challenge",
       step,
       stepsDone: after.progress,
-      totalSteps: TOTAL_STEPS,
-      progress: (after.progress + hold) / TOTAL_STEPS,
+      totalSteps,
+      progress: (after.progress + hold) / totalSteps,
       hold,
-      message: stepMessage(step, turn),
+      message: stepMessage(step, after.index),
       hint: secondary(input, step, hold > 0, stalled, t),
       accepted: false,
       stalled,
@@ -330,7 +387,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
     const count = recent.filter(Boolean).length;
     if (count >= frames) {
       recent = [];
-      if (!steps) return complete(input, t);
+      if (totalSteps === 0) return complete(input, t);
       return runChallenge(input, t);
     }
     const hold = Math.min(1, count / frames);
@@ -340,7 +397,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
       ...initial(),
       phase: seenFace ? "aligning" : "searching",
       hold,
-      progress: steps ? 0 : hold,
+      progress: totalSteps ? 0 : hold,
       hint: secondary(input, undefined, aligned, stalled, t),
       stalled,
       tone: tone.update(raw, t),
@@ -351,6 +408,7 @@ export function createFaceFlow(options: FaceFlowOptions = {}): FaceFlow {
   current = initial();
 
   return {
+    steps,
     update(input) {
       if (current.phase === "done" || current.phase === "failed") return current;
       const t = now();
