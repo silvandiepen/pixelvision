@@ -10,14 +10,14 @@ import type { MorphologyOptions } from "./morphology.model";
  * @param fn - Calling function name.
  * @param image - Single-channel `u8` matrix.
  * @param options - Radius, iterations, output.
- * @param pick - `Math.max` (dilate) or `Math.min` (erode).
+ * @param max - Take the maximum (dilate) or the minimum (erode).
  * @returns The filtered matrix.
  */
 const morph = (
   fn: string,
   image: Matrix<"u8">,
   options: MorphologyOptions,
-  pick: (a: number, b: number) => number,
+  max: boolean,
 ): Matrix<"u8"> => {
   assertType(fn, image, "u8");
   assertChannels(fn, image, 1);
@@ -28,21 +28,31 @@ const morph = (
   const { width: w, height: h } = image;
   let current = cloneMatrix(image).data;
   const temp = new Uint8Array(w * h);
+  // The comparison is written out rather than passed as Math.max / Math.min:
+  // a call per pixel and neighbour made this several times slower.
   for (let it = 0; it < iterations; it++) {
     for (let y = 0; y < h; y++) {
+      const row = y * w;
       for (let x = 0; x < w; x++) {
-        let v = current[y * w + x];
-        for (let k = Math.max(0, x - radius); k <= Math.min(w - 1, x + radius); k++)
-          v = pick(v, current[y * w + k]);
-        temp[y * w + x] = v;
+        let v = current[row + x];
+        const end = Math.min(w - 1, x + radius);
+        for (let k = Math.max(0, x - radius); k <= end; k++) {
+          const c = current[row + k];
+          if (max ? c > v : c < v) v = c;
+        }
+        temp[row + x] = v;
       }
     }
     const next = new Uint8Array(w * h);
     for (let y = 0; y < h; y++) {
+      const start = Math.max(0, y - radius);
+      const end = Math.min(h - 1, y + radius);
       for (let x = 0; x < w; x++) {
         let v = temp[y * w + x];
-        for (let k = Math.max(0, y - radius); k <= Math.min(h - 1, y + radius); k++)
-          v = pick(v, temp[k * w + x]);
+        for (let k = start; k <= end; k++) {
+          const c = temp[k * w + x];
+          if (max ? c > v : c < v) v = c;
+        }
         next[y * w + x] = v;
       }
     }
@@ -67,7 +77,7 @@ const morph = (
  * const closedEdges = dilate(canny(gray, { low: 30, high: 90 }));
  */
 export function dilate(image: Matrix<"u8">, options: MorphologyOptions = {}): Matrix<"u8"> {
-  return morph("dilate", image, options, Math.max);
+  return morph("dilate", image, options, true);
 }
 
 /**
@@ -84,7 +94,7 @@ export function dilate(image: Matrix<"u8">, options: MorphologyOptions = {}): Ma
  * const cleaned = erode(mask, { radius: 1 });
  */
 export function erode(image: Matrix<"u8">, options: MorphologyOptions = {}): Matrix<"u8"> {
-  return morph("erode", image, options, Math.min);
+  return morph("erode", image, options, false);
 }
 
 /**
