@@ -39,6 +39,7 @@
     "pixelvision": "workspace:^"
   },
   "devDependencies": {
+    "jpeg-js": "0.4.4",
     "onnxruntime-node": "^1.22.0",
     "pixelvision": "workspace:*",
     "tsup": "^9.0.0"

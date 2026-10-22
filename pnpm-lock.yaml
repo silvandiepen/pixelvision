@@ -376,6 +376,9 @@ importers:
 
   packages/face-neural:
     devDependencies:
+      jpeg-js:
+        specifier: 0.4.4
+        version: 0.4.4
       onnxruntime-node:
         specifier: ^1.22.0
         version: 1.30.0

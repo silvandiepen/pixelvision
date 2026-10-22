@@ -38,3 +38,13 @@ SOFTWARE.
 
 Not shipped, and never to be: InsightFace / InspireFace / SCRFD / RetinaFace weights (licensed for
 non-commercial research only).
+
+## Test photos — `fixtures/faces/` (not published)
+
+- One fictional, AI-generated person, not a real individual: `face-front` was generated with OpenAI's
+  image generation through the Codex CLI on 2026-10-22, and every other photo is an edit of it with
+  only the head pose changed (turned about 25° and 45° to her left and right, tilted about 15° and
+  30° up and down, a second frontal frame). Scaled to 960 px wide JPEGs.
+- Used by `src/headPoseTracker.test.ts` to check turns and tilts on the real model, and to set the
+  tracker's up and down thresholds. One synthetic person is not a test set: check the thresholds on
+  real people before relying on them.
