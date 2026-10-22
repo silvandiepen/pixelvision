@@ -288,3 +288,12 @@ describe("findDocument with reportCut: shapes that aren't a cut document", () =>
     ).toBeNull();
   });
 });
+
+describe("findDocument on a blank image", () => {
+  it("finds nothing, with no bright or dark class to split again", () => {
+    const blank = createMatrix(80, 60);
+    // All black: Otsu puts the level at 0, so nothing is brighter than it.
+    blank.data.fill(0);
+    expect(findDocument(blank)).toBeNull();
+  });
+});

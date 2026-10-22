@@ -10,6 +10,15 @@ import { warpPerspective } from "../imgproc/warp";
 import { perspectiveTransform } from "../math/transforms";
 import type { Point } from "../math/transforms.model";
 import { findContours } from "../shape/contours";
+import { orderCorners } from "./order";
+import {
+  gradientStrength,
+  levelWithin,
+  outlineSupport,
+  refinedVersions,
+  strengthPercentile,
+} from "./refine";
+
 import { approxPolygon, arcLength, contourArea, isConvex } from "../shape/polygon";
 import type {
   CutDocument,
@@ -19,25 +28,7 @@ import type {
   Quad,
 } from "./document.model";
 
-/**
- * Puts four corners in reading order: top-left, top-right, bottom-right,
- * bottom-left (clockwise, starting at the corner nearest the origin).
- *
- * @param points - Four corners in any order.
- * @returns The ordered corners.
- */
-export const orderCorners = (points: readonly Point[]): Quad => {
-  const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
-  const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
-  const clockwise = [...points].sort(
-    (a, b) => Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx),
-  );
-  let start = 0;
-  clockwise.forEach((p, i) => {
-    if (p.x + p.y < clockwise[start].x + clockwise[start].y) start = i;
-  });
-  return [0, 1, 2, 3].map((k) => clockwise[(start + k) % 4]) as Quad;
-};
+export { orderCorners };
 
 /**
  * Reduces a contour to a convex quadrilateral, loosening the tolerance
@@ -86,9 +77,13 @@ const toGray = (image: ImageLike | Matrix, order: FindDocumentOptions["order"]):
 
 /**
  * Finds a document (sheet of paper, ID card, receipt, book page) in a
- * photo or camera frame: the largest convex four-cornered shape that
- * stands out from its surroundings. Looks for its outline both as edges
- * and as a brightness region, so it works on light and dark backgrounds.
+ * photo or camera frame: a large convex four-cornered shape that stands
+ * out from its surroundings. Looks for its outline in several ways (as
+ * edges, as a bright or dark region, and as a smooth region inside faint
+ * edges), so it works on light, dark, busy and low-contrast backgrounds.
+ * Picks the candidate whose outline lies best on the image's edges, then
+ * moves its sides onto those edges, so rounded corners come out where the
+ * straight edges meet.
  *
  * Pair with {@link extractDocument} to straighten and crop it. In a camera
  * loop, wait until the corners are stable for a few frames before
@@ -123,40 +118,86 @@ export function findDocument(
   const { width, height } = gray;
   if (width < 8 || height < 8) return null;
   const scale = Math.min(1, maxSize / Math.max(width, height));
-  const small =
-    scale < 1
+  const resize = (factor: number) =>
+    factor < 1
       ? resample(gray, {
-          width: Math.max(1, Math.round(width * scale)),
-          height: Math.max(1, Math.round(height * scale)),
+          width: Math.max(1, Math.round(width * factor)),
+          height: Math.max(1, Math.round(height * factor)),
         })
       : gray;
+  const small = resize(scale);
   const blurred = gaussianBlur(small, { kernelSize: 5 });
   const level = otsuLevel(blurred);
 
-  // Two views of the outline: edges (closed up by dilation) and the bright
-  // or dark region the document forms.
-  const edges = dilate(
-    canny(blurred, { low: Math.max(10, level * 0.4), high: Math.max(30, level) }),
-  );
-  const bright = erode(dilate(threshold(blurred, { level })));
-  const dark = erode(dilate(threshold(blurred, { level, invert: true })));
+  // Edges at thresholds that follow the image's own contrast, for a faint
+  // page on a pale table: an outline at the default thresholds, and their
+  // dilation as the evidence a candidate's outline is checked against.
+  const strength = gradientStrength(blurred);
+  const p90 = Math.max(4, strengthPercentile(strength, 0.9));
+  const faintEdges = canny(blurred, { low: p90 * 0.5, high: p90 });
+  const evidence = dilate(faintEdges);
+
+  // Several views of the outline, since no single one works on every photo:
+  // edges (closed up by dilation); the bright or dark region the document
+  // forms; the same split again within that region, to part a white page
+  // from a light table or from glare; and the smooth region inside an
+  // outline of faint edges, for a page that barely stands out.
+  const masks = [
+    dilate(canny(blurred, { low: Math.max(10, level * 0.4), high: Math.max(30, level) })),
+    erode(dilate(threshold(blurred, { level }))),
+    erode(dilate(threshold(blurred, { level, invert: true }))),
+    erode(threshold(dilate(faintEdges, { radius: 2 }), { level: 0, invert: true })),
+  ];
+  const brighter = levelWithin(blurred, level, true);
+  if (brighter !== null) masks.push(erode(dilate(threshold(blurred, { level: brighter }))));
+  const darker = levelWithin(blurred, level, false);
+  if (darker !== null) {
+    masks.push(erode(dilate(threshold(blurred, { level: darker, invert: true }))));
+  }
+
   const imageArea = small.width * small.height;
   const minPixels = Math.max(16, Math.sqrt(minArea * imageArea) * 2);
-
-  let best: { quad: Point[]; area: number } | null = null;
-  for (const mask of [edges, bright, dark]) {
+  const candidates: Point[][] = [];
+  for (const mask of masks) {
     for (const contour of findContours(mask, { minPixels })) {
       const quad = toQuad(contour);
       if (!quad || hugsBorder(quad, small.width, small.height)) continue;
       const area = Math.abs(contourArea(quad)) / imageArea;
-      if (area < minArea || area > maxArea) continue;
-      if (!best || area > best.area) best = { quad, area };
+      if (area >= minArea && area <= maxArea) candidates.push(orderCorners(quad));
+    }
+  }
+
+  // The best candidate covers a large area with an outline that lies on
+  // edges, and has no corner on the image border (a page merged with glare
+  // or a neighbouring object usually does).
+  const onBorder = (quad: readonly Point[]) =>
+    quad.filter((p) => p.x <= 2 || p.y <= 2 || p.x >= small.width - 3 || p.y >= small.height - 3)
+      .length;
+  const score = (quad: readonly Point[]) =>
+    (Math.abs(contourArea(quad)) / imageArea) *
+    outlineSupport(quad, evidence) ** 2 *
+    0.5 ** onBorder(quad);
+  const ranked = candidates.sort((a, b) => score(b) - score(a)).slice(0, 4);
+
+  // Move the best few onto the image's edges, at up to twice the working
+  // size, and keep whichever version scores best.
+  const detailScale = Math.min(1, scale * 1.5);
+  const detail = gaussianBlur(resize(detailScale), { kernelSize: 3 });
+  const detailStrength = gradientStrength(detail);
+  const toDetail = detailScale / scale;
+  let best: { quad: Point[]; score: number } | null = null;
+  for (const quad of ranked) {
+    const versions = refinedVersions(quad, detailStrength, detail.width, detail.height, toDetail);
+    for (const version of versions) {
+      const s = score(version);
+      if (!best || s > best.score) best = { quad: version, score: s };
     }
   }
   if (best) {
     const corners = orderCorners(best.quad.map((p) => ({ x: p.x / scale, y: p.y / scale })));
-    return { corners, area: best.area };
+    return { corners, area: Math.abs(contourArea(best.quad)) / imageArea };
   }
+  const bright = masks[1];
   if (!options.reportCut) return null;
 
   // Nothing whole: look for a light region cut off by the image edge.
