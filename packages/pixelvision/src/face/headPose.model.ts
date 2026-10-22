@@ -7,10 +7,18 @@ import type { Detection, HaarCascade } from "../detect/haar.model";
  * the cascade and on whether the frame is mirrored; the head-turn
  * challenge only needs both to appear. Landmark-based detectors (such as
  * `@pixelvision/face-neural`) report `"turned-left"` / `"turned-right"`
- * from the person's point of view instead.
+ * from the person's point of view instead, and `"looking-up"` /
+ * `"looking-down"` for a head tilted back or forward.
  */
 export type HeadPose =
-  "frontal" | "profile" | "mirrored-profile" | "turned-left" | "turned-right" | "none";
+  | "frontal"
+  | "profile"
+  | "mirrored-profile"
+  | "turned-left"
+  | "turned-right"
+  | "looking-up"
+  | "looking-down"
+  | "none";
 
 /** Cascades for {@link detectHeadPose}. */
 export interface HeadPoseCascades {

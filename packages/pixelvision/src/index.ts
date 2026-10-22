@@ -100,6 +100,22 @@ export type {
   HeadTurnStep,
 } from "./face/headTurnChallenge.model";
 export { createHeadTurnChallenge } from "./face/headTurnChallenge";
+export type {
+  ChallengePreset,
+  ChallengeStep,
+  FaceChallenge,
+  FaceChallengeOptions,
+  FaceChallengeState,
+  FaceObservation,
+} from "./face/faceChallenge.model";
+export {
+  CHALLENGE_PRESETS,
+  challengeSteps,
+  createFaceChallenge,
+  needsDirection,
+} from "./face/faceChallenge";
+export type { RegionBox, RegionPatch } from "./face/motion.model";
+export { measureMotion, regionPatch } from "./face/motion";
 
 // Detection
 export type { BbfCascade, BbfFeature, BbfOptions, BbfStage } from "./detect/bbf.model";
