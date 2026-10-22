@@ -474,6 +474,26 @@ export const ICONS: Readonly<Record<string, IconMarkup>> = {
   "head-turn": icon(
     `<circle cx="12" cy="12" r="5.5"/>${dot(10.2, 11, 0.9)}${dot(13.8, 11, 0.9)}<path d="M10.5 14.2C11.5 14.8 12.5 14.8 13.5 14.2"/>${arrow(5, 12, 2, 12)}${arrow(19, 12, 22, 12)}`,
   ),
+  // A face in the viewfinder with a sequence of step dots under it.
+  "create-face-challenge": icon(
+    `<path d="M3 7V4.5A1.5 1.5 0 0 1 4.5 3H7M17 3H19.5A1.5 1.5 0 0 1 21 4.5V7" ${SOFT}/><ellipse cx="12" cy="9.5" rx="3.75" ry="4.75"/>${dot(10.6, 9, 0.75)}${dot(13.4, 9, 0.75)}<path d="M4 19H20" ${SOFT}/>${dot(5, 19, 1.4)}${dot(9.67, 19, 1.4)}${dot(14.33, 19, 1.4, SOFT)}${dot(19, 19, 1.4, SOFT)}`,
+  ),
+  // A face, and the grid it shrinks to, with one cell changed.
+  "region-patch": icon(
+    `<ellipse cx="8" cy="11" rx="4.5" ry="5.75" ${SOFT}/><rect x="13" y="6" width="8" height="10" rx="1"/><path d="M15.67 6V16M18.33 6V16M13 9.33H21M13 12.67H21" ${SOFT}/><rect x="15.67" y="9.33" width="2.67" height="3.33" fill="currentColor" stroke="none" opacity="0.8"/>${arrow(4, 20, 8, 20, SOFT)}`,
+  ),
+  // A list of steps: a bullet per step, the first ones done.
+  "challenge-steps": icon(
+    `${dot(5, 6, 1.4)}<path d="M9 6H20"/>${dot(5, 12, 1.4)}<path d="M9 12H20"/>${dot(5, 18, 1.4, SOFT)}<path d="M9 18H16" ${SOFT}/>`,
+  ),
+  // A compass: which ways the detector can tell.
+  "needs-direction": icon(
+    `<circle cx="12" cy="12" r="8.5" ${SOFT}/>${arrow(12, 12, 12, 5)}${arrow(12, 12, 19, 12)}<path d="M12 12V19M12 12H5" ${SOFT}/>`,
+  ),
+  // Two patches with a difference meter between them.
+  "measure-motion": icon(
+    `<rect x="2.5" y="5" width="7" height="7" rx="1"/><rect x="14.5" y="5" width="7" height="7" rx="1"/><path d="M14.5 8.5H21.5M18 5V12" ${SOFT}/><path d="M4 18H20" ${SOFT}/><path d="M4 18H9"/>${dot(9, 18, 1.4)}`,
+  ),
   // A camera whose lens is half run through a filter.
   "live-effects": icon(
     `<path d="M3 9A2 2 0 0 1 5 7H7.5L9 5H15L16.5 7H19A2 2 0 0 1 21 9V17A2 2 0 0 1 19 19H5A2 2 0 0 1 3 17Z"/><circle cx="12" cy="13" r="3.75"/><path d="M12 9.25A3.75 3.75 0 0 1 12 16.75Z" fill="currentColor" stroke="none" opacity="0.4"/>${dot(17.75, 9.75, 0.9)}`,

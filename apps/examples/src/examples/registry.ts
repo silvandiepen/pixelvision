@@ -28,6 +28,11 @@ import { detectBbfExample } from "./detect-bbf";
 import { detectFastExample } from "./detect-fast";
 import { detectHaarExample } from "./detect-haar";
 import { detectHeadPoseExample } from "./detect-head-pose";
+import { createFaceChallengeExample } from "./create-face-challenge";
+import { challengeStepsExample } from "./challenge-steps";
+import { needsDirectionExample } from "./needs-direction";
+import { regionPatchExample } from "./region-patch";
+import { measureMotionExample } from "./measure-motion";
 import { detectSkinExample } from "./detect-skin";
 import { detectYapeExample } from "./detect-yape";
 import { detectYape06Example } from "./detect-yape06";
@@ -176,6 +181,11 @@ export const EXAMPLES: readonly Example[] = [
   detectArucoMarkersExample,
   generateArucoMarkerExample,
   detectHeadPoseExample,
+  createFaceChallengeExample,
+  challengeStepsExample,
+  needsDirectionExample,
+  regionPatchExample,
+  measureMotionExample,
   findDocumentExample,
   documentTrackerExample,
   extractDocumentExample,
