@@ -110,13 +110,13 @@ describe("verifyEvidence on a recorded head turn", () => {
     // It stops once every step is done: the last frontal frames can't change the outcome.
     expect(result.framesChecked).toBeGreaterThan(40);
     expect(result.framesChecked).toBeLessThan(68);
-  }, 60_000);
+  });
 
   it("passes the motion challenge on a live-looking face", async () => {
     const challenge = await issue("motion");
     const result = await verifyEvidence({ challenge, frames: clip("motion") }, options());
     expect(result.reasons).toEqual([]);
-  }, 60_000);
+  });
 
   it("fails a different challenge the same recording doesn't do", async () => {
     // A recording of a head turn has no natural movement step between the turns.
@@ -132,7 +132,7 @@ describe("verifyEvidence on a recorded head turn", () => {
     const result = await verifyEvidence({ challenge, frames: clip("head-turn") }, options());
     expect(result.passed).toBe(false);
     expect(result.reasons).toContain("steps-not-done");
-  }, 60_000);
+  });
 
   it("fails a frozen picture", async () => {
     const challenge = await issue("motion");
@@ -140,7 +140,7 @@ describe("verifyEvidence on a recorded head turn", () => {
     const frames = Array.from({ length: 40 }, (_, i) => ({ ...first, time: i * 125 }));
     const result = await verifyEvidence({ challenge, frames }, options());
     expect(result.reasons).toEqual(expect.arrayContaining(["frozen-frames", "steps-not-done"]));
-  }, 60_000);
+  });
 
   it("fails spliced footage where the face jumps", async () => {
     const challenge = await issue("head-turn");
@@ -161,7 +161,7 @@ describe("verifyEvidence on a recorded head turn", () => {
       }),
     );
     expect(result.reasons).toContain("face-jumps");
-  }, 60_000);
+  });
 });
 
 describe("verifyEvidence refuses", () => {
