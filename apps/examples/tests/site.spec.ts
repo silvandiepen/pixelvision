@@ -22,6 +22,7 @@ const GUIDES = [
   "node",
   "react-native",
   "face-neural",
+  "security",
   "why",
   "use-cases",
   "from-jsfeat",
@@ -228,6 +229,8 @@ test.describe("document scanner", () => {
     await expect(page.getByRole("button", { name: "Retake" })).toBeVisible();
   });
 });
+
+
 
 test.describe("head-turn check", () => {
   test("a scripted run completes all four steps", async ({ page }) => {

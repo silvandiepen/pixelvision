@@ -9,6 +9,7 @@ import node from "./guide/node.md?raw";
 import useCases from "./guide/use-cases.md?raw";
 import why from "./guide/why.md?raw";
 import reactNative from "./guide/react-native.md?raw";
+import security from "./guide/security.md?raw";
 import webWorkers from "./guide/web-workers.md?raw";
 import type { Guide } from "./guides.model";
 
@@ -102,6 +103,14 @@ export const GUIDES: readonly Guide[] = [
     description:
       "The optional @pixelvision/face-neural package: YuNet faces, landmarks and head turns.",
     markdown: faceNeural,
+  },
+  {
+    slug: "security",
+    title: "Security levels",
+    section: "guides",
+    description:
+      "What each setup stops and what it doesn't, from a capture aid to certified identity checks.",
+    markdown: security,
   },
   {
     slug: "from-jsfeat",
