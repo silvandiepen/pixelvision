@@ -1,6 +1,6 @@
 {
   "name": "@pixelvision/capture-ui",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Customisable camera capture UI for pixelvision as Web Components: a selfie flow with a head-turn challenge and a document scanner that finds and straightens documents. Capture only: not liveness detection or document verification.",
   "license": "MIT",
   "author": "Sil van Diepen",
