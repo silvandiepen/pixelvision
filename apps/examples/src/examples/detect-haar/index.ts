@@ -13,7 +13,8 @@ export const detectHaarExample = defineExample<DetectHaarDemoOptions, Cascades>(
     "Finds faces, eyes, profiles or upper bodies with a Viola-Jones (Haar) cascade. Choose Webcam as the input to find your own face.",
   howItWorks: [
     'A cascade is a trained list of stages. Each stage adds up a few Haar features (differences between the sums of light and dark rectangles, such as "the eye band is darker than the cheeks"), which the integral image makes cheap to compute. A window passes a stage when its score clears the stage\'s threshold; most windows fail in the first stages, which is what makes it fast.',
-    "The window slides over the image at every position and at sizes growing by `scaleFactor`. Nearby hits are merged with `groupRectangles`, and groups with fewer than `minNeighbors` hits are dropped: more neighbours means more certain. Skipping flat windows (few Canny edges) speeds it up a lot on photos, but can skip a smooth, evenly lit face; it's off here because the sample face is drawn flat.",
+    "The window slides over the image at every position and at sizes growing by `scaleFactor`. Nearby hits are merged with `groupRectangles`, and groups with fewer than `minNeighbors` hits are dropped: more neighbours means more certain. Skipping flat windows (few Canny edges), `detectHaar`'s default, speeds it up a lot and drops false faces in flat graphics: turn it off on the logo sheet and the ring with a dot in it passes as a face. It can skip a very smooth, evenly lit face.",
+    "This follows jsfeat, which slides the window in smaller steps than OpenCV at large sizes, so one shape collects more overlapping hits and `minNeighbors` is a little less strict than the same number in OpenCV: on the logo sheet without edge skipping, OpenCV gets one hit on the ring and pixelvision six.",
     "The cascades are separate entry points, e.g. `pixelvision/cascades/frontal-face`, so you only load the ones you use. Each is a few hundred kilobytes.",
   ],
   howToTest:
@@ -60,8 +61,9 @@ export const detectHaarExample = defineExample<DetectHaarDemoOptions, Cascades>(
       type: "toggle",
       key: "skipFlat",
       label: "Skip flat windows",
-      description: "Skip windows with few edges (`edgeDensity: 0.07`). Faster on photos.",
-      default: false,
+      description:
+        "Skip windows with few edges (`edgeDensity: 0.07`, `detectHaar`'s default). Faster, and fewer false faces in flat graphics.",
+      default: true,
     },
   ],
   code,
