@@ -25,10 +25,9 @@
             <option v-if="webcamAllowed" value="webcam">Webcam</option>
           </select>
         </div>
-        <label :class="bemm('upload')">
-          Upload an image
-          <input :class="bemm('file')" type="file" accept="image/*" @change="upload" />
-        </label>
+        <FileButton :class="bemm('upload')" variant="raised" @change="upload"
+          >Upload an image</FileButton
+        >
       </div>
 
       <ControlField
@@ -116,6 +115,7 @@ import ControlField from "../ControlField";
 import DataTable from "../DataTable";
 import ImageView from "../ImageView";
 import SvgView from "../SvgView";
+import FileButton from "../FileButton";
 import { defaultValues } from "../../examples/define";
 import type { ControlValues, DemoOutput } from "../../examples/example.model";
 import { publishResult } from "../../results";
@@ -346,28 +346,15 @@ onBeforeUnmount(stopWebcam);
     font-weight: 600;
   }
 
+  &__upload {
+    align-self: flex-start;
+  }
+
   &__select {
     padding: var(--auno-space-2xs) var(--auno-space-xs);
     border: 0;
     border-radius: var(--auno-radius-s);
     background: var(--auno-raised);
-  }
-
-  &__upload {
-    color: var(--pv-accent);
-    font-size: var(--auno-text-small);
-    cursor: pointer;
-
-    &:focus-within {
-      outline: 2px solid var(--pv-accent);
-    }
-  }
-
-  &__file {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
   }
 
   &__reset {

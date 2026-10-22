@@ -1,0 +1,41 @@
+// The button look, shared by AppButton and FileButton (a label around a file input).
+
+@mixin base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--auno-space-xs);
+  min-height: var(--auno-target-min);
+  padding: 0 var(--auno-space-l);
+  border: 0;
+  border-radius: var(--auno-radius-action);
+  font-size: var(--auno-text-small);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--auno-base) var(--auno-ease);
+}
+
+@mixin primary {
+  background: var(--auno-ink);
+  color: var(--auno-on-ink);
+}
+
+@mixin secondary {
+  background: var(--auno-surface);
+  color: var(--auno-ink);
+
+  &:hover {
+    background: var(--auno-pressed);
+  }
+}
+
+// On a surface-coloured panel, where the secondary fill wouldn't show.
+@mixin raised {
+  background: var(--auno-raised);
+  color: var(--auno-ink);
+
+  &:hover {
+    background: var(--auno-pressed);
+  }
+}

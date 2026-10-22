@@ -47,16 +47,7 @@
           <AppButton variant="primary" data-capture-camera @click="startCamera">
             Start the camera
           </AppButton>
-          <label :class="bemm('upload')">
-            Upload a photo
-            <input
-              :class="bemm('file')"
-              type="file"
-              accept="image/*"
-              data-capture-upload
-              @change="upload"
-            />
-          </label>
+          <FileButton data-capture-upload @change="upload">Upload a photo</FileButton>
         </div>
       </div>
     </div>
@@ -73,6 +64,7 @@ import { computed, ref } from "vue";
 import { useBemm } from "bemm";
 import { findDocument } from "pixelvision";
 import AppButton from "../AppButton";
+import FileButton from "../FileButton";
 import { useDocumentScan } from "../../composables/useDocumentScan";
 import { readImageFile } from "../../utils/input";
 import type { DocumentCaptureEmits } from "./DocumentCapture.model";
@@ -247,35 +239,6 @@ async function upload(event: Event): Promise<void> {
     flex-wrap: wrap;
     justify-content: center;
     gap: var(--auno-space-s);
-  }
-
-  &__upload {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--auno-target-min);
-    padding: 0 var(--auno-space-l);
-    border-radius: var(--auno-radius-action);
-    background: var(--auno-page);
-    font-size: var(--auno-text-small);
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover {
-      background: var(--auno-pressed);
-    }
-
-    &:focus-within {
-      outline: 2px solid var(--auno-ink);
-      outline-offset: 3px;
-    }
-  }
-
-  &__file {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
   }
 
   &__message {

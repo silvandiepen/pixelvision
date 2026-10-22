@@ -16,16 +16,7 @@
         Use the camera
       </AppButton>
       <AppButton v-else variant="secondary" @click="stopCamera">Stop the camera</AppButton>
-      <label :class="bemm('upload')">
-        Upload a photo
-        <input
-          :class="bemm('file')"
-          type="file"
-          accept="image/*"
-          data-scanner-upload
-          @change="upload"
-        />
-      </label>
+      <FileButton data-scanner-upload @change="upload">Upload a photo</FileButton>
       <div :class="bemm('aspect')">
         <ControlField
           :control="aspectControl"
@@ -88,6 +79,7 @@ import type { Matrix, Point, RGBAImage } from "pixelvision";
 import AppButton from "../AppButton";
 import ControlField from "../ControlField";
 import ImageView from "../ImageView";
+import FileButton from "../FileButton";
 import { useDocumentScan } from "../../composables/useDocumentScan";
 import { defaultValues } from "../../examples/define";
 import type { SelectControl } from "../../examples/example.model";
@@ -244,35 +236,6 @@ usePhoto(getSample(props.example.sample ?? "desk").generate());
     flex-wrap: wrap;
     align-items: flex-end;
     gap: var(--auno-space-s);
-  }
-
-  &__upload {
-    position: relative;
-    display: inline-flex;
-    align-items: center;
-    min-height: var(--auno-target-min);
-    padding: 0 var(--auno-space-l);
-    border-radius: var(--auno-radius-action);
-    background: var(--auno-surface);
-    font-size: var(--auno-text-small);
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover {
-      background: var(--auno-pressed);
-    }
-
-    &:focus-within {
-      outline: 2px solid var(--auno-ink);
-      outline-offset: 3px;
-    }
-  }
-
-  &__file {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
   }
 
   &__aspect {
