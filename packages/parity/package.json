@@ -2,7 +2,7 @@
   "name": "@pixelvision/parity",
   "version": "0.0.0",
   "private": true,
-  "description": "Proves pixelvision matches jsfeat: runs both on the same seeded fixtures and compares the output.",
+  "description": "Proves pixelvision matches jsfeat and OpenCV: runs both on the same seeded fixtures and compares the output, and compares document finding with jscanify on labelled photos.",
   "license": "MIT",
   "type": "module",
   "scripts": {
@@ -13,7 +13,8 @@
     "pixelvision": "workspace:*"
   },
   "devDependencies": {
-    "jsfeat": "0.0.8",
-    "@techstark/opencv-js": "4.12.0-release.1"
+    "@techstark/opencv-js": "4.12.0-release.1",
+    "jpeg-js": "0.4.4",
+    "jsfeat": "0.0.8"
   }
 }

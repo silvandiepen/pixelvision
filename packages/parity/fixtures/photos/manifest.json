@@ -1,0 +1,123 @@
+{
+  "provenance": {
+    "source": "Generated with OpenAI image generation through the Codex CLI: fictional scenes, made-up text, no real people, brands or identity documents.",
+    "date": "2026-10-22",
+    "licence": "Generated for this repository; free to use in its tests."
+  },
+  "documents": [
+    {
+      "file": "doc-id-card.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A plastic ID-sized card marked SPECIMEN, 'Pixelvision Sample Card', on a wooden desk, rotated about 15 degrees, a pen and a cup at the edges.",
+      "corners": [
+        [272.1, 163],
+        [836.9, 248.8],
+        [804.3, 598.3],
+        [176.1, 483.1]
+      ],
+      "cut": false,
+      "note": "Rounded corners: the labels are where the straight edges meet, so a detector following the rounding lands up to about 12 px inside."
+    },
+    {
+      "file": "doc-receipt.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A long shop receipt for a made-up 'Corner Market' on a dark slate counter, slightly curled, with a torn bottom edge.",
+      "corners": [
+        [260, 68],
+        [533, 18],
+        [727, 564],
+        [404, 641]
+      ],
+      "cut": false,
+      "note": "Curled and torn: the corners are the paper's actual corner points, and with a torn bottom edge they are only defined to within about 10 px, so this photo allows 20 px.",
+      "tolerance": 20
+    },
+    {
+      "file": "doc-page-desk.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A printed A4 letter (made-up text) on a light oak desk, rotated about 10 degrees, a laptop edge and a plant leaf at the sides.",
+      "corners": [
+        [240, 72],
+        [666, 13],
+        [793, 607],
+        [309, 685]
+      ],
+      "cut": true,
+      "note": "The bottom-left corner lies 2 px below the image, where the bottom and left edges meet."
+    },
+    {
+      "file": "doc-low-contrast.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A white A4 sheet with a few printed lines on a pale white-washed wooden table, rotated about 8 degrees, soft overcast light.",
+      "corners": [
+        [264, 106],
+        [724, 45.5],
+        [811.5, 594.5],
+        [337.5, 657]
+      ],
+      "cut": false,
+      "note": "Low contrast: the paper barely stands out from the table."
+    },
+    {
+      "file": "doc-cluttered.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A printed A4 invoice (made-up) on a busy desk with a keyboard, sticky notes, a phone, cables, a notebook and a mug around it.",
+      "corners": [
+        [242.5, 99],
+        [617, 37.5],
+        [771.5, 566.5],
+        [315, 655]
+      ],
+      "cut": false,
+      "note": "Cluttered: the sticky notes nearly touch the top-right corner."
+    },
+    {
+      "file": "doc-in-hand.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A printed A5 flyer (made-up event) held up in a hand in a living room, tilted and slightly curved.",
+      "corners": [
+        [286, 41],
+        [707.5, 16],
+        [781, 628],
+        [336, 654]
+      ],
+      "cut": false,
+      "note": "The thumb covers part of the left edge; all four corners are visible.",
+      "expectedMiss": "The flyer's white top merges with the bright window behind it, and its green bottom with the room: no view of the outline isolates it. jscanify misses it too."
+    },
+    {
+      "file": "doc-steep.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A printed A4 page on a dark grey table, photographed at a steep angle so the far edge looks much shorter.",
+      "corners": [
+        [96.5, 123],
+        [531, 69.5],
+        [998.5, 400.5],
+        [292.5, 659]
+      ],
+      "cut": false,
+      "note": "Strong perspective."
+    },
+    {
+      "file": "doc-card-dark.jpg",
+      "width": 1024,
+      "height": 683,
+      "prompt": "A white loyalty card for a made-up shop 'Bean & Leaf' on a dark walnut table, rotated about 20 degrees, a lamp highlight on it.",
+      "corners": [
+        [224.9, 247.8],
+        [690.7, 125.7],
+        [810.9, 406.6],
+        [305.4, 569.6]
+      ],
+      "cut": false,
+      "note": "Rounded corners, labelled where the straight edges meet."
+    }
+  ]
+}
